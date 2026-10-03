@@ -1,0 +1,11 @@
+{
+  "name": "@dsh-mobile/script-cancel-verification",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "DSHM bounded install script cancellation verification",
+  "exports": { ".": "./index.js", "./package.json": "./package.json" },
+  "files": ["index.js", "postinstall.mjs", "cordis.patch.yml"],
+  "scripts": { "postinstall": "node postinstall.mjs" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

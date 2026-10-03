@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-model-list-verification
+      name: '@dsh-mobile/model-list-verification'

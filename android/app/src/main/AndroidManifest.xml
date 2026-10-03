@@ -1,0 +1,40 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <application android:name=".DshmApplication" android:label="DSHM" android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules" android:fullBackupContent="false"
+        android:theme="@style/Theme.DSHM"
+        android:usesCleartextTraffic="true" android:supportsRtl="true">
+        <provider android:name=".RemoteFileProvider" android:authorities="${applicationId}.remote.files"
+            android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/remote_share_paths" />
+        </provider>
+        <activity android:name=".RemoteActivity" android:exported="false" android:configChanges="uiMode" android:windowSoftInputMode="adjustResize" />
+        <activity android:name="com.journeyapps.barcodescanner.CaptureActivity" android:exported="false"
+            android:screenOrientation="portrait" tools:replace="android:screenOrientation" />
+        <activity android:name=".PairingEntryActivity" android:exported="true" android:excludeFromRecents="true"
+            android:taskAffinity="${applicationId}.pairingEntry">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dshm" android:host="pair" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ValidationActivity" android:exported="true"
+            android:configChanges="uiMode"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

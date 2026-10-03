@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-header-ui-verification
+      name: '@dsh-mobile/header-ui-verification'

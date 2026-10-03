@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-script-approval-verification
+      name: '@dsh-mobile/script-approval-verification'

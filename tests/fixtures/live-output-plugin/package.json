@@ -1,0 +1,7 @@
+{
+  "name": "@dsh-mobile/sidebar-output-verification",
+  "version": "0.0.7",
+  "type": "module",
+  "exports": { ".": "./index.js", "./package.json": "./package.json" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-sidebar-output-verification
+      name: '@dsh-mobile/sidebar-output-verification'

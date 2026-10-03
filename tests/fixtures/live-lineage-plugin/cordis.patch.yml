@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-lineage-ui-verification
+      name: '@dsh-mobile/lineage-ui-verification'

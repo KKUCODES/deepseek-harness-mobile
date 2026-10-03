@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-cordis-history-verification
+      name: '@dsh-mobile/cordis-history-verification'

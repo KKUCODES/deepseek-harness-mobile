@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-partial-ui-verification
+      name: '@dsh-mobile/partial-ui-verification'

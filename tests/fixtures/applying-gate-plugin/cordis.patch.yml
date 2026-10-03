@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-applying-gate-verification
+      name: '@dsh-mobile/applying-gate-verification'

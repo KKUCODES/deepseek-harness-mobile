@@ -1,0 +1,4 @@
+# 临时源码启动覆盖；不安装到用户profile，仅验收真实owner释放。
+- insert:
+    - id: dshm-job-owner-lifecycle-verification
+      name: './job-owner-lifecycle-host.mjs'

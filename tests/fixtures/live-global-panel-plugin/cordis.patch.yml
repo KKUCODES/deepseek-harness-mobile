@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-global-panel-verification
+      name: '@dsh-mobile/global-panel-verification'

@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-provider-directory-verification
+      name: '@dsh-mobile/provider-directory-verification'

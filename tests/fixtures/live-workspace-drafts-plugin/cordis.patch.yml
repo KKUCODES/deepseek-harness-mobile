@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-workspace-drafts-verification
+      name: '@dsh-mobile/workspace-drafts-verification'

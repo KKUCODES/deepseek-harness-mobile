@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+
+export async function checkRemoteComposerBar(page) {
+  await page.evaluate(() => window.fixture.select('one'));
+  const input = page.getByRole('textbox', { name: '消息', exact: true });
+  await input.fill('替换前草稿');
+  await page.evaluate(() => window.fixture.insertSidebarReference());
+  await input.locator('[data-composer-chip="fixture"]').waitFor();
+  await page.evaluate(() => window.fixture.enableComposerBarProbe());
+  await page.getByRole('textbox', { name: '插件消息', exact: true }).waitFor();
+  await page.evaluate(() => window.fixture.disableComposerBarProbe());
+  await input.locator('[data-composer-chip="fixture"]').waitFor();
+  await input.fill('替换前草稿');
+  await page.evaluate(() => window.fixture.enableComposerBarProbe());
+  const custom = page.getByRole('textbox', { name: '插件消息', exact: true });
+  await custom.waitFor(); assert.equal(await custom.inputValue(), '替换前草稿');
+  assert.equal(await input.count(), 0);
+  const dock = page.getByTestId('input-dock-probe');
+  await page.getByTestId('other-goal-dock').waitFor({ state: 'attached' });
+  assert.equal(await dock.getAttribute('data-session'), 'one');
+  assert.equal(await dock.getAttribute('data-phase'), 'open');
+  await custom.fill('插件修改草稿');
+  await page.waitForFunction(() => document.querySelector('[data-testid="input-dock-probe"]')?.textContent === '插件修改草稿');
+  assert.equal(await dock.getAttribute('data-consistent'), 'true');
+  await page.evaluate(() => window.fixture.conversationBlock('测试输入锁定'));
+  await page.waitForFunction(() => document.querySelector('[data-testid="composer-bar-probe"] input')?.disabled);
+  assert.equal(await page.getByRole('button', { name: '插件发送', exact: true }).isDisabled(), true);
+  await page.evaluate(() => window.fixture.conversationBlock(undefined));
+  await page.waitForFunction(() => !document.querySelector('[data-testid="composer-bar-probe"] input')?.disabled);
+  await page.evaluate(() => window.fixture.select('two'));
+  await page.waitForFunction(() => document.querySelector('[data-testid="composer-bar-probe"]')?.dataset.session === 'two');
+  assert.notEqual(await custom.inputValue(), '插件修改草稿');
+  await page.evaluate(() => window.fixture.select('one'));
+  await page.waitForFunction(() => document.querySelector('[data-testid="composer-bar-probe"]')?.dataset.session === 'one');
+  assert.equal(await custom.inputValue(), '插件修改草稿');
+  await page.evaluate(() => window.fixture.disableComposerBarProbe());
+  await input.waitFor(); assert.equal(await input.innerText(), '插件修改草稿');
+  assert.equal(await dock.count(), 0);
+  await input.fill('');
+  return { sharedDraft: true, originalOwner: true, sessionIsolation: true, unloadRestored: true, referencePreserved: true, blocked: true };
+}

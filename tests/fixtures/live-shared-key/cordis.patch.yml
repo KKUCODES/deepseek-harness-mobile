@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-shared-key-verification
+      name: '@dsh-mobile/shared-key-transport-verification'

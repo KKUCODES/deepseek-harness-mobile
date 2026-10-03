@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+
+export async function checkGlobalPanels(page) {
+  await page.evaluate(() => window.fixture.select('one'));
+  const editor = page.getByTestId('remote-workspace').getByRole('textbox', { name: '消息', exact: true });
+  const draft = await editor.innerText();
+  await page.evaluate(() => window.fixture.enableGlobalPanels());
+  await page.evaluate(() => window.fixture.openGlobalPanels());
+  const surface = page.locator('.remote-global-panel');
+  await surface.getByRole('button', { name: '测试插件页面', exact: true }).click();
+  const content = page.getByTestId('global-panel-content');
+  await content.waitFor(); assert.equal(await content.getAttribute('data-session'), 'none');
+  assert.equal(await content.getAttribute('data-current'), 'fixture-global');
+  await content.getByRole('button', { name: '面板计数 0', exact: true }).click();
+  await content.getByRole('button', { name: '面板计数 1', exact: true }).waitFor();
+  const navigation = await page.evaluate(() => window.fixture.checkPanelNavigation());
+  assert.deepEqual(navigation, { previousAborted: true, rejected: true, currentRetained: true, selected: 'fixture-global' });
+  const race = await page.evaluate(() => window.fixture.checkMainPanelRace());
+  assert.deepEqual(race, { cancelled: true, signalAborted: true, selected: null });
+  await surface.waitFor({ state: 'hidden' });
+  await page.evaluate(() => window.fixture.select('one')); assert.equal(await editor.innerText(), draft);
+  await page.evaluate(() => window.fixture.openSidePanel());
+  const side = page.locator('.remote-plugin-panel:not(.remote-global-panel)'); await side.waitFor();
+  await page.evaluate(() => window.fixture.selectGlobalPanel('fixture-global'));
+  await content.waitFor();
+  assert.equal(await side.evaluate(node => node.inert), true, '被全局页面遮挡的旁栏必须退出焦点和可访问性树');
+  await content.getByRole('button', { name: '面板计数 0', exact: true }).focus();
+  await side.locator('button').first().evaluate(node => node.focus());
+  assert.equal(await surface.evaluate(node => node.contains(document.activeElement)), true, '下层控件不能抢走焦点');
+  await page.keyboard.press('Escape');
+  await surface.waitFor({ state: 'hidden' }); assert.equal(await side.isVisible(), true);
+  assert.equal(await side.evaluate(node => node.inert), false);
+  await page.evaluate(() => window.fixture.selectGlobalPanel('fixture-global'));
+  await content.waitFor(); await page.evaluate(() => window.fixture.closeSidePanel());
+  await side.waitFor({ state: 'hidden' });
+  assert.equal(await page.getByTestId('remote-workspace').evaluate(node => node.inert), true);
+  assert.equal(await surface.evaluate(node => node.contains(document.activeElement)), true, '关闭下层窗口不能把焦点移出当前页面');
+  await page.evaluate(() => window.fixture.selectGlobalPanel('fixture-global'));
+  await content.getByRole('button', { name: '插件返回聊天', exact: true }).click();
+  await surface.waitFor({ state: 'hidden' }); assert.equal(await editor.innerText(), draft);
+  assert.equal(await page.getByTestId('remote-workspace').evaluate(node => node.inert), false);
+  await page.evaluate(() => window.fixture.selectGlobalPanel('fixture-global'));
+  await page.evaluate(() => window.fixture.removeGlobalPanels());
+  await content.waitFor({ state: 'detached' }); await surface.waitFor({ state: 'hidden' });
+  assert.equal(await editor.innerText(), draft);
+  return { ownPage: true, rootScope: true, panelInfo: true, originalNavigation: navigation, sharedMainNavigation: race, stackedBack: true, stackedInert: true, coveredPanelInert: true, focusPreserved: true, returnKeepsDraft: true, unloadClears: true };
+}

@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-auto-deny-verification
+      name: '@dsh-mobile/auto-deny-verification'

@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-attachment-document-verification
+      name: '@dsh-mobile/attachment-document-verification'

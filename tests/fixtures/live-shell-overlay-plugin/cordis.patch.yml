@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-shell-overlay-verification
+      name: '@dsh-mobile/shell-overlay-verification'

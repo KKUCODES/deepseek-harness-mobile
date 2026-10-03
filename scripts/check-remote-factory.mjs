@@ -1,0 +1,87 @@
+import assert from 'node:assert/strict';
+
+export async function checkRemoteFactory(page) {
+  await page.evaluate(async () => { await window.fixture.enableSidebarResources(); await window.fixture.select('one'); await window.fixture.enableFactoryProbe(); });
+  const main = page.getByTestId('remote-workspace'), panel = page.getByRole('region', { name: '插件面板', exact: true });
+  const aside = page.getByTestId('remote-sidebar-conversation').filter({ visible: true });
+  await page.evaluate(() => window.fixture.failFactoryOpenOnce());
+  await main.getByRole('button', { name: 'Remote 选项', exact: true }).click();
+  await main.getByRole('button', { name: '子会话', exact: true }).click();
+  await page.getByRole('dialog', { name: '子会话', exact: true }).getByRole('group', { name: '分析助手', exact: true })
+    .getByRole('button', { name: '在旁栏打开', exact: true }).click();
+  await panel.getByRole('alert').getByText('暂时无法打开这个聊天，请稍后重试。', { exact: false }).waitFor();
+  await panel.getByRole('button', { name: '重新读取聊天', exact: true }).click();
+  const input = aside.getByRole('textbox', { name: '消息', exact: true }); await input.waitFor();
+  await page.evaluate(() => window.fixture.enableShellOverlay());
+  await page.getByTestId('shell-overlay-wide').waitFor();
+  assert.equal(await page.getByTestId('shell-overlay-wide').count(), 1, '主/旁栏共用一个根浮层');
+  assert.equal(await page.locator('.remote-global-panel').count(), 1, '全局插件页面不在旁栏重复创建');
+  await page.evaluate(() => window.fixture.removeShellOverlay());
+  const width = panel.getByTestId('factory-width'); await width.waitFor();
+  assert.equal(await width.getAttribute('data-container'), 'true');
+  assert.equal(await width.getAttribute('data-phase'), 'active');
+  assert.equal(await width.getAttribute('data-locale'), 'function');
+  await width.click(); assert.equal(await width.innerText(), '1');
+  await input.fill('工厂默认聊天草稿');
+  assert.equal(await width.innerText(), '1', '内容更新不得重建局部控件');
+  await page.evaluate(() => window.fixture.setFactoryBlock('child-chat', '子会话输入暂停'));
+  await page.waitForFunction(() => document.querySelector('[data-testid="factory-width"]')?.dataset.block === '子会话输入暂停');
+  assert.equal(await input.getAttribute('contenteditable'), 'false');
+  await page.evaluate(() => window.fixture.setFactoryBlock('child-chat', undefined));
+  await aside.getByRole('button', { name: '返回父会话', exact: true }).click();
+  await aside.locator('.remote-heading strong').getByText('one', { exact: true }).waitFor();
+  assert.match(await page.evaluate(() => window.fixture.invokeFactorySelection()), /聊天已变化/);
+  await width.click();
+  assert.match(await page.evaluate(() => window.fixture.invokeFactorySelection()), /工作区已不存在/);
+  await page.evaluate(() => { window.fixture.setFactoryBlock('child-chat', '旧子会话暂停'); window.fixture.setFactoryBlock('one', '父会话输入暂停'); });
+  await page.waitForFunction(() => document.querySelector('[data-testid="factory-width"]')?.dataset.block === '父会话输入暂停');
+  assert.equal(await input.getAttribute('contenteditable'), 'false');
+  await page.evaluate(() => { window.fixture.setFactoryBlock('child-chat', undefined); window.fixture.setFactoryBlock('one', undefined); });
+  await page.waitForFunction(() => document.querySelector('[data-testid="factory-width"]')?.dataset.block === '');
+  await input.fill('工厂父级草稿');
+  await page.evaluate(() => window.fixture.disableFactoryProbe());
+  await width.waitFor({ state: 'detached' }); await input.waitFor();
+  assert.equal(await aside.locator('.remote-heading strong').innerText(), 'one');
+  assert.equal(await input.innerText(), '工厂父级草稿');
+  await page.evaluate(() => window.fixture.enableFactoryProbe(true));
+  const custom = panel.getByTestId('factory-custom-view'); await custom.waitFor();
+  assert.equal(await custom.getAttribute('data-session'), 'one');
+  assert.equal(await custom.getAttribute('data-open'), 'open');
+  await input.waitFor(); assert.equal(await input.innerText(), '工厂父级草稿');
+  await page.evaluate(() => window.fixture.emitTurn('one', 1, 0, '长聊天高度回归\n\n'.repeat(80)));
+  await aside.getByText(/长聊天高度回归/).first().waitFor();
+  const geometry = await input.evaluate(node => ({ bottom: node.getBoundingClientRect().bottom, viewport: innerHeight }));
+  assert.ok(geometry.bottom <= geometry.viewport, JSON.stringify(geometry));
+  const scroller = aside.getByRole('region', { name: '聊天内容', exact: true });
+  await scroller.evaluate(async node => {
+    node.scrollTop = 40;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  assert.equal(await scroller.evaluate(node => node.scrollTop), 40);
+  const editor = await input.elementHandle();
+  await custom.getByRole('button', { name: '仅显示插件内容', exact: true }).click();
+  await custom.getByText('插件独立内容', { exact: true }).waitFor();
+  for (const name of ['chain', 'bar', 'preset']) await custom.getByTestId(`factory-local-${name}`).waitFor();
+  const localDock = custom.getByTestId('factory-local-dock');
+  assert.equal(await localDock.getAttribute('data-session'), 'one');
+  assert.equal(await localDock.getAttribute('data-consistent'), 'true');
+  assert.equal(await localDock.innerText(), '工厂父级草稿');
+  await page.waitForFunction(() => window.fixture.readingContexts().at(-1) === null);
+  await input.waitFor();
+  assert.equal(await input.evaluate((node, before) => node === before, editor), true, '替换内容不能重建编辑器');
+  assert.equal(await input.innerText(), '工厂父级草稿');
+  await custom.getByRole('button', { name: '恢复聊天内容', exact: true }).click();
+  await aside.locator('.remote-heading strong').getByText('one', { exact: true }).waitFor();
+  await page.waitForFunction(() => window.fixture.readingContexts().at(-1) === 'one');
+  await page.waitForFunction(() => document.querySelector('[data-testid="remote-sidebar-conversation"] .conversation')?.scrollTop === 40);
+  assert.equal(await input.evaluate((node, before) => node === before, editor), true);
+  await editor.dispose();
+  await page.evaluate(() => window.fixture.disableFactoryProbe()); await input.waitFor();
+  await input.fill('');
+  await panel.getByRole('button', { name: '面板操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '关闭当前面板', exact: true }).click();
+  if (await panel.isVisible()) await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
+  return { defaultViews: true, localWidthControls: true, stableControls: true, customViews: true, unloadRestored: true,
+    openFailureRetry: true, residentComposer: true, composerBlockRebound: true, workspaceCallbackRebound: true, staleCallbackRejected: true,
+    localFactoryChildren: true };
+}

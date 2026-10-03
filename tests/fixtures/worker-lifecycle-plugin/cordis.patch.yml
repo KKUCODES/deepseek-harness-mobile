@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-worker-lifecycle-verification
+      name: '@dsh-mobile/worker-lifecycle-verification'

@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-model-footer-verification
+      name: '@dsh-mobile/model-footer-verification'

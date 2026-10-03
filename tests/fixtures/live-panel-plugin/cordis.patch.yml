@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-panel-ui-verification
+      name: '@dsh-mobile/panel-ui-verification'

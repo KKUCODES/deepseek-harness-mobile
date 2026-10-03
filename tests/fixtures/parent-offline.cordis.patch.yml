@@ -1,0 +1,4 @@
+# 仅通过显式 --patch 加载；不安装到用户配置，不改变任何生产路由。
+- insert:
+    - id: dshm-parent-offline-verification
+      name: './parent-offline-host.mjs'

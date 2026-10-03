@@ -1,0 +1,20 @@
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.6 system-ui, sans-serif; background: var(--dsw-alias-bg-base, #fafafa); color: var(--dsw-alias-label-primary, #161616); }
+.validation { max-width: 820px; margin: auto; padding: 20px; }
+h1 { font-size: 22px; }
+h2 { font-size: 17px; }
+section { margin: 18px 0; padding: 16px; border: 1px solid #8885; border-radius: 12px; }
+button,input { font: inherit; min-height: 44px; max-width: 100%; }
+button { cursor: pointer; }
+[data-live-client] { position: static !important; display: block; padding: 12px; border: 1px solid #8885; }
+.input-validation-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+.input-validation-card { position: relative; }
+.input-validation-card textarea { width: 100%; padding: 12px; font: inherit; resize: vertical; border: 1px solid #8888; border-radius: 8px; }
+.ordinary-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.ordinary-actions select { min-width: 0; max-width: 100%; }
+.ordinary-messages { max-height: 480px; overflow-y: auto; overflow-wrap: anywhere; }
+.ordinary-messages article { padding: 12px 0; border-bottom: 1px solid #8884; }
+.ordinary-text { white-space: pre-wrap; }
+[data-testid="ordinary-chat"] textarea { width: 100%; box-sizing: border-box; margin-top: 12px; font: inherit; }
+[data-testid="remote-page"] textarea, [data-testid="remote-page"] select { width: 100%; max-width: 100%; min-height: 44px; font: inherit; }
+[data-testid="remote-page"] code, [data-testid="remote-page"] pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }

@@ -1,0 +1,81 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { advanceSession as step, createSession } from '../docs/design/ordinary-preview/remote-chat-demo.mjs';
+
+const task = { id: 'done', title: '示例任务' };
+test('模型确认后更新共享会话，失败保留旧模型，电脑更新使旧响应失效', () => {
+  const s = { ...createSession(task), draft: '草稿' };
+  const pending = step(s, { type: 'model-select', online: true, id: 'deepseek-reasoner' });
+  assert.equal(pending.model.id, 'deepseek-chat');
+  assert.equal(step(pending, { type: 'send', online: true, id: 'blocked' }), pending);
+  const applied = step(pending, { type: 'tick', online: true });
+  assert.equal(applied.model.id, 'deepseek-reasoner');
+  assert.equal(applied.modelSource, '手机');
+  assert.equal(applied.draft, '草稿');
+  const failed = step({ ...pending, modelFailNext: true }, { type: 'tick', online: true });
+  assert.equal(failed.model.id, s.model.id);
+  assert.equal(failed.modelStatus, 'error');
+  const host = step(pending, { type: 'model-host-change', online: true, id: 'deepseek-chat' });
+  assert.equal(step(host, { type: 'tick', online: true }).model.id, 'deepseek-chat');
+});
+test('模型离线不能切换，未知结果重连不自动重放，其他会话不受影响', () => {
+  const a = createSession(task), b = createSession({ id: 'other', title: '其他任务' });
+  assert.equal(step(a, { type: 'model-select', online: false, id: 'deepseek-reasoner' }), a);
+  let pending = step(a, { type: 'model-select', online: true, id: 'deepseek-reasoner' });
+  pending = step(pending, { type: 'model-disconnected' });
+  assert.equal(pending.modelStatus, 'unknown');
+  assert.equal(step(pending, { type: 'tick', online: true }).model.id, 'deepseek-chat');
+  assert.equal(step(pending, { type: 'model-refresh', online: true }).modelStatus, 'ready');
+  assert.equal(b.model.id, 'deepseek-chat');
+});
+test('未知结果经过重连及核对只保留一条消息，不重复发送', () => {
+  let s = { ...createSession(task), draft: '只发送一次', fault: 'unknown' };
+  s = step(s, { type: 'send', online: true, id: 'one' });
+  s = step(s, { type: 'tick', online: true });
+  assert.equal(s.phase, 'unknown');
+  s = step(s, { type: 'draft', value: '保留草稿' });
+  const before = s;
+  s = step(s, { type: 'send', online: true, id: 'duplicate' });
+  assert.equal(s, before);
+  for (let i = 0; i < 4; i++) s = step(s, { type: 'tick', online: i > 1 });
+  assert.equal(s.phase, 'unknown');
+  s = step(s, { type: 'verify', online: true });
+  assert.equal(s.messages.filter(m => m.text === '只发送一次').length, 1);
+  assert.equal(s.draft, '保留草稿');
+  assert.equal(s.phase, 'accepted');
+});
+test('离线不写入，审批处理后旧操作失效', () => {
+  const pending = createSession({ id: 'approval', title: '修改文件' });
+  assert.equal(step(pending, { type: 'approve', online: false }), pending);
+  const handled = step(pending, { type: 'handled', online: true });
+  assert.equal(step(handled, { type: 'approve', online: true }), handled);
+  assert.equal(step(handled, { type: 'reject', online: true }), handled);
+  const stopped = step(pending, { type: 'stop', online: true });
+  assert.equal(stopped.approval, 'canceled');
+  assert.equal(step(stopped, { type: 'approve', online: true }), stopped);
+});
+test('排队消息保留附件，停止不会自动执行队列，取消不影响草稿', () => {
+  let s = { ...createSession({ id: 'running', title: '运行中' }), draft: '补充任务', attachments: ['示例.png'] };
+  s = step(s, { type: 'send', online: true, id: 'queued' });
+  assert.equal(s.queue.length, 1);
+  assert.deepEqual(s.queue[0].attachments, ['示例.png']);
+  s = step(s, { type: 'stop', online: true });
+  s = step(s, { type: 'tick', online: true });
+  assert.equal(s.phase, 'stopped');
+  assert.equal(s.queue.length, 1);
+  s = step(s, { type: 'draft', value: '下一条草稿' });
+  const running = step(s, { type: 'next', online: true });
+  assert.equal(running.messages.filter(m => m.id === 'queued').length, 1);
+  assert.equal(step(running, { type: 'next', online: true }), running);
+  const canceled = step(s, { type: 'cancel-queue', online: true, id: 'queued' });
+  assert.equal(canceled.queue.length, 0);
+  assert.equal(canceled.draft, '下一条草稿');
+});
+test('提问只提交一次，历史重复读取去重', () => {
+  let s = { ...createSession({ id: 'question', title: '提问' }), answer: '按主题' };
+  s = step(s, { type: 'submit-answer', online: true, id: 'answer' });
+  assert.equal(step(s, { type: 'submit-answer', online: true, id: 'again' }), s);
+  s = step(s, { type: 'history-ready' });
+  assert.equal(step(s, { type: 'history-ready' }), s);
+  assert.equal(s.messages.filter(m => m.id === 'older-user').length, 1);
+});

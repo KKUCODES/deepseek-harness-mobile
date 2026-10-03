@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-main-factory-verification
+      name: '@dsh-mobile/main-factory-verification'

@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-document-pages-verification
+      name: '@dsh-mobile/document-pages-verification'

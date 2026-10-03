@@ -1,0 +1,4 @@
+<resources>
+    <!-- WebView的系统媒体查询取自宿主isLightTheme，不能将宿主永远固定为浅色。 -->
+    <style name="Theme.DSHM" parent="android:style/Theme.Material.Light.NoActionBar" />
+</resources>

@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-auto-review-cancel-observer
+      name: '@dsh-mobile/auto-review-cancel-observer'

@@ -1,0 +1,7 @@
+<resources>
+    <string name="ime_probe_description">原生输入对照（仅调试）\n不加载 WebView、DSH 或插件，不联网、不保存输入。</string>
+    <string name="ime_probe_hint">点击这里测试系统中文键盘</string>
+    <string name="ime_probe_label">原生输入对照</string>
+    <string name="ime_probe_show">请求显示键盘</string>
+    <string name="ime_probe_measurements">窗口可见区域：%1$d × %2$d px\n原生内容高度：%3$d px</string>
+</resources>

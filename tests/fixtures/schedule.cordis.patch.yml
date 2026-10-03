@@ -1,0 +1,9 @@
+# Local live verification overlay, matching upstream apps/cli/config/examples/schedule/cordis.yml.
+# Passed with --patch for this run; does not change the user's persisted profile.
+- insert:
+    - id: time-context
+      name: '@deepseek-ai/dsh-time-context'
+    - id: schedule
+      name: '@deepseek-ai/dsh-schedule'
+- id: ui-schedule
+  disabled: false

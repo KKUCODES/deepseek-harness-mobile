@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-blocked-notice-verification
+      name: '@dsh-mobile/blocked-notice-verification'

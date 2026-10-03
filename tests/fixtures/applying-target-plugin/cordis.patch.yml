@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-applying-target-verification
+      name: '@dsh-mobile/applying-target-verification'

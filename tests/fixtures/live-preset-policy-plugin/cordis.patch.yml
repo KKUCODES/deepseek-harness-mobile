@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-preset-policy-verification
+      name: '@dsh-mobile/preset-policy-verification'

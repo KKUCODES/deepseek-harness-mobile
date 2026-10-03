@@ -1,0 +1,7 @@
+{
+  "name": "@dsh-mobile/non-bundle-verification",
+  "version": "0.0.1",
+  "private": true,
+  "description": "DSHM temporary valid archive without a DSH bundle; no scripts or dependencies",
+  "files": []
+}

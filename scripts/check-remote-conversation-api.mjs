@@ -1,0 +1,62 @@
+import assert from 'node:assert/strict';
+
+export async function checkRemoteConversationApi(page) {
+  await page.evaluate(async () => { await window.fixture.select('one'); await window.fixture.conversationProbe(); });
+  const editor = page.getByRole('textbox', { name: '消息', exact: true });
+  const probe = page.getByTestId('conversation-probe');
+  await probe.getByText('one:true', { exact: true }).waitFor();
+  await probe.getByRole('button', { name: '聚焦消息', exact: true }).click();
+  assert.equal(await editor.evaluate(node => node === document.activeElement), true);
+  await editor.fill('保留会话草稿');
+  await page.evaluate(() => { window.fixture.conversationNotify('插件会话提示'); window.fixture.conversationBlock('请先选择可用模型'); });
+  await page.getByRole('status').filter({ hasText: /^插件会话提示$/ }).waitFor();
+  await page.getByRole('status').filter({ hasText: /^请先选择可用模型$/ }).waitFor();
+  assert.equal(await editor.getAttribute('contenteditable'), 'false');
+  assert.equal(await page.getByRole('button', { name: '发送消息', exact: true }).isEnabled(), false);
+  assert.equal(await page.getByRole('button', { name: '添加附件', exact: true }).isEnabled(), false);
+  await page.evaluate(() => window.fixture.conversationSubmit());
+  assert.deepEqual(await page.evaluate(() => window.fixture.conversationCalls()), []);
+  assert.equal(await editor.innerText(), '保留会话草稿');
+  await page.evaluate(() => window.fixture.conversationBlock());
+  await page.waitForFunction(() => document.querySelector('[data-composer-input]')?.contentEditable === 'true');
+  assert.equal(await editor.innerText(), '保留会话草稿');
+  await page.evaluate(() => window.fixture.conversationDraft('公开接口草稿'));
+  await page.waitForFunction(() => window.fixture.inputDraft() === '公开接口草稿');
+  assert.deepEqual(await page.evaluate(() => window.fixture.conversationVerbs()), ['root rejected', 'root input rejected', 'steer converged', 'send rejected', 'cancel rejected', 'queue rejected']);
+  const calls = await page.evaluate(() => window.fixture.conversationCalls());
+  assert.equal(calls.length, 7);
+  assert.equal(calls.every(call => call.request.sessionId === 'one'), true, '调用使用调用方会话');
+  assert.deepEqual(calls[0].request.content, [{ type: 'text', text: 'verbatim /file @raw' }]);
+  assert.equal(await editor.innerText(), '公开接口草稿', '公开 send 不消费编辑器草稿');
+  await page.evaluate(() => window.fixture.conversationRetain());
+  await page.evaluate(() => window.fixture.select('two')); await editor.fill('另一个会话草稿');
+  await page.evaluate(() => window.fixture.conversationLate());
+  assert.equal(await page.getByText('原会话迟到提示', { exact: true }).count(), 0);
+  await page.evaluate(() => window.fixture.select('one'));
+  await page.getByRole('status').filter({ hasText: /^原会话迟到提示$/ }).waitFor();
+  assert.equal(await editor.innerText(), '公开接口草稿');
+  await page.evaluate(async () => { await window.fixture.select('two'); await window.fixture.conversationRelease(); window.fixture.conversationStale(); });
+  assert.equal(await editor.innerText(), '另一个会话草稿');
+  await editor.fill('');
+  await page.evaluate(() => { window.fixture.status('two', true); window.fixture.conversationBlock('生成中暂停输入'); });
+  const stop = page.getByRole('button', { name: '停止生成', exact: true });
+  await stop.waitFor();
+  assert.equal(await stop.isEnabled(), true, '插件暂停输入不会阻止停止正在生成的回复');
+  assert.equal(await page.getByRole('button', { name: '添加附件', exact: true }).isEnabled(), false);
+  await stop.click();
+  await page.waitForFunction(() => window.fixture.conversationCalls().at(-1)?.request.sessionId === 'two');
+  await page.evaluate(() => { window.fixture.status('two', false); window.fixture.conversationBlock(); });
+  await page.waitForFunction(() => document.querySelector('[data-composer-input]')?.contentEditable === 'true');
+  await editor.fill('另一个会话草稿');
+  assert.equal(await page.getByText('过期提示', { exact: true }).count(), 0);
+  await page.evaluate(() => window.fixture.conversationBlock('卸载后应恢复'));
+  await page.getByRole('status').filter({ hasText: /^卸载后应恢复$/ }).waitFor();
+  await page.evaluate(() => window.fixture.conversationCleanup());
+  await probe.waitFor({ state: 'detached' });
+  await page.waitForFunction(() => document.querySelector('[data-composer-input]')?.contentEditable === 'true');
+  assert.equal(await editor.innerText(), '另一个会话草稿');
+  await page.evaluate(() => window.fixture.select('one')); await editor.fill('');
+  return { originalConversationHook: true, scopedVerbs: true, rootRejected: true, failuresRejected: true,
+    steerRaceConverges: true, focus: true, noticeSessionIsolation: true, noticeSurvivesRemount: true,
+    blockKeepsDraft: true, blockStopsSubmission: true, blockAllowsStop: true, disposedInputInert: true, pluginCleanupUnblocks: true };
+}

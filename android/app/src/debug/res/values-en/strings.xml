@@ -1,0 +1,7 @@
+<resources>
+    <string name="ime_probe_description">Native input comparison (debug only)\nNo WebView, DSH, plugins, network access, or saved input.</string>
+    <string name="ime_probe_hint">Tap here to test the system Chinese keyboard</string>
+    <string name="ime_probe_label">Native input comparison</string>
+    <string name="ime_probe_show">Show keyboard</string>
+    <string name="ime_probe_measurements">Visible window: %1$d × %2$d px\nNative content height: %3$d px</string>
+</resources>

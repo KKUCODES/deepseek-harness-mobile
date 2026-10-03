@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-key-state-verification
+      name: '@dsh-mobile/key-state-verification'

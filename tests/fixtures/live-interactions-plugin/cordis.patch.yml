@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-interaction-verification
+      name: '@dsh-mobile/interaction-verification'

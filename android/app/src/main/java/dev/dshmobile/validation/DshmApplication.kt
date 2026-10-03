@@ -1,0 +1,36 @@
+package dev.dshmobile.validation
+
+import android.app.Activity
+import android.app.Application
+import android.os.Bundle
+import java.io.File
+
+/** 只观察本进程的页面生命周期，不启动服务或注册唤醒入口。 */
+class DshmApplication : Application(), Application.ActivityLifecycleCallbacks {
+    internal lateinit var appearance: PhoneAppearance
+        private set
+    internal lateinit var notices: RemoteNotifications
+        private set
+    internal lateinit var noticeConnection: RemoteNoticeConnection
+        private set
+    internal lateinit var saveJournal: RemoteSaveJournal
+        private set
+    private lateinit var saveRecovery: RemoteSaveRecovery
+    override fun onCreate() {
+        super.onCreate()
+        appearance = PhoneAppearance(this)
+        saveJournal = RemoteSaveJournal(File(noBackupFilesDir, "remote-save-writes"))
+        saveRecovery = RemoteSaveRecovery(saveJournal, appearance)
+        notices = RemoteNotifications(this, appearance)
+        noticeConnection = RemoteNoticeConnection(this, notices)
+        registerActivityLifecycleCallbacks(this)
+        noticeConnection.start()
+    }
+    override fun onActivityStarted(activity: Activity) = notices.started(activity)
+    override fun onActivityStopped(activity: Activity) = notices.stopped(activity)
+    override fun onActivityResumed(activity: Activity) { notices.resumed(activity); saveRecovery.resumed(activity) }
+    override fun onActivityPaused(activity: Activity) { saveRecovery.paused(activity); notices.paused(activity) }
+    override fun onActivityDestroyed(activity: Activity) = notices.destroyed(activity)
+    override fun onActivityCreated(activity: Activity, state: Bundle?) = Unit
+    override fun onActivitySaveInstanceState(activity: Activity, state: Bundle) = Unit
+}

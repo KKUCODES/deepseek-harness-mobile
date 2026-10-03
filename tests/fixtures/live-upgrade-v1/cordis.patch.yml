@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-upgrade-verification
+      name: '@dsh-mobile/upgrade-verification'

@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-scalar-settings-verification
+      name: '@dsh-mobile/scalar-settings-verification'

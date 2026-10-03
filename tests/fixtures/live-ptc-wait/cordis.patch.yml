@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-ptc-wait-verification
+      name: '@dsh-mobile/ptc-wait-verification'

@@ -1,0 +1,12 @@
+{
+  "name": "@dsh-mobile/model-footer-verification",
+  "version": "0.0.3",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.js", "./client": "./client.js", "./package.json": "./package.json" },
+  "files": ["index.js", "client.js", "cordis.patch.yml"],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-ui-renderer"] }
+  }
+}

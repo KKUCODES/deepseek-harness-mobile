@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-composer-bar-verification
+      name: '@dsh-mobile/composer-bar-verification'

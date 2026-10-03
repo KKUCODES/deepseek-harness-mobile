@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".RemoteSaveProbeActivity" android:exported="false" />
+        <provider android:name=".RemoteSaveProbeProvider" android:authorities="${applicationId}.saveprobe"
+            android:exported="true" android:grantUriPermissions="true" android:permission="android.permission.MANAGE_DOCUMENTS" />
+        <activity android:name=".ComputerKeyProbeActivity" android:exported="false" />
+        <activity android:name=".NativeInputProbeActivity" android:exported="true"
+            android:label="DSHM 原生输入对照（调试）"
+            android:windowSoftInputMode="adjustResize" />
+    </application>
+</manifest>

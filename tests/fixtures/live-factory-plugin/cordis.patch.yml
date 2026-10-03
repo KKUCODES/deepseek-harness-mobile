@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-conversation-factory-verification
+      name: '@dsh-mobile/conversation-factory-verification'

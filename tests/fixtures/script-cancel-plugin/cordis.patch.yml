@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-script-cancel-verification
+      name: '@dsh-mobile/script-cancel-verification'

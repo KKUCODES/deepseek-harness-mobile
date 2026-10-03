@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-host-restart-verification
+      name: '@dsh-mobile/host-restart-verification'

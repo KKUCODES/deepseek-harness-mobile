@@ -1,0 +1,46 @@
+.settings-app { --settings-bg: #fff; --settings-text: #111216; --settings-muted: #757982; --settings-line: #e9e9eb; --settings-surface: #f7f7f8; background: var(--settings-bg); color: var(--settings-text); }
+.settings-app.settings-dark { --settings-bg: #1b1c1f; --settings-text: #ededf0; --settings-muted: #a8abb4; --settings-line: #37383e; --settings-surface: #27282c; --dsw-alias-label-primary: #ededf0; --dsw-alias-label-primary-foreground: #151619; --dsw-alias-button-primary-fill: #ededf0; --dsw-alias-button-primary-hover: #d2d3d8; --dsw-alias-interactive-bg-hover: #35363c; --dsw-alias-interactive-bg-active: #43444a; --dsw-alias-border-l3: #55565f; color-scheme: dark; }
+.settings-app .topbar > strong { font-size: 17px; font-weight: 550; text-align: center; }
+.settings-dark .topbar .icon-button { background: var(--settings-surface); color: var(--settings-text); }
+.settings-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 8px 20px max(24px, env(safe-area-inset-bottom)); }
+.settings-group-title { font-size: 13px; font-weight: 500; color: var(--settings-muted); margin: 26px 0 10px; }
+.settings-group { border: 1px solid var(--settings-line); border-radius: 16px; overflow: hidden; }
+.settings-row { display: flex; align-items: center; gap: 12px; min-height: 58px; width: 100%; padding: 13px 14px; background: var(--settings-bg); border: 0; text-align: left; color: var(--settings-text); font: inherit; cursor: pointer; }
+.settings-row + .settings-row, .settings-toggle + .settings-toggle { border-top: 1px solid var(--settings-line); }
+.settings-row:hover:not(:disabled) { background: var(--settings-surface); }
+.settings-row:disabled { opacity: .45; cursor: not-allowed; }
+.settings-row > svg { flex-shrink: 0; color: var(--settings-muted); }
+.settings-row-label { flex: 1; min-width: 0; }
+.settings-row-value { font-size: 12px; color: var(--settings-muted); max-width: 45%; text-align: right; overflow-wrap: anywhere; }
+.settings-row.danger .settings-row-label { color: #bf4b49; }
+.settings-help { font-size: 13px; line-height: 1.8; color: var(--settings-muted); margin: 16px 0; }
+.settings-preview-note { font-size: 11px; line-height: 1.7; color: var(--settings-muted); margin-top: 32px; }
+.settings-toggle { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 58px; padding: 12px 14px; }
+.settings-toggle [role=switch] { flex-shrink: 0; }
+.settings-dark [role=switch][aria-checked=true] { background: #dedee8; }
+.settings-dark [role=switch][aria-checked=true] > span { background: #202126; }
+.settings-storage { padding: 24px 4px; }
+.settings-storage strong { font-size: 32px; font-weight: 500; }
+.settings-storage strong small { font-size: 14px; color: var(--settings-muted); }
+.settings-storage p { color: var(--settings-muted); font-size: 12px; margin-top: 10px; }
+.settings-device { text-align: center; padding: 25px 0; }
+.settings-device svg { margin: 0 auto 16px; }
+.settings-device h2 { font-size: 19px; font-weight: 550; overflow-wrap: anywhere; }
+.settings-device p, .settings-device small { color: var(--settings-muted); }
+.settings-notice { background: var(--settings-surface); border: 1px solid var(--settings-line); padding: 12px 14px; border-radius: 12px; margin: 12px 0; font-size: 13px; line-height: 1.7; }
+.settings-notice.is-error, .settings-error { color: #bd4e45; }
+.settings-appearance-sample { background: var(--settings-surface); border: 1px solid var(--settings-line); border-radius: 20px; padding: 30px 18px 16px; text-align: center; }
+.settings-appearance-sample strong { font-size: 19px; font-weight: 500; }
+.settings-appearance-sample p { color: var(--settings-muted); font-size: 13px; }
+.settings-appearance-sample div { margin-top: 30px; background: var(--settings-bg); color: var(--settings-muted); padding: 16px; border-radius: 20px; text-align: left; font-size: 13px; }
+.settings-sheet { background: var(--settings-bg); color: var(--settings-text); overflow-wrap: anywhere; }
+.settings-sheet p { line-height: 1.75; font-size: 14px; }
+.settings-sheet .settings-help { font-size: 12px; }
+.settings-field { display: flex; flex-direction: column; gap: 10px; margin: 18px 0; font-size: 14px; }
+.settings-field input, .settings-field select, .settings-field textarea { width: 100%; box-sizing: border-box; background: var(--settings-surface); color: var(--settings-text); border: 1px solid var(--settings-line); border-radius: 12px; padding: 12px; font: inherit; }
+.settings-field textarea { resize: vertical; font-size: 12px; min-height: 100px; }
+.settings-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 4px; }
+.settings-actions > button { min-height: 44px; height: auto; padding: 10px 16px; }
+.settings-notification { margin-top: 18px; border: 1px solid var(--settings-line); padding: 16px; border-radius: 16px; background: var(--settings-surface); }
+.settings-notification small { color: var(--settings-muted); }
+.settings-row:focus-visible { outline-offset: -3px; }

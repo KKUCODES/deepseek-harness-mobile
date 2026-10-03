@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-settings-tabs-verification
+      name: '@dsh-mobile/settings-tabs-verification'

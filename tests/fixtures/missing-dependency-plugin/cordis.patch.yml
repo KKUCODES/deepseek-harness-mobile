@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-missing-dependency-verification
+      name: '@dsh-mobile/missing-dependency-verification'

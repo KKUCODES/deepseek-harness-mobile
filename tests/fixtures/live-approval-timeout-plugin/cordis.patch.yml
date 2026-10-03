@@ -1,0 +1,3 @@
+- insert:
+    - id: dshm-approval-timeout-verification
+      name: '@dsh-mobile/approval-timeout-verification'

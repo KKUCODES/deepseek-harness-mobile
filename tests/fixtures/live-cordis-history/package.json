@@ -1,0 +1,9 @@
+{
+  "name": "@dsh-mobile/cordis-history-verification",
+  "version": "0.0.3",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.js", "./package.json": "./package.json" },
+  "files": ["index.js", "session.v3.jsonl", "cordis.patch.yml"],
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

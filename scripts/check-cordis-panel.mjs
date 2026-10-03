@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+
+export async function checkCordisPanel(page) {
+  await page.evaluate(() => window.fixture.select('one'));
+  await page.evaluate(() => window.fixture.enableCordisPanel());
+  const panel = page.getByRole('region', { name: '插件面板', exact: true });
+  if (await panel.isVisible()) await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
+  const main = page.getByTestId('remote-workspace');
+  const editor = main.getByRole('textbox', { name: '消息', exact: true });
+  const draft = await editor.textContent();
+  await main.getByRole('button', { name: 'Remote 选项', exact: true }).click();
+  await main.getByRole('button', { name: '插件面板', exact: true }).click();
+  const trigger = panel.locator('[data-cordis-badge]');
+  await trigger.click();
+  const popup = panel.locator('[data-cordis-panel]');
+  await popup.getByText('动态插件布局检查', { exact: true }).waitFor();
+  const box = await popup.boundingBox(), button = await trigger.boundingBox();
+  const viewport = page.viewportSize();
+  assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width + 1, JSON.stringify(box));
+  assert.ok(box.y + box.height <= button.y + 1, '原弹窗应在底部按钮上方');
+  await popup.locator('[data-cordis-switch="run"]').click();
+  await trigger.click();
+  await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
+  assert.equal(await editor.textContent(), draft);
+  await page.evaluate(() => window.fixture.requestCordisApproval());
+  assert.equal(await page.locator('[data-cordis-panel]').count(), 0, '关闭窗口不挂载原视口弹层');
+  await main.getByRole('button', { name: '查看请求', exact: true }).click();
+  await popup.locator('[data-cordis-decline]').waitFor();
+  const approvalBounds = await popup.boundingBox();
+  assert.ok(approvalBounds.y >= 0 && approvalBounds.y + approvalBounds.height <= viewport.height, JSON.stringify(approvalBounds));
+  await popup.locator('[data-cordis-decline]').click();
+  await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
+  await main.getByRole('button', { name: '查看请求', exact: true }).waitFor({ state: 'detached' });
+  await page.evaluate(() => window.fixture.select(null));
+  await page.evaluate(() => window.fixture.requestCordisApproval());
+  await main.getByRole('button', { name: '查看请求', exact: true }).click();
+  await popup.locator('[data-cordis-approve]').click();
+  await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
+  assert.equal(await editor.textContent(), draft);
+  await page.evaluate(() => window.fixture.requestCordisApproval());
+  await main.getByRole('button', { name: '查看请求', exact: true }).waitFor();
+  await page.evaluate(() => window.fixture.removeCordisPanel());
+  await main.getByRole('button', { name: '查看请求', exact: true }).waitFor({ state: 'detached' });
+  assert.equal(await page.locator('[data-cordis-badge]').count(), 0);
+  return { originalPanel: true, bounds: box, approvalBounds, draftPreserved: true, removed: true, source: 'isolated inventory; no Host lifecycle claim' };
+}

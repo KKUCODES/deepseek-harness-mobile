@@ -1,0 +1,9 @@
+{
+  "name": "@dsh-mobile/cordis-verification",
+  "version": "0.0.8",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.js", "./package.json": "./package.json" },
+  "files": ["index.js", "client-source.js", "cordis.patch.yml"],
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }
+}

@@ -1,0 +1,5 @@
+# 按上游支持的配置开启真实全文搜索；仅验收启动传入，不修改用户 profile。
+- id: session-query-sqlite
+  config:
+    path: ':memory:'
+    openAt: first-search
