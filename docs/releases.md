@@ -24,3 +24,7 @@ GitHub 托管的 Ubuntu 24.04 + Node.js 24 + JDK 17 + Android SDK 35。只读官
 CI 使用 `npm run prepare:ci`、`npm run build:web:ci` 与 Gradle 的 `ciBuild` 参数；产物独立放在 `artifacts/ci/`。默认本地构建与原 App 不受这些参数影响。
 
 维护来源：[工作流](../.github/workflows/android-build.yml)、[版本配置](../ci/release.json)、[SDK 准备](../scripts/prepare-ci.mjs)、[产物整理](../scripts/ci-package.mjs)、[Android 构建规则](../android/app/build.gradle.kts)。
+
+## 已核验范围
+
+2026-10-13 的[实际云端构建](https://github.com/KKUCODES/dshm/actions/runs/38368759360)已通过 Web 打包、`assembleRelease` 与 `lintRelease`。下载后核对 APK 包名、版本、Android 版本要求、164 个 Web 资源和 SHA-256，签名检查确认包未签名。此记录不包含安装、覆盖更新或模型请求。
