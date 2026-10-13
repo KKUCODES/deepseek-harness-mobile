@@ -40,3 +40,9 @@ GitHub 托管的 Ubuntu 24.04 + Node.js 24 + JDK 17 + Android SDK 35。只读官
 Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地入口保持。签名和可安装性核验不代表完整模型、真机或公网功能复验。
 
 维护来源：[工作流](../.github/workflows/android-build.yml)、[版本与证书](../ci/release.json)、[SDK 准备](../scripts/prepare-ci.mjs)、[无签名产物整理](../scripts/ci-package.mjs)、[Android 构建规则](../android/app/build.gradle.kts)。
+
+## 已核验范围
+
+2026-10-13 的[实际签名与发布构建](https://github.com/KKUCODES/dshm/actions/runs/38375720876)已通过 Web、Android 构建、lint、签名及证书/版本核对，并发布 [0.1.0-preview.1](https://github.com/KKUCODES/dshm/releases/tag/v0.1.0-preview.1)。APK 与三个校验附件均已实际匿名下载并核对摘要。
+
+同一公开 APK 已在隔离 MuMu 中覆盖原本地候选，版本 code 2 → 3；安装、启动、原 UID/首次安装时间、本地草稿及语言偏好保留通过。该环境未配置模型 Key，没有读取用户凭据或个人聊天；此核验不代表重新完成模型、Remote、真实手机或完整公网验收。
