@@ -8,6 +8,7 @@ assert.ok(Number.isInteger(config.versionCode) && config.versionCode >= 3 && con
 assert.equal(config.dshVersion, '0.2.1-alpha.2');
 assert.equal(config.upstreamCommit, 'd743267388641bc76f17c45ce8b4c231aed1d32c');
 assert.match(config.backendCommit, /^[a-f0-9]{40}$/);
+assert.match(config.signingCertificateSha256, /^[a-f0-9]{64}$/);
 if (process.env.GITHUB_REF_TYPE === 'tag') {
   assert.equal(process.env.GITHUB_REF_NAME, `v${config.version}`, 'Tag must match ci/release.json');
 }

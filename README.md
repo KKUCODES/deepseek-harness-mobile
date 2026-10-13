@@ -46,9 +46,9 @@ flowchart LR
 
 ## 开始使用
 
-[APK 构建与下载](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml) · [发行版本](https://github.com/KKUCODES/dshm/releases)
+[下载 APK](https://github.com/KKUCODES/dshm/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [构建与签名说明](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml) · [发行版本](https://github.com/KKUCODES/dshm/releases)
 
-当前 Actions 仅提供无签名 APK，供构建检查，不能直接安装。可安装的公开发行包尚未发布。
+公开开发预览提供已签名 APK，最低 Android 9。下载 Release 中的 `.apk` 安装，或从成功构建的 `dshm-signed-apk` 获取。PR 的无签名包仅用于构建检查。
 
 - **普通聊天：** 安装 App，配置自己的 DeepSeek Key。历史保存在手机，无需电脑。
 - **Remote：** 电脑安装[配套插件](https://github.com/KKUCODES/dshm-plugin)，连接中转；手机领取一次性链接，电脑核对指纹并批准。
@@ -59,7 +59,7 @@ flowchart LR
 
 ## 当前状态
 
-开发候选，尚未正式发布。核心 Remote 已在 **官方 DSH `0.2.1-alpha.2`＋插件 `0.1.80-latest.0`＋配套 Android** 上完成 Web + MuMu 本地验收；扩展范围见[兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
+开发预览，尚未进入应用商店。核心 Remote 已在 **官方 DSH `0.2.1-alpha.2`＋插件 `0.1.80-latest.0`＋配套 Android** 上完成 Web + MuMu 本地验收；扩展范围见[兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
 
 - 首版仅 Android。真机、完整公网链路及其他版本、插件、模型仍需验证。
 - 电脑和 DSH 保持运行，只安装独立插件，不修改 DSH 本体。
@@ -80,6 +80,6 @@ docs/        使用、开发与技术文档
 
 - [使用指南](./docs/usage.md)：普通聊天、配对与限制。
 - [开发指南](./docs/development.md)：环境、构建与测试。
-- [构建与下载](./docs/releases.md)：Actions 无签名 APK、摘要与版本信息。
+- [构建与下载](./docs/releases.md)：自动签名、公开 APK、摘要与版本信息。
 - [兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)：版本与支持范围。
 - [知识库](./docs/project-knowledge/catalog.md)：架构、设计与验证资料。

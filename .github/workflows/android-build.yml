@@ -8,6 +8,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish a signed development preview for public download'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,6 +25,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.config.outputs.version }}
     defaults:
       run:
         working-directory: dsh-mobile
@@ -80,3 +87,119 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           path: dsh-mobile/artifacts/ci/packages/*
+
+  sign:
+    needs: build
+    if: github.repository == 'KKUCODES/dshm' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      APP_VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      # 不检出或执行项目源码/依赖；私钥仅交给官方签名工具。
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dshm-unsigned-apk
+          path: unsigned
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare Android signing tools
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ''build-tools;35.0.0'''
+      - name: Sign and verify APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64" && test -n "$ANDROID_STORE_PASSWORD" && test -n "$ANDROID_KEY_PASSWORD" && test -n "$ANDROID_KEY_ALIAS"
+          umask 077
+          keyfile="$RUNNER_TEMP/dshm-signing.p12"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keyfile"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const m = JSON.parse(fs.readFileSync('unsigned/compatibility.json'));
+          assert.equal(m.sourceCommit, process.env.GITHUB_SHA);
+          assert.equal(m.version, process.env.APP_VERSION);
+          assert.equal(m.applicationId, 'dev.dshmobile.validation.officialtest');
+          assert.equal(m.signed, false);
+          assert.match(m.signingCertificateSha256, /^[a-f0-9]{64}$/);
+          NODE
+          mkdir -p signed
+          tools="$ANDROID_HOME/build-tools/35.0.0"
+          "$tools/zipalign" -P 16 -f 4 "unsigned/DSHM-$APP_VERSION-unsigned.apk" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" sign --ks "$keyfile" --ks-key-alias "$ANDROID_KEY_ALIAS" --ks-pass env:ANDROID_STORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD --v4-signing-enabled false --out "signed/DSHM-$APP_VERSION.apk" "$RUNNER_TEMP/aligned.apk"
+          "$tools/apksigner" verify --verbose --print-certs "signed/DSHM-$APP_VERSION.apk" > signed/signature.txt
+          "$tools/aapt" dump badging "signed/DSHM-$APP_VERSION.apk" > "$RUNNER_TEMP/badging.txt"
+          node <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const crypto = require('node:crypto');
+          const path = require('node:path');
+          const m = JSON.parse(fs.readFileSync('unsigned/compatibility.json'));
+          const signature = fs.readFileSync('signed/signature.txt', 'utf8');
+          const cert = signature.match(/^Signer #1 certificate SHA-256 digest: ([a-f0-9]+)$/m)?.[1];
+          assert.equal(cert, m.signingCertificateSha256, 'Signing certificate must match the existing app');
+          const badging = fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'badging.txt'), 'utf8');
+          const identity = badging.match(/^package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'/m);
+          assert.ok(identity, 'APK identity missing');
+          assert.equal(identity[1], m.applicationId);
+          assert.equal(Number(identity[2]), m.versionCode);
+          assert.equal(identity[3], m.version);
+          assert.ok(!badging.includes('application-debuggable'), 'Public preview must not be debuggable');
+          const name = `DSHM-${m.version}.apk`;
+          const hash = crypto.createHash('sha256').update(fs.readFileSync(`signed/${name}`)).digest('hex');
+          fs.writeFileSync('signed/SHA256SUMS.txt', `${hash}  ${name}\n`);
+          fs.writeFileSync('signed/compatibility.json', JSON.stringify({ ...m, signed: true, directlyInstallable: true }, null, 2) + '\n');
+          NODE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dshm-signed-apk
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            signed/*.apk
+            signed/SHA256SUMS.txt
+            signed/compatibility.json
+            signed/signature.txt
+
+  release:
+    needs: [build, sign]
+    if: github.repository == 'KKUCODES/dshm' && (github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_release))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      APP_VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dshm-signed-apk
+          path: signed
+      - name: Publish signed development preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="v$APP_VERSION"
+          if gh release view "$tag" --json id >/dev/null 2>&1; then
+            echo 'This version already exists. Increase ci/release.json version and versionCode.' >&2
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          DSHM Android development preview / Android 开发预览版
+
+          - Download the .apk asset to install; Android 9 or newer.
+          - 下载 APK 即可安装，最低 Android 9；普通聊天使用你自己的 DeepSeek Key。
+          - Remote uses official DSH 0.2.1-alpha.2 with the DSHM plugin and a relay. Keep the computer running.
+          - Uses the existing preview app identity and certificate for compatible updates; no DSH core patches.
+          - SHA-256, certificate report and compatibility metadata are included. This is not an app-store release or full physical-device/public-network certification.
+          NOTES
+          gh release create "$tag" "signed/DSHM-$APP_VERSION.apk" signed/SHA256SUMS.txt signed/compatibility.json signed/signature.txt --target "$GITHUB_SHA" --prerelease --title "DSHM $APP_VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"

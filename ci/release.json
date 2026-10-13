@@ -4,5 +4,6 @@
   "dshVersion": "0.2.1-alpha.2",
   "upstreamCommit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
   "applicationId": "dev.dshmobile.validation.officialtest",
-  "backendCommit": "6b0be9b089192349db572e73ef216c3f7f242a5e"
+  "backendCommit": "6b0be9b089192349db572e73ef216c3f7f242a5e",
+  "signingCertificateSha256": "d97f5b68c6a327f4ae455834ba30f23ce7b64f2eeafd8a222e0e74b0a998e51e"
 }
