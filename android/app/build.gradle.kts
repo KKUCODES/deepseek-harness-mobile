@@ -69,7 +69,7 @@ android {
         if (providers.gradleProperty("isolatedPairingTest").orNull == "true") applicationIdSuffix = ".pairingtest"
         check(!(latestCompatibilityTest && providers.gradleProperty("isolatedPairingTest").orNull == "true")) { "Choose only one isolated test package" }
     }
-    // CI 发行候选保持已有测试包 UID，私钥由独立签名作业提供。
+    // 无签名 CI 候选保持测试包 UID；签名与安装验收另行进行。
     if (ciBuild) buildTypes.getByName("release") { applicationIdSuffix = ".officialtest" }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
