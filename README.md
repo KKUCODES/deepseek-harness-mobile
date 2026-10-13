@@ -1,4 +1,4 @@
-# DSHM
+# DeepSeek Harness Mobile (DSHM)
 
 简体中文 | [English](./README.en.md)
 
@@ -10,7 +10,7 @@
 
 ![DSHM：离开电脑后，继续推进电脑上的工作。](./docs/images/hero.png)
 
-Android 聊天客户端。用自己的 DeepSeek Key 随手聊，也能连接电脑上的 DSH，继续同一个会话。任务由电脑执行，手机查看、沟通、决策。
+DeepSeek Harness 的 Android 聊天客户端，软件简称 **DSHM**。用自己的 DeepSeek Key 随手聊，也能连接电脑上的 DSH，继续同一个会话。任务由电脑执行，手机查看、沟通、决策。
 
 ## 界面
 
@@ -46,7 +46,7 @@ flowchart LR
 
 ## 开始使用
 
-[下载 APK](https://github.com/KKUCODES/dshm/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [构建与签名说明](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml) · [发行版本](https://github.com/KKUCODES/dshm/releases)
+[下载 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [构建与签名说明](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml) · [发行版本](https://github.com/KKUCODES/deepseek-harness-mobile/releases)
 
 公开开发预览提供已签名 APK，最低 Android 9。下载 Release 中的 `.apk` 安装，或从成功构建的 `dshm-signed-apk` 获取。PR 的无签名包仅用于构建检查。
 

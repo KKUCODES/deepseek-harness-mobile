@@ -4,9 +4,9 @@
 
 ## 下载并安装
 
-从 [GitHub Releases](https://github.com/KKUCODES/dshm/releases) 下载 `DSHM-<version>.apk`，Android 9 及以上可安装。公开发行附件无需登录，另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`。
+从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载 `DSHM-<version>.apk`，Android 9 及以上可安装。公开发行附件无需登录，另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`。
 
-也可打开 [Build Android APK](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
+也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
 当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，支持同身份、同签名的正常覆盖更新。不要卸载旧版来更新，以免删除本地数据。普通聊天使用你自己的 DeepSeek Key；Remote 适配官方 DSH `0.2.1-alpha.2`。
 
@@ -20,7 +20,7 @@
 
 ## 签名凭据
 
-指定仓库 `KKUCODES/dshm` 的 Settings → Secrets and variables → Actions 中配置四个 **Secrets**，不使用普通 Variables：
+指定仓库 `KKUCODES/deepseek-harness-mobile` 的 Settings → Secrets and variables → Actions 中配置四个 **Secrets**，不使用普通 Variables：
 
 | Secret | 内容 |
 | --- | --- |
@@ -43,6 +43,6 @@ Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地�
 
 ## 已核验范围
 
-2026-10-13 的[实际签名与发布构建](https://github.com/KKUCODES/dshm/actions/runs/38375720876)已通过 Web、Android 构建、lint、签名及证书/版本核对，并发布 [0.1.0-preview.1](https://github.com/KKUCODES/dshm/releases/tag/v0.1.0-preview.1)。APK 与三个校验附件均已实际匿名下载并核对摘要。
+2026-10-13 的[实际签名与发布构建](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38375720876)已通过 Web、Android 构建、lint、签名及证书/版本核对，并发布 [0.1.0-preview.1](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.1)。APK 与三个校验附件均已实际匿名下载并核对摘要。
 
 同一公开 APK 已在隔离 MuMu 中覆盖原本地候选，版本 code 2 → 3；安装、启动、原 UID/首次安装时间、本地草稿及语言偏好保留通过。该环境未配置模型 Key，没有读取用户凭据或个人聊天；此核验不代表重新完成模型、Remote、真实手机或完整公网验收。

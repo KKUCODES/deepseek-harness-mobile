@@ -90,7 +90,7 @@ jobs:
 
   sign:
     needs: build
-    if: github.repository == 'KKUCODES/dshm' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+    if: github.repository == 'KKUCODES/deepseek-harness-mobile' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -170,7 +170,7 @@ jobs:
 
   release:
     needs: [build, sign]
-    if: github.repository == 'KKUCODES/dshm' && (github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_release))
+    if: github.repository == 'KKUCODES/deepseek-harness-mobile' && (github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_release))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

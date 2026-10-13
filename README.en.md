@@ -1,4 +1,4 @@
-# DSHM
+# DeepSeek Harness Mobile (DSHM)
 
 [简体中文](./README.md) | English
 
@@ -10,7 +10,7 @@
 
 ![DSHM: keep your work moving when you leave your computer.](./docs/images/hero.png)
 
-An Android chat client. Chat directly with your own DeepSeek API key, or connect to DSH on your computer and continue the same conversation. The computer runs tasks; your phone lets you follow progress, send messages, and make decisions.
+An Android chat client for DeepSeek Harness, named **DSHM** in the app. Chat directly with your own DeepSeek API key, or connect to DSH on your computer and continue the same conversation. The computer runs tasks; your phone lets you follow progress, send messages, and make decisions.
 
 ## Screenshots
 
@@ -46,7 +46,7 @@ flowchart LR
 
 ## Get started
 
-[Download APK](https://github.com/KKUCODES/dshm/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [Build and signing guide (Chinese)](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml) · [Releases](https://github.com/KKUCODES/dshm/releases)
+[Download APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [Build and signing guide (Chinese)](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml) · [Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases)
 
 The public development preview provides a signed APK for Android 9 or newer. Install the `.apk` from Releases, or download `dshm-signed-apk` from a successful build. Unsigned PR artifacts are for build checks only.
 
