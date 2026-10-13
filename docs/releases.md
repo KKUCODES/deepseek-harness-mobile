@@ -16,7 +16,7 @@
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。
 - 手动选择 `main` → Run workflow 可生成签名包；勾选 `publish_release` 发布公开开发预览。
 - 推送对应 `v<version>` 标签时，版本校验、构建、签名成功后发布预览。
-- 发新版本前同步修改 [ci/release.json](../ci/release.json) 中的版本并递增 `versionCode`。已存在的 Release 不覆盖，重新发版应使用新版本号。
+- 发新版本前同步修改 [ci/release.json](../ci/release.json) 中的版本并递增 `versionCode`，更新两份 README 的直接下载链接。已存在的 Release 不覆盖，重新发版应使用新版本号。
 
 ## 签名凭据
 
