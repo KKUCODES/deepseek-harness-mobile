@@ -46,6 +46,8 @@ flowchart LR
 
 ## Get started
 
+[APK builds and downloads (Chinese)](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml) · [Releases](https://github.com/KKUCODES/dshm/releases)
+
 - **Direct chat:** Install the app and configure your own DeepSeek API key. History stays on your phone; no computer is needed.
 - **Remote:** Install the [companion plugin](https://github.com/KKUCODES/dshm-plugin/blob/main/README.en.md) in DSH on your computer and connect it to a relay. Claim a one-time pairing link on your phone, then verify its fingerprint and approve it on the computer.
 
@@ -64,7 +66,7 @@ Development candidate; no official release yet. Core Remote features passed loca
 
 ## Development and documentation
 
-Kotlin + WebView, with a React chat interface that reuses DSH client components. Pages are bundled with the app. Builds require adjacent projects and a pinned SDK; cloning this repository alone is not enough for a one-command build.
+Kotlin + WebView, with a React chat interface that reuses DSH client components. Pages are bundled with the app. GitHub Actions prepares pinned SDK packages and read-only official source automatically; existing local development commands still use adjacent projects. See the [build and release guide (Chinese)](./docs/releases.md).
 
 ```text
 android/     Android project and native bridge
@@ -78,5 +80,6 @@ Detailed guides are currently in Chinese:
 
 - [Usage guide](./docs/usage.md): direct chat, pairing, and limitations.
 - [Development guide](./docs/development.md): environment, builds, and tests.
+- [Downloads and releases](./docs/releases.md): Actions packages, signing, and release drafts.
 - [Compatibility report](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md): versions and support scope.
 - [Knowledge catalog](./docs/project-knowledge/catalog.md): architecture, design, and validation evidence.

@@ -1,0 +1,8 @@
+{
+  "version": "0.1.0-preview.1",
+  "versionCode": 3,
+  "dshVersion": "0.2.1-alpha.2",
+  "upstreamCommit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
+  "applicationId": "dev.dshmobile.validation.officialtest",
+  "signingCertificateSha256": "d97f5b68c6a327f4ae455834ba30f23ce7b64f2eeafd8a222e0e74b0a998e51e"
+}

@@ -1,0 +1,165 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths: ['src/**', 'scripts/**', 'android/**', 'ci/**', 'package*.json', '.github/workflows/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_draft:
+        description: 'Create an unpublished prerelease draft'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.config.outputs.version }}
+      version_code: ${{ steps.config.outputs.version_code }}
+    defaults:
+      run:
+        working-directory: dsh-mobile
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: dsh-mobile
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            dsh-mobile/package-lock.json
+            dsh-mobile/ci/sdk/*/package-lock.json
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - id: config
+        run: node scripts/ci-version.mjs
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ steps.config.outputs.upstream_ref }}
+          path: dsh-mobile/artifacts/ci/official-source
+          persist-credentials: false
+      - name: Prepare pinned client dependencies
+        run: |
+          npm ci --ignore-scripts --legacy-peer-deps --no-audit --no-fund
+          npm run prepare:ci
+          npm run build:web:ci
+      - name: Build unsigned release candidate
+        working-directory: dsh-mobile/android
+        env:
+          APP_VERSION: ${{ steps.config.outputs.version }}
+          APP_VERSION_CODE: ${{ steps.config.outputs.version_code }}
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0'
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease :app:lintRelease --no-daemon -PlatestCompatibilityTest=true -PofficialPluginOnlyTest=true -PofficialDshVersion=0.2.1-alpha.2 -PciBuild=true -PciVersionName="$APP_VERSION" -PciVersionCode="$APP_VERSION_CODE"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dshm-unsigned-apk
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            dsh-mobile/artifacts/ci/android/outputs/apk/release/app-release-unsigned.apk
+            dsh-mobile/ci/release.json
+
+  sign:
+    needs: build
+    if: github.repository == 'KKUCODES/dshm' && (github.event_name == 'workflow_dispatch' || github.ref_type == 'tag')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      APP_VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dshm-unsigned-apk
+          path: unsigned
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Sign and verify APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64" && test -n "$ANDROID_STORE_PASSWORD" && test -n "$ANDROID_KEY_PASSWORD" && test -n "$ANDROID_KEY_ALIAS"
+          keyfile="$RUNNER_TEMP/dshm-signing.jks"
+          trap 'rm -f "$keyfile"' EXIT
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keyfile"
+          chmod 600 "$keyfile"
+          mkdir -p release-files
+          unsigned_apk=$(find unsigned -name app-release-unsigned.apk -type f)
+          metadata=$(find unsigned -name release.json -type f)
+          test -n "$unsigned_apk" && test -n "$metadata"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'build-tools;35.0.0'
+          apk="release-files/DSHM-$APP_VERSION.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" sign --ks "$keyfile" --ks-key-alias "$ANDROID_KEY_ALIAS" --ks-pass env:ANDROID_STORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD --out "$apk" "$unsigned_apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$apk" > release-files/signature.txt
+          expected=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1])).signingCertificateSha256)' "$metadata")
+          actual=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' release-files/signature.txt)
+          test "$actual" = "$expected"
+          cp "$metadata" release-files/compatibility.json
+          (cd release-files && sha256sum *.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dshm-signed-apk
+          retention-days: 30
+          if-no-files-found: error
+          path: release-files/*
+
+  release:
+    needs: [build, sign]
+    if: github.repository == 'KKUCODES/dshm' && (github.ref_type == 'tag' || (github.event_name == 'workflow_dispatch' && inputs.release_draft))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      APP_VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: dshm-signed-apk
+          path: release-files
+      - name: Create release draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cat > release-files/RELEASE-NOTES.md <<'NOTES'
+          DSHM Android development preview for official DSH 0.2.1-alpha.2.
+
+          - Android 9 or newer. Keep your computer and DSH running for Remote.
+          - Retains the existing test app identity and signing certificate for updates.
+          - Generated from pinned official client source and published SDK packages; no DSH core patches.
+          - CI build/signature checks do not replace real-device or full public-network validation.
+          - SHA-256, signature and compatibility metadata are included.
+          NOTES
+          tag="v$APP_VERSION"
+          if gh release view "$tag" --json isDraft > release-state.json 2>/dev/null; then
+            node -e 'if (!require("./release-state.json").isDraft) throw Error("Published releases cannot be overwritten")'
+            target=$(gh api "repos/$GH_REPO/git/ref/tags/$tag" --jq '.object.sha')
+            test "$target" = "$GITHUB_SHA"
+            gh release upload "$tag" release-files/*.apk release-files/SHA256SUMS.txt release-files/compatibility.json release-files/signature.txt --clobber
+          else
+            gh release create "$tag" release-files/*.apk release-files/SHA256SUMS.txt release-files/compatibility.json release-files/signature.txt --target "$GITHUB_SHA" --draft --prerelease --title "DSHM $APP_VERSION" --notes-file release-files/RELEASE-NOTES.md
+          fi

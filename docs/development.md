@@ -4,6 +4,8 @@
 
 [返回项目首页](../README.md) · [使用指南](./usage.md) · [知识库总目录](./project-knowledge/catalog.md)
 
+公开自动构建从[GitHub Actions 与下载说明](./releases.md)进入；下文保留原本地候选环境的构建方法。CI 自动安装锁定的已发布 SDK 和固定只读源码，不需要准备本机验收材料。
+
 ## 环境准备
 
 | 工具 | 当前工程使用的版本 |

@@ -12,6 +12,8 @@ val officialPluginOnlyTest = providers.gradleProperty("officialPluginOnlyTest").
 val officialDshVersion = providers.gradleProperty("officialDshVersion").orNull ?: "0.2.1-alpha.1"
 check(officialDshVersion in listOf("0.2.1-alpha.1", "0.2.1-alpha.2")) { "Unreviewed official DSH version" }
 val officialAlpha2 = officialDshVersion == "0.2.1-alpha.2"
+val ciBuild = providers.gradleProperty("ciBuild").orNull == "true"
+check(!ciBuild || (officialPluginOnlyTest && latestCompatibilityTest && officialAlpha2)) { "CI requires official alpha.2 assets" }
 check(!officialAlpha2 || (officialPluginOnlyTest && latestCompatibilityTest)) { "Alpha.2 requires the isolated official candidate" }
 val latestNoticeBaselineAssets = providers.gradleProperty("latestNoticeBaselineAssets").orNull == "true"
 check(!latestOfficeLifetimeTest || latestCompatibilityTest) { "Office lifetime validation requires the latest SDK" }
@@ -21,7 +23,8 @@ check(!latestFinalTest || latestCompatibilityTest) { "Final validation requires 
 check(!officialPluginOnlyTest || latestCompatibilityTest) { "Official plugin validation requires the latest SDK" }
 check(!latestNoticeBaselineAssets || latestCompatibilityTest) { "Notice baseline assets require the latest SDK" }
 check(listOf(latestOfficeLifetimeTest, latestCordisPeerTest, latestNoticeLifecycleTest, latestFinalTest, officialPluginOnlyTest).count { it } <= 1) { "Choose only one latest test package" }
-if (latestCompatibilityTest) layout.buildDirectory.set(file(when {
+if (ciBuild) layout.buildDirectory.set(file("../../artifacts/ci/android"))
+else if (latestCompatibilityTest) layout.buildDirectory.set(file(when {
     latestOfficeLifetimeTest -> "../../artifacts/latest-office-android-build"
     latestCordisPeerTest -> "../../artifacts/latest-cordis-peer-android-build"
     latestNoticeLifecycleTest -> "../../artifacts/latest-notice-android-build"
@@ -39,6 +42,14 @@ android {
         targetSdk = 35
         versionCode = 2
         versionName = "0.1.0-ordinary"
+        if (ciBuild) {
+            val requestedVersion = providers.gradleProperty("ciVersionName").get()
+            check(requestedVersion.matches(Regex("[0-9]+\\.[0-9]+\\.[0-9]+(?:-[A-Za-z0-9.-]+)?"))) { "Invalid CI version" }
+            versionName = requestedVersion
+            versionCode = providers.gradleProperty("ciVersionCode").get().toInt().also {
+                check(it in 3..2100000000) { "CI versionCode must increase from the existing candidate" }
+            }
+        }
         buildConfigField("String", "DSH_SDK_VERSION", "\"${if (latestCompatibilityTest) officialDshVersion else "0.1.6-alpha.2"}\"")
         testInstrumentationRunner = "dev.dshmobile.validation.OrdinarySecurityInstrumentation"
     }
@@ -58,6 +69,8 @@ android {
         if (providers.gradleProperty("isolatedPairingTest").orNull == "true") applicationIdSuffix = ".pairingtest"
         check(!(latestCompatibilityTest && providers.gradleProperty("isolatedPairingTest").orNull == "true")) { "Choose only one isolated test package" }
     }
+    // CI 发行候选保持已有测试包 UID，私钥由独立签名作业提供。
+    if (ciBuild) buildTypes.getByName("release") { applicationIdSuffix = ".officialtest" }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -68,6 +81,7 @@ android {
 
 // 同一个已验证的 Web 产物进入 APK，避免另维护一套插件加载逻辑。
 val webAssets = file(when {
+    ciBuild -> "../../artifacts/ci/web"
     officialPluginOnlyTest -> if (officialAlpha2) "../../artifacts/official-alpha2-mobile-dist" else "../../artifacts/official-mobile-dist"
     latestNoticeBaselineAssets -> "../../artifacts/latest-notice-baseline-web"
     latestCompatibilityTest -> "../../artifacts/latest-mobile-dist"

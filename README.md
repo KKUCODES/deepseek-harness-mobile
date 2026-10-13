@@ -46,6 +46,8 @@ flowchart LR
 
 ## 开始使用
 
+[APK 构建与下载](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml) · [发行版本](https://github.com/KKUCODES/dshm/releases)
+
 - **普通聊天：** 安装 App，配置自己的 DeepSeek Key。历史保存在手机，无需电脑。
 - **Remote：** 电脑安装[配套插件](https://github.com/KKUCODES/dshm-plugin)，连接中转；手机领取一次性链接，电脑核对指纹并批准。
 
@@ -64,7 +66,7 @@ flowchart LR
 
 ## 开发与文档
 
-Kotlin + WebView，React 聊天界面复用 DSH 客户端组件，页面随 App 打包。构建依赖相邻项目与固定 SDK，单独克隆尚不能一键构建。
+Kotlin + WebView，React 聊天界面复用 DSH 客户端组件，页面随 App 打包。GitHub Actions 自动准备固定 SDK 与只读官方源码；原本地开发入口仍使用相邻项目，见[构建说明](./docs/releases.md)。
 
 ```text
 android/     Android 工程与原生桥
@@ -76,5 +78,6 @@ docs/        使用、开发与技术文档
 
 - [使用指南](./docs/usage.md)：普通聊天、配对与限制。
 - [开发指南](./docs/development.md)：环境、构建与测试。
+- [下载与发版](./docs/releases.md)：Actions 安装包、签名与发行草稿。
 - [兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)：版本与支持范围。
 - [知识库](./docs/project-knowledge/catalog.md)：架构、设计与验证资料。

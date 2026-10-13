@@ -16,6 +16,7 @@ const alpha2 = process.argv.includes('--official-alpha2');
 if (alpha2 && !officialOnly) throw Error('Alpha.2 requires the official candidate');
 const latest = process.argv.includes('--latest-candidate') ? latestMobileBuild(root, {
   officialOnly, officialVersion: alpha2 ? '0.2.1-alpha.2' : '0.2.1-alpha.1',
+  ci: process.argv.includes('--ci-candidate'),
 }) : null;
 const dist = latest?.dist ?? resolve(root, 'dist');
 await mkdir(resolve(dist, 'plugins'), { recursive: true });

@@ -5,6 +5,8 @@
   "type": "module",
   "description": "DSH ordinary-chat plugin validation; not the production mobile application",
   "scripts": {
+    "prepare:ci": "node scripts/prepare-ci.mjs",
+    "build:web:ci": "node scripts/build-web.mjs --latest-candidate --official-candidate --official-alpha2 --ci-candidate",
     "build:web": "node scripts/build-web.mjs",
     "build:web:official": "node scripts/build-web.mjs --latest-candidate --official-candidate --official-alpha2",
     "test": "node --test tests/*.test.mjs",
