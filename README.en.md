@@ -2,7 +2,11 @@
 
 [简体中文](./README.md) | English
 
-**Android app** · [Desktop plugin](https://github.com/KKUCODES/dshm-plugin/blob/main/README.en.md) · [Relay server](https://github.com/KKUCODES/dshm-relay/blob/main/README.en.md)
+**DSHM Android app** · [DSHM desktop plugin](https://github.com/KKUCODES/dshm-plugin/blob/main/README.en.md) · [DSHM relay server](https://github.com/KKUCODES/dshm-relay/blob/main/README.en.md)
+
+**DSHM** is a community-developed Android client for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Chat directly with DeepSeek or synchronize DSH conversations from your computer. Away from your desk, you can keep sending messages, viewing execution results, switching models, and handling approvals; the computer runs the tasks.
+
+[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
@@ -10,9 +14,7 @@
 
 ![DSHM: keep your work moving when you leave your computer.](./docs/images/hero.png)
 
-An Android chat client for DeepSeek Harness, named **DSHM** in the app. Chat directly with your own DeepSeek API key, or connect to DSH on your computer and continue the same conversation. The computer runs tasks; your phone lets you follow progress, send messages, and make decisions.
-
-## Screenshots
+## Direct chat and Remote screenshots
 
 <table>
   <tr>
@@ -21,15 +23,15 @@ An Android chat client for DeepSeek Harness, named **DSHM** in the app. Chat dir
     <th width="33%">Review before approving</th>
   </tr>
   <tr>
-    <td><a href="./docs/images/ordinary-chat.png"><img src="./docs/images/ordinary-chat.png" width="240" alt="Direct chat: organize a desk in three steps"></a></td>
-    <td><a href="./docs/images/remote-sessions.png"><img src="./docs/images/remote-sessions.png" width="240" alt="Remote: projects and conversations for a personal website, reading notes, and weekly reports"></a></td>
-    <td><a href="./docs/images/remote-approval.png"><img src="./docs/images/remote-approval.png" width="240" alt="Computer conversation: review the actual homepage link changes before approving"></a></td>
+    <td><a href="./docs/images/ordinary-chat.png"><img src="./docs/images/ordinary-chat.png" width="240" alt="DSHM Android direct chat: a DeepSeek reply about organizing a desk and the message composer"></a></td>
+    <td><a href="./docs/images/remote-sessions.png"><img src="./docs/images/remote-sessions.png" width="240" alt="DSHM Remote: computer workspaces and recent conversation list"></a></td>
+    <td><a href="./docs/images/remote-approval.png"><img src="./docs/images/remote-approval.png" width="240" alt="DSHM Remote: file change preview and tool approval"></a></td>
   </tr>
 </table>
 
 [Image sources (Chinese)](./docs/images/README.md). Screenshots show the Simplified Chinese interface; click to view full size.
 
-## Features
+## Mobile chat and remote session features
 
 | Capability | What you can do |
 | --- | --- |
@@ -44,14 +46,19 @@ flowchart LR
     Relay <--> Computer["Computer: DSH + DSHM plugin<br/>Conversations · Projects · Task execution"]
 ```
 
-## Get started
+## Download the Android APK and get started
 
-[Download APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [Build and signing guide (Chinese)](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml) · [Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases)
+[APK releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) · [Build and signing guide (Chinese)](./docs/releases.md) · [GitHub Actions builds](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)
 
-The public development preview provides a signed APK for Android 9 or newer. Install the `.apk` from Releases, or download `dshm-signed-apk` from a successful build. Unsigned PR artifacts are for build checks only.
+The public development preview provides a signed APK for Android 9 or newer. Download the `.apk` directly from Releases without a GitHub account. Downloading `dshm-signed-apk` from Actions requires sign-in. See the [APK build and download guide (Chinese)](./docs/releases.md) for signing and updates.
 
-- **Direct chat:** Install the app and configure your own DeepSeek API key. History stays on your phone; no computer is needed.
-- **Remote:** Install the [companion plugin](https://github.com/KKUCODES/dshm-plugin/blob/main/README.en.md) in DSH on your computer and connect it to a relay. Claim a one-time pairing link on your phone, then verify its fingerprint and approve it on the computer.
+Install the app and configure your own DeepSeek API key to start direct chat. Your phone connects directly to DeepSeek, and history stays locally on the device. No computer or relay is needed.
+
+### Connect to DeepSeek Harness on your computer
+
+1. Install the [DSHM remote connection plugin](https://github.com/KKUCODES/dshm-plugin/blob/main/README.en.md) in official DSH on your computer and connect it to a relay.
+2. Claim the computer's one-time pairing link in DSHM on your phone.
+3. Verify the device fingerprint and approve it on the computer. Then open an existing workspace on your phone to continue a conversation or create a new chat.
 
 **[Hosting your own relay](https://github.com/KKUCODES/dshm-relay/blob/main/README.en.md) is recommended.** You can also use the [public service](http://118.31.20.47:18787): `http://118.31.20.47:18787`. Open registration requires no enrollment token; phone pairing and computer approval are still required.
 
@@ -65,6 +72,24 @@ Development preview; not an app-store release. Core Remote features passed local
 - Keep the computer and DSH running. Install the standalone plugin; no DSH core modifications are needed.
 - The phone does not create computer workspaces, accept manually entered commands, or forward computer localhost websites.
 - Notifications stop when the app process ends. Reopening the app attempts to reconnect.
+
+## FAQ
+
+### How is Remote different from opening DSH in a phone browser?
+
+Remote uses the DSHM chat interface bundled with the app and synchronizes computer conversations and actions through the relay. You view execution progress, file changes, and approvals in the phone's own pages. Computer DSH executes the tasks; the phone and computer participate in the same conversation.
+
+### Do I need to enter a DeepSeek API key on my phone for Remote?
+
+No phone direct-chat key is required. Remote uses the models and credentials configured in computer DSH, after pairing and computer approval. Direct chat uses your own DeepSeek API key configured on the phone; the modes are managed separately.
+
+### Where are direct-chat and Remote histories stored?
+
+Direct-chat history and drafts stay on the phone and can be exported through local backups. Remote connects to conversations stored by computer DSH. The histories are managed separately and are not merged when you switch modes. See [history and backups (Chinese)](./docs/usage.md#历史与备份).
+
+### Is there an iPhone version?
+
+Only the Android development preview is available, for Android 9 or newer. No iPhone version is available yet.
 
 ## Development and documentation
 

@@ -2,7 +2,11 @@
 
 简体中文 | [English](./README.en.md)
 
-**手机端** · [电脑插件](https://github.com/KKUCODES/dshm-plugin) · [中转服务](https://github.com/KKUCODES/dshm-relay)
+**DSHM 安卓客户端** · [DSHM 电脑插件](https://github.com/KKUCODES/dshm-plugin) · [DSHM 中转服务](https://github.com/KKUCODES/dshm-relay)
+
+**DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
+
+[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -10,9 +14,7 @@
 
 ![DSHM：离开电脑后，继续推进电脑上的工作。](./docs/images/hero.png)
 
-DeepSeek Harness 的 Android 聊天客户端，软件简称 **DSHM**。用自己的 DeepSeek Key 随手聊，也能连接电脑上的 DSH，继续同一个会话。任务由电脑执行，手机查看、沟通、决策。
-
-## 界面
+## 普通聊天与 Remote 界面
 
 <table>
   <tr>
@@ -21,15 +23,15 @@ DeepSeek Harness 的 Android 聊天客户端，软件简称 **DSHM**。用自己
     <th width="33%">看清再确认</th>
   </tr>
   <tr>
-    <td><a href="./docs/images/ordinary-chat.png"><img src="./docs/images/ordinary-chat.png" width="240" alt="普通聊天：用三个步骤整理书桌"></a></td>
-    <td><a href="./docs/images/remote-sessions.png"><img src="./docs/images/remote-sessions.png" width="240" alt="Remote：个人网站、读书笔记和周报的项目与会话"></a></td>
-    <td><a href="./docs/images/remote-approval.png"><img src="./docs/images/remote-approval.png" width="240" alt="电脑会话：批准之前查看首页链接的实际修改"></a></td>
+    <td><a href="./docs/images/ordinary-chat.png"><img src="./docs/images/ordinary-chat.png" width="240" alt="DSHM 安卓普通聊天：DeepSeek 回复整理书桌的问题与消息输入框"></a></td>
+    <td><a href="./docs/images/remote-sessions.png"><img src="./docs/images/remote-sessions.png" width="240" alt="DSHM Remote：电脑工作区与最近会话列表"></a></td>
+    <td><a href="./docs/images/remote-approval.png"><img src="./docs/images/remote-approval.png" width="240" alt="DSHM Remote：文件改动预览与工具审批"></a></td>
   </tr>
 </table>
 
 [图片来源](./docs/images/README.md) · 点击截图看原图。
 
-## 功能
+## 手机聊天与远程会话功能
 
 | 能力 | 内容 |
 | --- | --- |
@@ -44,14 +46,19 @@ flowchart LR
     Relay <--> Computer["电脑端 DSH + DSHM 插件<br/>会话 · 项目 · 任务执行"]
 ```
 
-## 开始使用
+## 下载 Android APK 与开始使用
 
-[下载 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [构建与签名说明](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml) · [发行版本](https://github.com/KKUCODES/deepseek-harness-mobile/releases)
+[APK 发行版本](https://github.com/KKUCODES/deepseek-harness-mobile/releases) · [构建与签名说明](./docs/releases.md) · [GitHub Actions 构建](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)
 
-公开开发预览提供已签名 APK，最低 Android 9。下载 Release 中的 `.apk` 安装，或从成功构建的 `dshm-signed-apk` 获取。PR 的无签名包仅用于构建检查。
+公开开发预览提供已签名 APK，最低 Android 9。可直接从 Release 下载 `.apk` 安装，无需登录 GitHub；Actions 中的 `dshm-signed-apk` 下载需要登录。签名与更新说明见[APK 构建与下载指南](./docs/releases.md)。
 
-- **普通聊天：** 安装 App，配置自己的 DeepSeek Key。历史保存在手机，无需电脑。
-- **Remote：** 电脑安装[配套插件](https://github.com/KKUCODES/dshm-plugin)，连接中转；手机领取一次性链接，电脑核对指纹并批准。
+安装 App 后，配置自己的 DeepSeek Key 即可开始普通聊天。手机直连 DeepSeek，聊天历史保存在本地，无需电脑或中转服务。
+
+### 连接电脑上的 DeepSeek Harness
+
+1. 在电脑的官方 DSH 中安装[DSHM 远程连接插件](https://github.com/KKUCODES/dshm-plugin)，连接中转服务。
+2. 在手机 DSHM 中领取电脑生成的一次性配对链接。
+3. 电脑核对设备指纹并批准后，手机打开已有工作区，继续会话或创建新聊天。
 
 **推荐[自建中转](https://github.com/KKUCODES/dshm-relay)**，也可使用[公共服务](http://118.31.20.47:18787)：`http://118.31.20.47:18787`。开放注册免注册密钥，手机仍需配对和批准。
 
@@ -65,6 +72,24 @@ flowchart LR
 - 电脑和 DSH 保持运行，只安装独立插件，不修改 DSH 本体。
 - 手机不创建电脑工作区、不输入命令、不转发电脑 localhost 网站。
 - App 进程结束后不推送；重新打开尝试重连。
+
+## 常见问题
+
+### Remote 与手机浏览器打开 DSH 有什么区别？
+
+Remote 使用随 App 打包的 DSHM 聊天界面，通过中转同步电脑会话与操作。手机能在自己的页面查看执行过程、文件改动和审批；电脑端 DSH 负责执行任务，手机与电脑共同参与同一个会话。
+
+### 连接 Remote 需要在手机填写 DeepSeek Key 吗？
+
+不需要填写手机普通聊天的 Key。Remote 使用电脑 DSH 配置的模型与凭据，手机需要配对并获得电脑批准。普通聊天则使用你在手机配置的 DeepSeek API Key，两种模式分别管理。
+
+### 普通聊天与 Remote 的历史保存在哪里？
+
+普通聊天历史和草稿保存在手机，可通过本地备份导出；Remote 对接电脑 DSH 保存的会话。两者分别管理，切换模式不会合并聊天历史。详细步骤见[历史与备份](./docs/usage.md#历史与备份)。
+
+### 有 iPhone 版吗？
+
+目前只提供 Android 开发预览，最低 Android 9；尚未提供 iPhone 版本。
 
 ## 开发与文档
 
