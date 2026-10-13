@@ -2,6 +2,8 @@
 
 [简体中文](./README.md) | English
 
+**Android app** · [Desktop plugin](https://github.com/KKUCODES/dshm-plugin/blob/main/README.en.md) · [Relay server](https://github.com/KKUCODES/dshm-relay/blob/main/README.en.md)
+
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
 </p>
@@ -45,15 +47,15 @@ flowchart LR
 ## Get started
 
 - **Direct chat:** Install the app and configure your own DeepSeek API key. History stays on your phone; no computer is needed.
-- **Remote:** Install the [companion plugin](../plugin/README.en.md) in DSH on your computer and connect it to a relay. Claim a one-time pairing link on your phone, then verify its fingerprint and approve it on the computer.
+- **Remote:** Install the [companion plugin](https://github.com/KKUCODES/dshm-plugin/blob/main/README.en.md) in DSH on your computer and connect it to a relay. Claim a one-time pairing link on your phone, then verify its fingerprint and approve it on the computer.
 
-**[Hosting your own relay](../backend/README.en.md) is recommended.** You can also use the [public service](http://118.31.20.47:18787): `http://118.31.20.47:18787`. Open registration requires no enrollment token; phone pairing and computer approval are still required.
+**[Hosting your own relay](https://github.com/KKUCODES/dshm-relay/blob/main/README.en.md) is recommended.** You can also use the [public service](http://118.31.20.47:18787): `http://118.31.20.47:18787`. Open registration requires no enrollment token; phone pairing and computer approval are still required.
 
 The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTTPS relay for sensitive content. Direct chat does not use the relay. See the [usage guide (Chinese)](./docs/usage.md) for full instructions.
 
 ## Current status
 
-Development candidate; no official release yet. Core Remote features passed local Web + MuMu validation with **official DSH `0.2.1-alpha.2` + plugin `0.1.80-latest.0` + the matching Android app**. See the [compatibility report (Chinese)](../plugin/compatibility/latest-upstream/official-support.md) for the supported scope.
+Development candidate; no official release yet. Core Remote features passed local Web + MuMu validation with **official DSH `0.2.1-alpha.2` + plugin `0.1.80-latest.0` + the matching Android app**. See the [compatibility report (Chinese)](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md) for the supported scope.
 
 - Android only for the first version. Physical devices, the complete public-network path, and other versions, plugins, and models still need validation.
 - Keep the computer and DSH running. Install the standalone plugin; no DSH core modifications are needed.
@@ -76,5 +78,5 @@ Detailed guides are currently in Chinese:
 
 - [Usage guide](./docs/usage.md): direct chat, pairing, and limitations.
 - [Development guide](./docs/development.md): environment, builds, and tests.
-- [Compatibility report](../plugin/compatibility/latest-upstream/official-support.md): versions and support scope.
+- [Compatibility report](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md): versions and support scope.
 - [Knowledge catalog](./docs/project-knowledge/catalog.md): architecture, design, and validation evidence.

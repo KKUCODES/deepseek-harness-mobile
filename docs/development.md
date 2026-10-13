@@ -44,7 +44,7 @@ dsh-mobile/                  项目集合
 | `../plugin/artifacts/official-alpha2-sdk/` | 配套插件 SDK 依赖。 |
 | `../plugin/artifacts/official-dsh-alpha2/` | 官方发布包及可用的 SDK 依赖。 |
 
-这些本机材料不随 Git 分发，`npm ci` 不会替你补齐；本页记录已有候选环境的构建入口。材料与版本来源见[接口和构建入口审查](../../plugin/compatibility/latest-upstream/official-interface-audit.md#开发入口的版本边界)。只构建 DSHM，不修改或重新构建电脑 DSH、SDK 或 Electron。
+这些本机材料不随 Git 分发，`npm ci` 不会替你补齐；本页记录已有候选环境的构建入口。材料与版本来源见[接口和构建入口审查](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-interface-audit.md#开发入口的版本边界)。只构建 DSHM，不修改或重新构建电脑 DSH、SDK 或 Electron。
 
 在本仓库根目录构建页面：
 
@@ -60,7 +60,7 @@ npm run build:web:official
 
 APK 输出为 `artifacts/official-alpha2-android-build/outputs/apk/debug/app-debug.apk`，相对路径从本仓库根目录计算。候选包名为 `dev.dshmobile.validation.officialtest`，与原 App 独立存储；不能为了验收清除用户数据或覆盖日常 App。
 
-源码未变化时复用已有候选。生成新包不等于已经通过兼容验收；版本、安装和真实结果从[当前兼容结论](../../plugin/compatibility/latest-upstream/official-support.md)进入。
+源码未变化时复用已有候选。生成新包不等于已经通过兼容验收；版本、安装和真实结果从[当前兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)进入。
 
 ## 旧基线与浏览器诊断
 
@@ -114,7 +114,7 @@ npm test
 | 普通聊天页面性能 | `node scripts/measure-page.mjs --product` 使用隔离 Edge；`node scripts/measure-product-android.mjs` 使用指定 Android 设备。串行运行，页面耗时与模型网络耗时分别记录。 |
 | 诊断页对照测量 | `npm run measure:page` 和 `node scripts/measure-android-page.mjs`；属于诊断页，不能替代产品页面结果。 |
 | 旧基线软键盘诊断 | `node scripts/diagnose-ime.mjs` 对比 WebView 与原生输入框，会重启目标 App；历史环境问题见[诊断记录](./plugin-validation/results.md#真实软键盘环境诊断)。 |
-| 当前官方 Remote | [官方组合验收](./integration/official-plugin-only.md)及[完整功能矩阵](../../plugin/compatibility/latest-upstream/official-feature-matrix.md)，按各专项核对目标版本与隔离环境。 |
+| 当前官方 Remote | [官方组合验收](./integration/official-plugin-only.md)及[完整功能矩阵](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-feature-matrix.md)，按各专项核对目标版本与隔离环境。 |
 | 文档链接 | 在相邻 `../backend/` 运行 `node scripts/check-docs.mjs`，检查整个项目集合的 Markdown 本地链接。 |
 
 性能结果需要注明浏览器、模拟器或物理手机环境，不能把 MuMu 结果写成真机结果。既有测量和未覆盖范围见[普通聊天记录](./integration/ordinary-current.md)与[Remote 性能记录](./integration/performance-current.md)。
@@ -125,7 +125,7 @@ npm test
 
 仓库保存手机源码、Android 工程、Gradle wrapper、依赖锁文件、测试与夹具，以及文档。依赖目录、APK、构建输出、下载工具、联调数据、环境配置和本机签名文件不纳入版本管理。
 
-验收文档中的截图、日志和安装包属于本机证据，不随仓库分发；在新环境需重新生成。现有文档保留不同日期和版本的历史结果，当前支持以[固定组合结论](../../plugin/compatibility/latest-upstream/official-support.md)为准，旧补丁报告不作为当前兼容依据。
+验收文档中的截图、日志和安装包属于本机证据，不随仓库分发；在新环境需重新生成。现有文档保留不同日期和版本的历史结果，当前支持以[固定组合结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)为准，旧补丁报告不作为当前兼容依据。
 
 架构和专项资料从[知识库总目录](./project-knowledge/catalog.md)查找，具体模块入口见[模块地图](./project-knowledge/blueprint/module-map.md)。
 

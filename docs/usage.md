@@ -8,7 +8,7 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 
 当前是未发布的本地开发候选，Android 9 及以上可运行。获取本地候选与配套电脑插件时，先核对版本；本地验收使用官方 DSH `0.2.1-alpha.2` 和插件 `0.1.80-latest.0`，不能直接把任意新版 DSH 与旧手机包混用。
 
-普通聊天只需要 DSHM 和自己的 DeepSeek Key。Remote 另需电脑上的官方 DSH、DSHM 插件及手机和电脑都能连接的中转地址。候选安装与版本核对见[配套安装说明](../../plugin/compatibility/latest-upstream/official-installation.md)；从源码构建见[开发指南](./development.md)。
+普通聊天只需要 DSHM 和自己的 DeepSeek Key。Remote 另需电脑上的官方 DSH、DSHM 插件及手机和电脑都能连接的中转地址。候选安装与版本核对见[配套安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)；从源码构建见[开发指南](./development.md)。
 
 ## 普通聊天
 
@@ -30,13 +30,13 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 
 ### 选择中转服务
 
-**推荐自行搭建中转服务**，便于管理服务、数据与访问策略，搭建方式见[后端说明](../../backend/README.md)。
+**推荐自行搭建中转服务**，便于管理服务、数据与访问策略，搭建方式见[后端说明](https://github.com/KKUCODES/dshm-relay)。
 
 暂时不想搭建时，可使用项目维护者提供的[公共中转服务](http://118.31.20.47:18787)。电脑插件的“服务地址”填写 `http://118.31.20.47:18787`，注册并开启连接，再生成链接给手机配对。公共服务为开放注册，不需要注册密钥，手机仍必须由电脑核对指纹后批准。
 
 当前公共服务使用 HTTP，传输未加密；涉及敏感内容时建议自建并启用 HTTPS。它只用于 Remote，普通聊天仍由手机直连 DeepSeek。
 
-电脑已注册其他中转时，在插件页“修改服务地址”选择“更换后端，重新注册和配对”，然后给手机使用新配对链接。完整步骤见[插件使用指南](../../plugin/docs/usage.md#5-修改服务地址)。
+电脑已注册其他中转时，在插件页“修改服务地址”选择“更换后端，重新注册和配对”，然后给手机使用新配对链接。完整步骤见[插件使用指南](https://github.com/KKUCODES/dshm-plugin/blob/main/docs/usage.md#5-修改服务地址)。
 
 ### 在电脑准备连接
 
@@ -73,7 +73,7 @@ DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可�
 | 电脑或 DSH 退出 | 无法继续远程操作；重新连接不保证中断任务自动续跑。 |
 | 撤销设备授权 | Remote 断开，该设备无法继续访问电脑；普通聊天仍独立可用。 |
 
-文件格式、大小、转换依赖和异常范围以[当前兼容结论](../../plugin/compatibility/latest-upstream/official-support.md)及对应专项为准。手机不提供电脑命令输入，也不转发电脑 localhost 网站。
+文件格式、大小、转换依赖和异常范围以[当前兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)及对应专项为准。手机不提供电脑命令输入，也不转发电脑 localhost 网站。
 
 ## 连接问题
 
@@ -85,4 +85,4 @@ DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可�
 
 ## 维护依据
 
-本页按 2026-10-10 的本地候选整理，由 DSHM 手机端维护者维护。使用流程来自[官方组合安装说明](../../plugin/compatibility/latest-upstream/official-installation.md)、[普通聊天实现](./integration/ordinary-current.md)和[当前支持清单](../../plugin/compatibility/latest-upstream/official-support.md)。本次只整理文档，没有重新执行 App 功能验收；历史报告各自保留原版本与测试环境。
+本页按 2026-10-10 的本地候选整理，由 DSHM 手机端维护者维护。使用流程来自[官方组合安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)、[普通聊天实现](./integration/ordinary-current.md)和[当前支持清单](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。本次只整理文档，没有重新执行 App 功能验收；历史报告各自保留原版本与测试环境。
