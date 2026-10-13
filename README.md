@@ -48,6 +48,8 @@ flowchart LR
 
 [APK 构建与下载](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml) · [发行版本](https://github.com/KKUCODES/dshm/releases)
 
+当前 Actions 仅提供无签名 APK，供构建检查，不能直接安装。可安装的公开发行包尚未发布。
+
 - **普通聊天：** 安装 App，配置自己的 DeepSeek Key。历史保存在手机，无需电脑。
 - **Remote：** 电脑安装[配套插件](https://github.com/KKUCODES/dshm-plugin)，连接中转；手机领取一次性链接，电脑核对指纹并批准。
 
@@ -78,6 +80,6 @@ docs/        使用、开发与技术文档
 
 - [使用指南](./docs/usage.md)：普通聊天、配对与限制。
 - [开发指南](./docs/development.md)：环境、构建与测试。
-- [下载与发版](./docs/releases.md)：Actions 安装包、签名与发行草稿。
+- [构建与下载](./docs/releases.md)：Actions 无签名 APK、摘要与版本信息。
 - [兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)：版本与支持范围。
 - [知识库](./docs/project-knowledge/catalog.md)：架构、设计与验证资料。

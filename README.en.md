@@ -48,6 +48,8 @@ flowchart LR
 
 [APK builds and downloads (Chinese)](./docs/releases.md) · [GitHub Actions](https://github.com/KKUCODES/dshm/actions/workflows/android-build.yml) · [Releases](https://github.com/KKUCODES/dshm/releases)
 
+Actions currently provides unsigned APKs for build checks. They cannot be installed directly; installable public releases are not available yet.
+
 - **Direct chat:** Install the app and configure your own DeepSeek API key. History stays on your phone; no computer is needed.
 - **Remote:** Install the [companion plugin](https://github.com/KKUCODES/dshm-plugin/blob/main/README.en.md) in DSH on your computer and connect it to a relay. Claim a one-time pairing link on your phone, then verify its fingerprint and approve it on the computer.
 
@@ -80,6 +82,6 @@ Detailed guides are currently in Chinese:
 
 - [Usage guide](./docs/usage.md): direct chat, pairing, and limitations.
 - [Development guide](./docs/development.md): environment, builds, and tests.
-- [Downloads and releases](./docs/releases.md): Actions packages, signing, and release drafts.
+- [Builds and downloads](./docs/releases.md): unsigned Actions APKs, checksums, and version metadata.
 - [Compatibility report](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md): versions and support scope.
 - [Knowledge catalog](./docs/project-knowledge/catalog.md): architecture, design, and validation evidence.

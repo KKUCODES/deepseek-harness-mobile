@@ -1,6 +1,6 @@
 # 手机端知识总目录
 
-自动构建与下载：[GitHub Actions、固定 SDK、签名隔离和发行草稿](../releases.md)。原本地与历史候选入口保持，CI 构建不代替手机功能兼容验收。
+自动构建与下载：[GitHub Actions、固定 SDK 与无签名 APK](../releases.md)。当前不上传签名私钥、不生成手机发行草稿；原本地与历史候选入口保持，CI 构建不代替手机功能兼容验收。
 
 阅读入口：[项目首页](../../README.md) · [English](../../README.en.md) · [使用指南](../usage.md) · [开发指南](../development.md) · [截图来源](../images/README.md)。本总目录负责查找技术依据；日常使用和构建步骤从前述指南进入。
 
