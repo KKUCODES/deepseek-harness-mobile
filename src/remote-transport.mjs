@@ -1,8 +1,12 @@
+import { isProfileDshVersion } from './remote-dsh-version.mjs';
 import { uploadRemote, promptRemote } from './remote-upload.mjs';
 import { RemotePluginOperations, longPluginCalls } from './remote-plugin-operations.mjs';
 
 export const isRemoteHostDisconnect = error => error instanceof Error &&
   ['host_offline', 'host_disconnected_outcome_unknown', 'connection_closed_outcome_unknown', 'remote_not_connected'].includes(error.message);
+
+// SDK 与电脑版本必须成套；仅隔离候选构建会设置新版常量。
+const mobileSdkVersion = typeof DSHM_MOBILE_SDK_VERSION === 'string' ? DSHM_MOBILE_SDK_VERSION : '0.1.6-alpha.2';
 
 /** DSH 原始 ClientTransportHooks；身份、凭据和 socket 仍由独立 Remote 原生桥持有。 */
 export class RemoteTransport {
@@ -12,10 +16,12 @@ export class RemoteTransport {
     this.fetchResource = fetchResource;
     this.loadScript = loadScript;
     this.generation = 0;
+    this.hostOffline = false;
     this.lifetime = new AbortController();
     this.unsubscribe = client.subscribe(frame => {
       if (frame.type === 'closed' || frame.type === 'ready') {
         this.generation++;
+        this.hostOffline = frame.type === 'closed' || frame.hostOnline === false;
         this.capabilities = undefined;
         this.lifetime.abort();
         this.lifetime = new AbortController();
@@ -35,6 +41,18 @@ export class RemoteTransport {
       return uploadRemote(this.client, input, init, this.lifetime.signal);
     } };
   }
+  pauseHostOperations(error, generation) {
+    if (!isRemoteHostDisconnect(error) || this.hostOffline || generation !== this.generation) return;
+    // 新载体已在线但能力尚未确认时，订阅的本地前置检查并不代表再次断线。
+    // 不能递增世代并取消正在确认能力的请求；真正的远端断线仍结束旧操作。
+    if (error.message === 'remote_not_connected' && !this.capabilities && this.client.connected) return;
+    this.hostOffline = true;
+    this.generation++;
+    // 电脑退出时中转仍可保留手机socket；本地保存窗口也必须结束旧传输。
+    // 多条订阅会同时失败，只取消一次；保留能力供已加载的聊天继续显示。
+    this.lifetime.abort();
+    this.lifetime = new AbortController();
+  }
   async negotiate({ signal } = {}) {
     signal?.throwIfAborted();
     const generation = this.generation;
@@ -43,11 +61,13 @@ export class RemoteTransport {
     signal?.addEventListener('abort', cancel, { once: true });
     let result;
     try { result = await request.promise; signal?.throwIfAborted(); }
+    catch (error) { this.pauseHostOperations(error, generation); throw error; }
     finally { signal?.removeEventListener('abort', cancel); }
     if (generation !== this.generation || this.lifetime.signal.aborted) throw new Error('remote_generation_changed');
     if (result?.transport !== 2) throw new Error('unsupported_remote_version');
-    if (result.dshVersion !== '0.1.6-alpha.2') throw new Error('unsupported_dsh_version');
+    if (result.dshVersion !== mobileSdkVersion) throw new Error('unsupported_dsh_version');
     this.capabilities = result;
+    this.hostOffline = false;
     return result;
   }
   channel(channel) {
@@ -72,6 +92,7 @@ export class RemoteTransport {
       if (endpoint === 'subagents/prompt' && this.capabilities.subagentPromptUpload !== true) throw new Error('请更新电脑插件和网关后向子会话发送图片。');
       return promptRemote(this.client, payload, this.lifetime.signal, signal, endpoint);
     }
+    const generation = this.generation;
     const request = this.client.request({ method: 'remote.rpc', endpoint, payload });
     const cancel = () => request.cancel();
     signal?.addEventListener('abort', cancel, { once: true });
@@ -80,12 +101,25 @@ export class RemoteTransport {
       signal?.throwIfAborted();
       if (typeof result?.ok !== 'boolean') throw new Error('invalid_remote_result');
       if (result.ok) this.lastReceivedAt = Date.now();
+      // 新版生成Client要求原生字节；自有下载器的旧range请求仍保留既有base64契约。
+      if (result.ok && isProfileDshVersion(this.capabilities?.dshVersion) && endpoint === 'workspaceFiles/readBytes'
+        && Object.hasOwn(payload?.args ?? {}, 'options')) {
+        const data = result.value?.data;
+        if (typeof data !== 'string' || data.length > Math.ceil(65536 / 3) * 4
+          || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) throw new Error('invalid_remote_result');
+        const raw = atob(data);
+        if (raw.length > 65536 || btoa(raw) !== data) throw new Error('invalid_remote_result');
+        return { ...result, value: { ...result.value, data: Uint8Array.from(raw, char => char.charCodeAt(0)) } };
+      }
       return result;
-    } finally { signal?.removeEventListener('abort', cancel); }
+    } catch (error) { this.pauseHostOperations(error, generation); throw error; }
+    finally { signal?.removeEventListener('abort', cancel); }
   }
   async *stream(channel, endpoint, payload, signal) {
+    const generation = this.generation;
     try { yield* this.readStream(channel, endpoint, payload, signal); }
     catch (error) {
+      this.pauseHostOperations(error, generation);
       // 仅恢复只读订阅；写操作仍以原错误结束，不能自动重放。
       if (!signal.aborted && isRemoteHostDisconnect(error)) {
         const carrier = new Error(error.message, { cause: error });

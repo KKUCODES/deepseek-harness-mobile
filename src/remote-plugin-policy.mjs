@@ -1,3 +1,4 @@
+import { isProfileDshVersion } from './remote-dsh-version.mjs';
 // 这些入口的组合职责已由手机承担。保留模块表供依赖解析，但不再执行桌面 apply。
 // 其余插件仍按真实服务依赖启动；缺失服务显示等待，不伪造 Host 能力。
 export const mobileComposition = new Set([
@@ -7,6 +8,8 @@ export const mobileComposition = new Set([
   '@deepseek-ai/dsh-api-gateway', '@deepseek-ai/dsh-typert-registry',
   '@deepseek-ai/dsh-client-ui-approval', '@deepseek-ai/dsh-client-ui-user-questions',
   '@deepseek-ai/dsh-api-remotes', '@deepseek-ai/dsh-api-session-controller', '@deepseek-ai/dsh-api-workspace-controller',
+  // 新版任务服务在聊天装配前单独安装，避免插件树再创建第二份订阅。
+  '@deepseek-ai/dsh-api-job-controller',
   '@deepseek-ai/dsh-client-ui-renderer', '@deepseek-ai/dsh-client-ui-layout',
   '@deepseek-ai/dsh-client-ui-session', '@deepseek-ai/dsh-client-ui-workspace',
   '@deepseek-ai/dsh-client-ui-conversation', '@deepseek-ai/dsh-client-ui-chat',
@@ -48,7 +51,13 @@ export function supportsDeliverables(capabilities) {
 }
 
 function composed(id, capabilities) {
-  return mobileComposition.has(id) || id === '@deepseek-ai/dsh-client-ui-deliverables' && supportsDeliverables(capabilities)
+  // 新版把同一组设置卡片拆成四个入口；卡片仍由手机注册，避免执行桌面组合。
+  const latestSettings = isProfileDshVersion(capabilities?.dshVersion) && [
+    '@deepseek-ai/dsh-client-ui-settings',
+    '@deepseek-ai/dsh-client-ui-settings-shell', '@deepseek-ai/dsh-client-ui-settings-agent-loop',
+    '@deepseek-ai/dsh-client-ui-settings-subagent', '@deepseek-ai/dsh-client-ui-settings-web-search',
+  ].includes(id);
+  return mobileComposition.has(id) || latestSettings || id === '@deepseek-ai/dsh-client-ui-deliverables' && supportsDeliverables(capabilities)
     || id === '@deepseek-ai/dsh-client-ui-open-in-app' && capabilities?.desktopApps === true;
 }
 

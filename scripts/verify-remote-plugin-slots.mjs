@@ -60,6 +60,7 @@ import { prepare as prepareClientEntries, outputRoot as clientEntriesOutput } fr
 
 const root = resolve(import.meta.dirname, '..'), require = createRequire(import.meta.url);
 const documentOnly = process.argv.includes('--documents');
+const inputOnly = process.argv.includes('--input-contracts');
 const overlayOnly = process.argv.includes('--shell-overlays');
 const globalPanelsOnly = process.argv.includes('--global-panels');
 const modelFooterOnly = process.argv.includes('--model-footer');
@@ -114,7 +115,16 @@ try {
     await route.fulfill({ status: 200, contentType: 'text/javascript', body });
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly ? '?documents' : ''}`);
-  if (coldDraftOnly) {
+  if (inputOnly) {
+    await page.waitForFunction(() => !!window.fixture);
+    report.inputContracts = await page.evaluate(() => window.fixture.checkRemoteInput());
+    await page.evaluate(() => window.fixture.select('one'));
+    await page.getByRole('textbox', { name: '消息', exact: true }).waitFor();
+    report.viewInputs = await page.evaluate(() => window.fixture.checkViewInputs());
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, 'artifacts/remote-input-contracts-web.json'), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (coldDraftOnly) {
     await page.waitForFunction(() => !!window.fixture);
     await page.evaluate(() => window.fixture.select('one'));
     await page.getByRole('textbox', { name: '消息', exact: true }).waitFor();

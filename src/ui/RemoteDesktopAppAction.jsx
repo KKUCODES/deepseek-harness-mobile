@@ -36,7 +36,8 @@ export function RemoteDesktopAppAction({ model, sessionId }) {
   const t = (key, values) => (dictionary[key] ?? key).replace('{app}', values?.app ?? '');
   return <div data-remote-desktop-app-action>
     <MobilePluginFrame id={pluginId} layout={model.pluginSlots.layout}>
-    <OpenInAppAction sessionId={sessionId} t={t}
+    <OpenInAppAction sessionId={sessionId} absolutePath={catalog.workspacePath} t={t}
+      useOpenInAppLaunch={select => select({ phase: 'idle' })} useShortcuts={select => select([])}
       useSessions={select => select({ byId: { [sessionId]: { cwd: catalog.workspacePath } } })}
       useOpenInAppApps={select => select(catalog.apps)} useOpenInAppChoice={select => select(currentChoice)}
       choose={id => choice.set(id)} iconUrl={iconUrl}

@@ -6,7 +6,7 @@ const actions = { 'pluginManager/installBundle': '安装插件', 'pluginManager/
   'pluginManager/setBundleEnabled': '切换插件包', 'pluginManager/setPluginEnabled': '切换插件组件' };
 const outcomes = { applied: '已完成', 'restart-required': '重启电脑 DSH 后生效', cancelled: '已取消', failed: '未完成', overridden: '已被其他配置覆盖' };
 
-/** 展示本设备电脑回执及本次连接的未确认摘要；不提供重试安装或脚本批准。 */
+/** 展示本设备电脑回执及同一绑定的未确认摘要；不提供重试安装或脚本批准。 */
 export function RemotePluginOperationHistory({ model, connected }) {
   const t = useTranslate();
   const [open, setOpen] = useState(false), [items, setItems] = useState(null), [error, setError] = useState('');
@@ -44,7 +44,7 @@ export function RemotePluginOperationHistory({ model, connected }) {
     <details className="remote-plugin-operations" onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>{t('最近插件操作')}</summary>
     {open && <>
-      <p className="muted">{t('电脑保留最近一小时的操作结果。电脑重启后，手机仍会提示本次连接中未确认的操作；不会自动重新安装。')}</p>
+      <p className="muted">{t('保留最近一小时的操作记录。手机或电脑重启后，重新连接可核对未确认的操作；不会自动重新安装。')}</p>
       {!connected ? <p role="status">{t('电脑连接已断开，重新连接后可继续操作。')}</p> : <>
         <Button onClick={() => setRevision(value => value + 1)}>{t('刷新操作记录')}</Button>
         {error && <p role="alert">{t(error)}</p>}

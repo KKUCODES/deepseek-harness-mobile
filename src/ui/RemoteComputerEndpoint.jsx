@@ -3,11 +3,21 @@ import { useTranslate } from './locale.jsx';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { computerEndpointUrlSchema } from '../../../backend/packages/protocol/dist/index.js';
 
+/** 局部表单卸载后，外层设置页仍可显示这个提供方的未确认结果。 */
+export function RemoteEndpointNotice({ service, provider }) {
+  const t = useTranslate(), notice = useSyncExternalStore(service.subscribeNotice, service.getNotice);
+  return notice ? <section aria-label={t('未确认的提供方地址')}>
+    {provider && <p>{t('模型提供方')}：<bdi>{provider}</bdi></p>}
+    <p role="status">{t(notice)}</p>
+  </section> : null;
+}
+
 export function RemoteComputerEndpoint({ model, service = model.computerEndpoint, onDraftChange }) {
   const t = useTranslate();
   const state = useSyncExternalStore(model.subscribeView, model.getSnapshot);
   const connected = state.connectionState === 'connected';
   const endpoint = service, search = endpoint.target === 'web-search-deepseek';
+  const serviceNotice = useSyncExternalStore(endpoint.subscribeNotice, endpoint.getNotice);
   const inputId = useId(), provider = typeof endpoint.target === 'object' ? endpoint.target.provider : null;
   const title = search ? '电脑网页搜索服务地址' : '电脑模型服务地址';
   const [view, setView] = useState(null), [value, setValue] = useState(''), [review, setReview] = useState(null);
@@ -31,6 +41,9 @@ export function RemoteComputerEndpoint({ model, service = model.computerEndpoint
   }, [endpoint]);
   const prepare = change => {
     if (model.getSnapshot().connectionState !== 'connected') return;
+    if (change.op === 'unset' && view?.resettable === false) {
+      setNotice('当前没有可恢复的默认地址，请填写完整服务地址。'); return;
+    }
     if (change.op === 'set' && !computerEndpointUrlSchema.safeParse(change.value).success) {
       setNotice('请输入不含账号、密码、查询参数和片段的 HTTP 或 HTTPS 地址。'); return;
     }
@@ -45,6 +58,7 @@ export function RemoteComputerEndpoint({ model, service = model.computerEndpoint
       {view && <>
         <p>{view.origin ? <>{t("当前站点：")}<bdi>{view.origin}</bdi></> : t('未单独配置地址，由提供方的模型目录决定。')}</p>
         <p className="remote-muted">{t(view.overridden ? '已单独设置' : '使用电脑默认值')}{view.protocol !== 'provider' && <> · {view.protocol === 'messages' ? 'Messages' : 'Chat Completions'}</>}</p>
+        {view.resettable === false && <p className="remote-muted">{t('当前没有可恢复的默认地址，请填写完整服务地址。')}</p>}
         {view.customPath && <p className="remote-muted">{t("当前地址还包含路径，完整地址请在电脑查看。更换时请输入完整的新地址。")}</p>}
         {view.origin?.startsWith('http:') && <p role="status">{t(search ? "HTTP 未加密，电脑发送的 Key 和搜索内容可能被窃听。" : "HTTP 未加密，电脑发送的 Key 和聊天内容可能被窃听。")}</p>}
         {review ? <div role="group" aria-label={t("确认服务地址")} className="remote-endpoint-confirm">
@@ -57,12 +71,12 @@ export function RemoteComputerEndpoint({ model, service = model.computerEndpoint
           <label htmlFor={inputId}>{t("新的完整服务地址")}</label>
           <input id={inputId} className="sheet-editor" type="url" autoComplete="off" spellCheck="false" placeholder="https://…" value={value} disabled={!connected || busy || !view.writable} onChange={event => setValue(event.target.value)}/>
           <Button disabled={!connected || busy || !view.writable || !value} onClick={() => prepare({ op: 'set', value })}>{t("核对新地址")}</Button>
-          <Button disabled={!connected || busy || !view.writable || !view.overridden} onClick={() => prepare({ op: 'unset' })}>{t("恢复默认服务地址")}</Button>
+          <Button disabled={!connected || busy || !view.writable || !view.overridden || view.resettable === false} onClick={() => prepare({ op: 'unset' })}>{t("恢复默认服务地址")}</Button>
         </>}
         {!view.writable && <p>{t("电脑设置目前只读。")}</p>}
       </>}
       <Button disabled={!connected || busy} onClick={() => void run(null)}>{t(busy ? '正在处理地址…' : '重新读取服务地址')}</Button>
-      {notice && <p role="status">{t(notice)}</p>}
+      {(serviceNotice || notice) && <p role="status">{t(serviceNotice || notice)}</p>}
     </>}
   </section>;
 }

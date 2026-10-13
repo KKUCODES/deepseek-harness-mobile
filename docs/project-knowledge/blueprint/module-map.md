@@ -1,5 +1,63 @@
 # 手机端模块地图
 
+地址保存的进程恢复由[RemoteModel](../../../src/remote-model.mjs)持有[RemoteEndpointJournal](../../../src/remote-endpoint-journal.mjs)，沿[原草稿数据库](../../../src/remote-drafts.mjs)按绑定严格持久化待核对目标/编号；不保存地址、Key或可重发请求。[地址服务](../../../src/remote-endpoint.mjs)在发请求前提交记录，明确结算或新连接实际读取后按编号清理，[共享Remote页面](../../../src/ui/RemoteWorkspace.jsx)显示重开后待核对提示。表单卸载和App进程恢复共用服务，不由具体设置卡持有唯一提示。维护角色手机端维护者，核验2026-10-10；来源：[六种实际App结束与同APK核心回归](../../../../plugin/compatibility/latest-upstream/official-alpha2.md#服务地址保存时app结束与恢复2026-10-10)。
+
+官方alpha.2组合：[SDK选择器](../../../scripts/latest-mobile-build.mjs)只解析独立根内真实路径与精确版本；[新节点接入](../../../src/remote-chat-presentation-alpha2.jsx)使用官方bottomSource与同步搜索隐藏，不安装第二个桌面滚动协调器。[外观默认值](../../../src/phone-appearance.mjs)及[本地ConfigForm](../../../src/local-settings.mjs)补齐新主题字段，保持手机原存储权威。启动探针与真实Android证据见[新版复验](../../../../plugin/compatibility/latest-upstream/official-alpha2.md)；只读官方源码不写回，派生产物只用于DSHM。
+
+[提问与计划发送驱动](../../../tests/support/official-interaction-sending.mjs)由实际手机按钮提交原结构化答案，复用外部测试转发口在转发前或真实回执送达前切断连接；不改生产函数或生成回执。默认legacy没有callId，以原eventId、精确问题身份及官方记录关联；计划核对原intent.callId/detail。原生自动重连后，未送达要求用户明确重答，已结算只恢复唯一结果。草稿/历史/模型/PID保持；共享转发口的原write发送回归另验。来源：[真实四种情况与三轮收尾](../../integration/official-plugin-only.md#默认提问与计划答复发送断线及确认丢失)；维护角色手机端维护者，核验2026-10-09。
+
+[普通竞争驱动](../../../tests/support/official-interaction-race.mjs)与[超时补答竞争驱动](../../../tests/support/official-timed-race.mjs)复用已有App显示实际问题/计划与胜出结果。两个实际鉴权连接同时提交相反答复，默认问题/计划原结果唯一；continued补答保持原pending结果，只追加一条原问题用户消息。手机撤下旧卡片、历史/草稿/模型保持；不是双实体手机同时点击，也不代表在途异常已验。来源：[六次真实竞争与最终环境恢复](../../integration/official-plugin-only.md#默认提问计划与超时补答的同时竞争)；维护角色手机端维护者，核验2026-10-09。
+
+[默认提问与计划的电脑恢复驱动](../../../tests/support/official-interaction-host.mjs)复用已有App，在同一手机运行期间结束拥有的正常官方CLI。旧waterfall随Host结束失效，不将legacy/plan误作timed补答；手机撤下旧卡片，官方未知结果与原完整日志保持。显式新请求才生成新callId，手机回答/批准/要求修改单次结算，模式关闭或保持分别核对；结算后再重启不重放。来源：[真实两轮与最终环境恢复](../../integration/official-plugin-only.md#默认提问与计划中的电脑退出与恢复)；维护角色手机端维护者，核验2026-10-09。
+
+[带超时提问的电脑恢复驱动](../../../tests/support/official-timed-host.mjs)在同一真实手机运行期间结束已登记的官方CLI进程树，再正常启动同一home。沿原问题面板补答，后端核对官方追加的未知结果、原问题continued、唯一用户补答与原日志前缀；结算后再重启没有重放。问题面板接管输入区时，模型检查延后到答完；测试收尾的授权失败不阻止独立UID/映射清理。来源：[实际入口和失败边界](../../integration/official-plugin-only.md#带超时提问中的电脑退出与恢复)；维护角色手机端维护者，核验2026-10-09。
+
+[带超时提问驱动](../../../tests/support/official-timed-question.mjs)复用已有App与原问题组件，通过正常Launcher恢复等待问题或超时后的continued问题。电脑用公开插件管理器临时声明独立timed模式，原标准模式/默认目录保持；共享策略只在新版开放计时流与结构化补答，原Host负责live root与问题归属。完整原记录、唯一工具结果及迟到用户消息分别核对，观察读者不代持计时。来源：[实际证据和失败边界](../../integration/official-plugin-only.md#带超时提问的app恢复与补答)；维护角色手机端维护者，核验2026-10-09。
+
+[默认提问进程恢复驱动](../../../tests/support/official-question-process.mjs)复用真实App与官方默认legacy问题协议；电脑公开session/prompt发起任务，独立UID结束后正常Launcher/抽屉恢复。后端按唯一callId和问题id/正文/选项核对原waterfall、完整记录前缀、答案结果唯一与真实completed，不把legacy空活动投影当作结算，也不向提问发送write审批字符串。原草稿保持，另一真实连接答复后不恢复旧卡片；timed和Host恢复分别见上方独立专项。维护角色：手机端维护者；核验2026-10-09；来源：[真实范围与环境守卫失败](../../integration/official-plugin-only.md#默认提问等待时app结束与恢复)。
+
+[计划进程恢复驱动](../../../tests/support/official-plan-process.mjs)复用原计划插件及真实Android，关闭独立UID后从正常Launcher进入自身Remote；四种情况分别验证恢复后手机批准/要求修改及另一连接在App停止期间的批准/要求修改。后端按原intent/callId/eventId/plan detail关联，核对完整原记录、唯一结果及模式投影；要求修改使用官方ASK_CANCELLED，旧相反答复只产生幂等空操作。仅新增测试代码，不修改本体或生产实现，不将顺序旧答复检查计作同时竞争。来源：[真实计划恢复与环境保护](../../integration/official-plugin-only.md#计划审批等待时app结束与恢复)；维护角色与核验日期同上。
+
+[审批传输验收驱动](../../../tests/support/official-approval-sending.mjs)与[外部测试转发口](../../../../backend/tests/support/official-approval-transport.ts)分别在真正手机批准未转发和真正生产回执未送达的位置切断连接；独立核对官方记录与文件，不替换生产方法或伪造鉴权。载体重新ready但尚未协商能力时，[RemoteTransport](../../../src/remote-transport.mjs)不能因订阅的本地前置失败递增世代；真正远端断线仍取消旧操作，只有只读订阅恢复，审批不自动重放。维护角色：手机端维护者；核验2026-10-09；来源：[真实Android、两次失败和两个调用入口回归](../../integration/official-plugin-only.md#普通write审批答复断线与确认丢失)。
+
+[RemoteTurnProcess](../../../src/ui/RemoteTurnProcess.jsx)是DSHM自有结算标题，复用原样式和折叠控制契约；`interrupted`显示“已中断”，不显示成功用时，执行过程保持展开。固定上游仅只读，手机构建由[局部渲染适配](../../../scripts/latest-turn-process-sources.mjs)引入；不修改电脑DSH或已安装SDK。[主聊天/旁栏展示回归](../../../scripts/check-latest-turn-process-web.mjs)核对受阻、中断、停止、失败及完成状态，浏览器回放不替代真实模型/Android验收。维护角色：手机端维护者；核验2026-10-09。
+
+[官方Host重启驱动](../../../tests/support/official-host-restart.mjs)在真实write审批等待与结算后，仅结束明确登记的测试pnpm进程树；[后端生命周期](../../../../backend/tests/support/official-host-lifecycle.ts)通过正常pnpm入口恢复同一官方安装与profile，不注入启动。手机进程不重启，核对自行重连、原会话/草稿/模型、失效审批及未知工具结果；后端独立检查完整原事件前缀、唯一结果及自己的文件。显式新任务必须生成新审批，已完成写入在再次重启后不重放。来源：[真实专项与失败边界](../../integration/official-plugin-only.md#普通write审批中的电脑端结束与恢复)；维护角色与核验日期同上。
+
+[审批进程恢复驱动](../../../tests/support/official-approval-process.mjs)让手机正常留下草稿，电脑经公开session/prompt发起真实write任务；仅结束自己的测试UID，从普通Launcher/抽屉恢复DSHM自有Remote。后端持有原会话事件前缀，核对同一审批仍待处理或已由另一真实连接拒绝、消息/升级write结果唯一、草稿保持和原文件；等官方completed结算，不以审批期间隐藏停止按钮代替完成。维护角色：手机端维护者；核验2026-10-09；[真实范围、三次驱动失败与剩余Host/其他审批生命周期](../../integration/official-plugin-only.md#审批等待时app结束与原会话恢复)。
+
+[目标写入中断验收](../../../tests/support/official-destination-write-interruption.mjs)在正常系统Downloads已写入真实前缀后冻结自己的UID，再由原按钮取消、生产Host断线或桌面撤销设备触发原生清理；后端独立核对目标/原件摘要和官方历史，保存成功先到不算取消通过。两个互斥专项覆盖取消/断线/手动完整重试及真实写入中撤权，不替换生产函数或使用调试provider。维护角色：手机端维护者；核验2026-10-09；[实际范围与剩余提供方/竞争](../../integration/official-plugin-only.md#系统目标写入时取消断线与撤权)。
+
+[目标写入进程验收](../../../tests/support/official-destination-write-death.mjs)使用正常系统“下载”目录，在真实目标字节大于0且小于完整原件时，外部OS观察器冻结并结束自己的独立UID，核对生产保存记录、普通/Remote恢复提示、确认语义、同一官方历史/草稿及手动完整原件重试。没有使用调试provider或替换生产函数；启动保留外部半成品，只清理私有暂存并提示用户，测试收尾才按前缀摘要删除自己的目标。维护角色：手机端维护者；核验2026-10-09；[实际范围及其他回收策略](../../integration/official-plugin-only.md#系统目标写入时app结束与恢复)。
+
+[附件驱动](../../../tests/support/official-attachments.mjs)从实际Android系统文件选择经生产上传到官方单条消息的三个文件引用，再验证DSHM自有历史附件面板与原件系统保存。[后端编排](../../../../backend/tests/official-host.test.ts)独立核对真实模型读取、公开附件流的字节/身份及错误会话拒绝；源文件位于后端测试目录、不是DSH工作区中的同名副本。驱动只清理自己摘要未变的手机副本；官方历史/附件存储保留作证。维护角色：手机端维护者；核验2026-10-09；[真实范围、首次枚举失败与模拟器重启恢复](../../integration/official-plugin-only.md#手机上传与历史附件预览下载)。
+
+[RemoteTransport](../../../src/remote-transport.mjs)在RPC/订阅的明确Host断线错误处取消本地传输，即使手机socket仍在线；同代只取消一次，旧请求迟到错误不能取消恢复后的生命周期，不自动重放写入。[系统窗口驱动](../../../tests/support/official-save-window.mjs)在完整私有原件和实际位置选择窗口同时存在时验证系统取消/断线关闭/清理及显式重试。维护角色：手机端维护者；核验2026-10-09；来源：[两入口回归](../../../tests/remote-transport.test.mjs)、[实际Android及核心回归](../../integration/official-plugin-only.md#系统保存窗口取消断线与显式重试)。
+
+[纯官方文件中断驱动](../../../tests/support/official-file-recovery.mjs)在真实私有暂存已写入后，使用原按钮取消、中转停用及自己原件尺寸变化，核对清理/失败/无自动重试；手动重试经系统保存完整最新字节与摘要，草稿保持。后端大Buffer使用直接equals，避免测试框架逐项比较耗尽内存；异常退出的[受控恢复](../../../../backend/scripts/recover-official-file-check.mjs)单独保存报告，不改写失败。维护角色：手机端维护者；核验2026-10-09；[证据与未验证范围](../../integration/official-plugin-only.md#文件下载中断与最新完整原件重试)。
+
+纯官方文件与安装验收由[后端 opt-in](../../../../backend/tests/official-host.test.ts)编排；[文件驱动](../../../tests/support/official-files-transfers.mjs)使用真实文件树/文档标签/原生保存，[插件安装驱动](../../../tests/support/official-plugin-install.mjs)核对管理授权、真实安装结果和官方重启提示。测试只操作独立UID与自己的文件/插件；失败保留，不修改DSH本体。维护角色：手机端维护者；核验2026-10-09；结果见[当前证据](../../integration/official-plugin-only.md)。
+
+[Office驱动](../../../tests/support/official-office-preview.mjs)只读既有真实原件、触发正常官方转换并核对手机PDF画布/正文及关闭重开；不复用历史修改版缓存观察器，不把重开相同推导为缓存或取消生命周期通过。来源与核验日期同上。
+
+[工作区管理驱动](../../../tests/support/official-workspace-management.mjs)经原手机管理入口处理电脑预先登记的测试注册；后端独立读取公开follow基线、磁盘和原事件，核对改名/排序/移除注册、其他工作区保持和授权收回。来源与核验日期同上。
+
+[电脑设置驱动](../../../tests/support/official-computer-settings.mjs)经原五字段表单临时调整超时并恢复数值/继承；后端以官方脱敏describe独立核对公开标量，失败收尾只恢复仍与本轮临时值匹配的单项。来源与核验日期同上；不读取/修改Key、地址或全量配置。
+
+[队列驱动](../../../tests/support/official-queue-control.mjs)通过真实只读前台工具的有界窗口，操作手机排队/编辑/取消/引导与停止；后端独立核对 inbox 身份、真实用户/模型消息、aborted/user 结束及闲置状态。停止保留待发送项并重连后继续取消，原App隔离保持。来源与核验日期同上；竞争/在途写入断线另验。
+
+[导航驱动](../../../tests/support/official-session-navigation.mjs)经手机菜单改名/分支/归档恢复，核对父身份、继承消息、原会话与各自草稿；内容搜索另读官方片段，并明确依赖电脑开启。纯官方默认关闭时的提示、正常profile临时开启与精确恢复见当前证据，不改本体。来源与核验日期同上。
+
+[审批恢复驱动](../../../tests/support/official-approval-recovery.mjs)经实际手机按钮、生产中转与官方事件验证等待时断线恢复；后端的独立连接同时提交相反决定并核对唯一官方结果、重复答复空操作及手机卡片撤下。读者只使用各自 clientId，不冒用手机归属；自己的文件/授权清理和原App保护分别核验。来源与核验日期同上。
+
+[计划审阅驱动](../../../tests/support/official-plan-review.mjs)使用手机计划模式开关与原计划正文面板/审阅卡片，核对实际 `exit_plan_mode` 调用、批准后的模式退出和要求修改后的模式保持，收尾恢复关闭。正文面板须正常返回聊天后操作卡片，不强制穿透点击。来源与核验日期同上。
+
+[完成通知驱动](../../../tests/support/official-task-notifications.mjs)只等待官方真实会话结算，经原生系统通知核对事件身份/摘要和实际点击。仅结束独立测试UID，Launcher重开后先核对普通首页已恢复通知连接且无历史补发，再从原抽屉回Remote读取同一结果；中转重连后新的完成继续送达。后端独立核对唯一用户消息、模型source/工具结果/完成事件，不构造通知或替换生产函数。来源与核验日期同上；其他通知类别与Host结束另验。
+
+当前纯官方候选由[build-web](../../../scripts/build-web.mjs)的 `--official-candidate` 和[latestMobileBuild](../../../scripts/latest-mobile-build.mjs)使用独立正常 npm 手机 SDK 依赖，输出到 `official-mobile-dist`；[Gradle隔离项](../../../android/app/build.gradle.kts)生成 `.officialtest`，不覆盖原应用。[RemoteWorkspace](../../../src/ui/RemoteWorkspace.jsx)共用主聊天/旁栏菜单按协商能力显示桌面应用选择和汇总待处理，聊天内审批仍走原公开事件通道。维护角色：手机端维护者；核验2026-10-09；[实际入口与范围](../../integration/official-plugin-only.md)。
+
+[remote-plugin-journal](../../../src/remote-plugin-journal.mjs)仅过滤未确认操作展示摘要，按一小时/64条及白名单限制；[RemoteDraftStore](../../../src/remote-drafts.mjs)沿原绑定命名空间严格落盘。[RemotePluginOperations](../../../src/remote-plugin-operations.mjs)先保存再提交，重开只向电脑核对，不形成重放队列；[RemoteModel](../../../src/remote-model.mjs)释放时等结算后关闭存储。维护角色：项目协作Agent；核验2026-10-06；[当前实际范围](../../integration/latest-install-recovery.md#手机与电脑都结束后的安装摘要)。
+
 [remote-tool-cancellation](../../../src/remote-tool-cancellation.jsx)包装原 ui-tool 工具树的局部 toolview，仅按明确取消结果使用原 ToolRow 展示本地化提示；[remote-tool-row](../../../src/remote-tool-row.mjs)与备用消息详情共用取消分类及固定诊断过滤，原始记录不变。维护角色：项目协作Agent；核验2026-09-28；[主聊天、旁栏与实际Android边界](../../integration/auto-review-current.md#手机取消提示与共享入口2026-09-28)。
 
 [RemoteProviderSettings](../../../src/ui/RemoteProviderSettings.jsx)在目录打开且已授权时订阅原设置/适配器事件，经已有受限只读服务串行更新目录，丢弃失效响应；保留仍存在的选中表单，移除路由才清除选择。维护角色：项目协作Agent；核验2026-09-28；[实际入口与边界](../../integration/provider-directory-current.md)。

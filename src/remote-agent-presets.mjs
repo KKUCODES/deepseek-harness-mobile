@@ -1,4 +1,4 @@
-import { readRoster, presetOptions } from '../../deepseek-harness/packages/client/ui-agent-preset/src/client/settings-store.ts';
+import { AGENT_PRESET_SETTINGS_NS, readRoster, presetOptions } from '../../deepseek-harness/packages/client/ui-agent-preset/src/client/settings-store.ts';
 import { presetDisplayText, zh, en } from '../../deepseek-harness/packages/client/ui-agent-preset/src/client/locales.ts';
 
 export const agentPresetText = (option, locale = 'zh') => presetDisplayText(option, key => (locale === 'en' ? en : zh)[key]);
@@ -13,7 +13,10 @@ export class RemoteAgentPresets {
   seatWork = new Map();
   constructor(model) {
     this.model = model;
-    this.off = model.remote.$on('settings/document-updated', ns => { if (ns === 'agent-presets') this.invalidate(); });
+    this.off = model.remote.$on('settings/document-updated', ns => {
+      // 新版事件使用真实 profile 实例 ID，可由部署自定义。目录只读，遇到配置变化重新核对。
+      if (ns === AGENT_PRESET_SETTINGS_NS || AGENT_PRESET_SETTINGS_NS === 'agent-preset-registry') this.invalidate();
+    });
     this.offGeneration = model.connection.generation.subscribe(() => this.invalidate());
   }
   get available() { return this.model.transport.capabilities?.endpoints?.calls?.includes('agentPresets/list') ?? false; }
@@ -40,7 +43,10 @@ export class RemoteAgentPresets {
       const result = await readRoster(this.model.ctx);
       if (read !== this.reads) return;
       if (!result.ok) throw new Error(result.error);
-      this.publish({ status: 'ready', options: presetOptions(result.value.presets), enabled: result.value.modeSelectionEnabled });
+      // 固定新版原契约取消了模式开关；旧版缺失/关闭开关仍必须拒绝，不能统一用缺省 true。
+      const enabled = AGENT_PRESET_SETTINGS_NS === 'agent-preset-registry' || result.value.modeSelectionEnabled === true;
+      const options = presetOptions(result.value.presets);
+      this.publish({ status: 'ready', options: options.filter(option => this.model.codingTools?.allows(option) ?? true), allOptions: options, enabled });
     } catch (error) {
       if (read === this.reads) this.publish({ status: 'error', options: [], enabled: false, error: error.message });
     }

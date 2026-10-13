@@ -24,8 +24,11 @@ public class RemoteShareReceiver extends Activity {
             try {
                 result.put("uid", Process.myUid());
                 Uri uri = getIntent().getParcelableExtra(Intent.EXTRA_STREAM);
-                if (uri == null || !"content".equals(uri.getScheme()) || !"dev.dshmobile.validation.remote.files".equals(uri.getAuthority())) throw new IllegalArgumentException();
-                result.put("scheme", uri.getScheme()).put("type", getIntent().getType()).put("flags", getIntent().getFlags());
+                String receiver = getPackageName();
+                if (!receiver.matches("dev\\.dshmobile\\.validation(?:\\.(?:pairingtest|latesttest|latestofficetest|officialtest))?\\.test")) throw new IllegalArgumentException();
+                String authority = receiver.substring(0, receiver.length() - 5) + ".remote.files";
+                if (uri == null || !"content".equals(uri.getScheme()) || !authority.equals(uri.getAuthority())) throw new IllegalArgumentException();
+                result.put("scheme", uri.getScheme()).put("authority", uri.getAuthority()).put("type", getIntent().getType()).put("flags", getIntent().getFlags());
                 try (Cursor cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
                     if (cursor == null || !cursor.moveToFirst()) throw new IllegalStateException();
                     result.put("name", cursor.getString(0));

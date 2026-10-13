@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RemoteLiveJobOutput } from '../src/remote-live-job-output.mjs';
 
-function fixture() {
+function fixture(latest = false) {
   const target = { id: 'job', sessionId: 'own', startedAt: 1 }, events = new Set(), requests = [];
   const state = { selected: 'own', session: { openState: 'open' }, connectionState: 'connected', list: { jobsBySession: { own: [target] } } };
+  if (latest) { state.jobs = { rows: { own: [target] }, observed: {} }; delete state.list.jobsBySession; }
   let connection = 1;
   const model = { getSnapshot: () => state, subscribe(fn) { events.add(fn); return () => events.delete(fn); },
     transport: { capabilities: { jobControlGeneration: 'host', jobOutput: true } }, connection: { generation: { getSnapshot: () => ({ id: connection }) } },
@@ -14,6 +15,37 @@ function fixture() {
 function chunk(bytes, startOffset, totalBytes, status = 'running', lossy = false) {
   return { state: 'available', status, data: Buffer.from(bytes).toString('base64'), startOffset, nextOffset: startOffset + bytes.length, totalBytes, lossy };
 }
+
+test('新版环形输出坐标跳过另一通道，跨页 UTF-8 保留且未协商格式拒绝', async () => {
+  const f = fixture(true); f.model.transport.capabilities.jobOutputCoordinates = 'ring';
+  const reader = new RemoteLiveJobOutput(f.model, f.target, 'stdout', 'history');
+  const bytes = Buffer.from('中');
+  try {
+    const first = reader.read();
+    f.requests.at(-1).resolve({ ...chunk(bytes.subarray(0, 2), 0, 8), coordinate: 'ring', nextOffset: 6, skippedBytes: 4, producerGap: false });
+    await first; assert.equal(reader.snapshot.text, ''); assert.equal(reader.snapshot.offset, 6);
+    const second = reader.read();
+    f.requests.at(-1).resolve({ ...chunk(bytes.subarray(2), 6, 8, 'completed'), coordinate: 'ring', nextOffset: 8, skippedBytes: 1, producerGap: false });
+    await second; assert.equal(reader.snapshot.text, '中'); assert.equal(reader.snapshot.phase, 'ended');
+    f.model.transport.capabilities.jobOutputCoordinates = undefined;
+    const invalid = reader.read();
+    f.requests.at(-1).resolve({ ...chunk(Buffer.alloc(0), 8, 8), coordinate: 'ring', skippedBytes: 0, producerGap: false });
+    await invalid; assert.equal(reader.snapshot.phase, 'error');
+  } finally { reader.dispose(); }
+});
+
+test('新版环形输出拒绝伪造跳过量，生产者缺口仍明确展示', async () => {
+  const f = fixture(true); f.model.transport.capabilities.jobOutputCoordinates = 'ring';
+  const reader = new RemoteLiveJobOutput(f.model, f.target, 'stderr', 'history');
+  try {
+    const first = reader.read();
+    f.requests.at(-1).resolve({ ...chunk(Buffer.from('tail'), 0, 4), coordinate: 'ring', skippedBytes: 0, producerGap: true });
+    await first; assert.equal(reader.snapshot.gap, true); assert.equal(reader.snapshot.text, 'tail');
+    const next = reader.read();
+    f.requests.at(-1).resolve({ ...chunk(Buffer.from('x'), 4, 5), coordinate: 'ring', skippedBytes: 1, producerGap: false });
+    await next; assert.equal(reader.snapshot.phase, 'error'); assert.equal(reader.timer, null);
+  } finally { reader.dispose(); }
+});
 
 test('手机独立游标连续解码跨分片中文，分段读取完整内容', async () => {
   const f = fixture(), reader = new RemoteLiveJobOutput(f.model, f.target, 'stdout', 'history');

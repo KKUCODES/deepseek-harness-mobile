@@ -1,5 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <activity android:name="dev.dshmobile.validation.LatestRemoteShareReceiver" android:exported="true" android:label="DSHM 新版分享验收">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
         <activity android:name="dev.dshmobile.validation.RemoteShareReceiver" android:exported="true" android:label="DSHM 分享验收">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

@@ -21,7 +21,7 @@ export async function checkRemoteInput() {
       getSnapshot: () => state, async writeDraft(id, value, editor) { state.drafts[id] = value; state.draftEditors[id] = editor; writes.push(value); },
       async changeAttachments(id, update) { state.attachments[id] = update(state.attachments[id]); },
       async send(mode, request) {
-        calls.push({ mode, text: request.text, ids: request.attachmentIds, signal: request.signal });
+        calls.push({ mode, text: request.text, ids: request.attachmentIds, signal: request.signal, displayDraft: request.displayDraft });
         await dispatch(request);
         state.attachments.one = state.attachments.one.filter(item => !request.attachmentIds.includes(item.id));
       } };
@@ -40,6 +40,8 @@ export async function checkRemoteInput() {
     const pending = Promise.withResolvers(); dispatch(() => pending.promise);
     input.submit(); await tick();
     equal(calls.map(call => call.text), ['model:id1'], '使用模型表示而非展示文本');
+    equal(calls[0].displayDraft.text.trim(), '@example', '发送核对记录保留展示草稿');
+    equal(JSON.stringify(calls[0].displayDraft.editor).includes('id1'), true, '发送核对记录保留原引用身份');
     equal(state.drafts.one.trim(), '@example', '持久化草稿确认前保持');
     equal(input.shell.snapshot.draft, '', '编辑区暂时清空');
     input.sync(); input.submit(); equal(calls.length, 1, '不会把旧附件/草稿再次加入');

@@ -280,6 +280,7 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
             "remote.providerKeySetup",
             "remote.providerCardRead",
             "remote.modelReadiness",
+            "remote.presetManagementRead", "remote.presetCopy", "remote.presetDelete", "remote.codingToolsRead",
             "remote.providerRemovalRead", "remote.providerRemovalWrite",
             "remote.providerCreationRead", "remote.providerCreationWrite",
             "remote.providerModelsRead", "remote.providerModelsWrite",
@@ -287,6 +288,7 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
             "remote.providerModelsDiscover",
             "remote.modelProbePrepare", "remote.modelProbeExecute",
             "remote.desktopApps", "remote.prepareDesktopApp", "remote.openDesktopApp", "remote.desktopAppIcon",
+            "remote.subagentStateFollow",
             "remote.negotiate", "remote.rpc", "remote.stream", "remote.graph", "remote.graphFollow", "remote.feedbackFollow", "remote.taskFollow", "remote.resource", "remote.upload", "remote.prompt", "remote.office", "remote.attachment", "remote.attachmentOffice", "remote.changes", "remote.jobStop", "remote.jobOutput", "remote.commandOutput", "remote.sessionExport", "remote.settingsRead", "remote.settingsWrite", "remote.keyRead", "remote.endpointRead", "remote.endpointWrite", "remote.desktop", "remote.openFile", "remote.prepareDesktopFile", "remote.openDesktopFile", "remote.prepareDesktopAttachment", "remote.openDesktopAttachment", "remote.pluginOperationStart", "remote.pluginOperationRead", "remote.pluginOperations")
     }
 }

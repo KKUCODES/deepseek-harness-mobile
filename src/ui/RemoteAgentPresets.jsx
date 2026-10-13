@@ -11,7 +11,7 @@ export function RemoteAgentPresetLabel({ model, onOpen }) {
   const catalog = useSyncExternalStore(model.agentPresets.subscribe, model.agentPresets.getSnapshot);
   useEffect(() => { if (model.agentPresets.available) void model.agentPresets.load(); }, [model]);
   if (!model.agentPresets.available || state.agentPreset == null) return null;
-  const option = catalog.options.find(item => item.id === state.agentPreset);
+  const option = (catalog.allOptions ?? catalog.options).find(item => item.id === state.agentPreset);
   const name = option ? agentPresetText(option, locale).name : state.agentPreset;
   return <div className="remote-agent-mode"><Button aria-label={t('Agent 模式，当前 {name}', { name })} disabled={catalog.busy} onClick={onOpen}>{name}<IconChevronDownOutline14/></Button></div>;
 }
@@ -34,7 +34,7 @@ export function RemoteAgentPresetPicker({ model, sessionId }) {
     {(catalog.error || error) && <p role="alert">{t(error || catalog.error)}</p>}
     {catalog.status === 'ready' && catalog.options.map(option => {
       const text = agentPresetText(option, locale);
-      return <Button key={option.id} className="option remote-permission-option" aria-label={text.name} aria-pressed={state.agentPreset === option.id}
+      return <Button key={option.id} data-agent-preset={option.id} className="option remote-permission-option" aria-label={text.name} aria-pressed={state.agentPreset === option.id}
         disabled={locked || catalog.busy || !catalog.enabled || !model.agentPresets.writable} onClick={() => void choose(option.id)}>
         <span><strong>{text.name}</strong>{text.description && <small>{text.description}</small>}</span>{state.agentPreset === option.id && <IconCheckOutline16/>}
       </Button>;

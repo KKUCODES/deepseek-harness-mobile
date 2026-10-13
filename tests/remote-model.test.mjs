@@ -9,6 +9,7 @@ import { turnForkAnchor } from '../src/remote-forks.mjs';
 import { subagentAccess, subagentStatus } from '../src/remote-subagents.mjs';
 import { captureRemoteResume } from '../src/remote-resume.mjs';
 import { RemoteDraftStore } from '../src/remote-drafts.mjs';
+import { IDBFactory } from 'fake-indexeddb';
 import { draftStorage, draftBinding } from './fixtures/remote-draft-storage.mjs';
 import { loadRemoteHistory } from '../src/remote-history.mjs';
 
@@ -388,6 +389,43 @@ test('Remote 正式模型重建恢复独立会话草稿，成功发送清理持�
   } finally { await next.model.dispose(); }
 });
 
+test('电脑已收到但发送确认丢失，重建正式模型依据原请求编号清理草稿且不重发', async () => {
+  const database = new IDBFactory(), open = () => RemoteDraftStore.open(draftBinding, database, null);
+  const first = fixture(false, await open()); let requestId;
+  const call = first.transport.call;
+  first.transport.call = async (...args) => {
+    if (args[1] !== 'session/prompt') return call(...args);
+    requestId = args[2].args.request.requestId;
+    return { ok: false, error: { code: 'gateway/internal', message: 'lost acknowledgement' } };
+  };
+  try {
+    await first.model.start(); await first.model.select(sid); await first.model.draft('已在电脑收到的消息');
+    await assert.rejects(first.model.send());
+    assert.equal(first.model.draftStore.read(sid), '已在电脑收到的消息');
+    assert.equal(first.model.draftStore.readSubmission(sid)?.requestId, requestId);
+  } finally { await first.model.dispose(); }
+  assert.equal(typeof requestId, 'string');
+  const next = fixture(false, await open()), stream = next.transport.stream.bind(next.transport);
+  next.transport.stream = async function* (...args) {
+    for await (const frame of stream(...args)) yield args[1] === 'session/follow' && frame.type === 'snapshot'
+      ? { ...frame, cursor: 0, records: [{ type: 'event', event: { type: 'user/message', seq: 0, time: 1,
+        data: { id: 'received', role: 'user', content: [{ type: 'text', text: '已在电脑收到的消息' }], source: { kind: 'user', rpcId: requestId } }, surfaceOp: 'append' } }] }
+      : frame;
+  };
+  try {
+    await next.model.start(); await next.model.select(sid);
+    await tick();
+    assert.equal(next.model.snapshot.session.error, undefined, JSON.stringify(next.model.snapshot.session));
+    await waitFor(() => next.model.reference.binding.eventSource.getSnapshot().entries.length);
+    assert.equal(next.model.reference.binding.eventSource.getSnapshot().entries[0].event.data.source.rpcId, requestId);
+    await waitFor(() => next.model.snapshot.drafts[sid] === '');
+    assert.equal(next.model.snapshot.draftErrors[sid], null);
+    assert.equal(next.model.snapshot.drafts[sid], '');
+    assert.equal(next.model.draftStore.read(sid), '');
+    assert.equal(next.calls.some(item => item.endpoint === 'session/prompt'), false);
+  } finally { await next.model.dispose(); }
+});
+
 test('发送失败保留持久草稿，迟到成功不能清除用户发送期间新写的文字', async () => {
   const draftDisk = draftStorage(), store = new RemoteDraftStore(draftBinding, () => draftDisk);
   const f = fixture(false, store), call = f.transport.call; let release, reject = true;
@@ -403,6 +441,55 @@ test('发送失败保留持久草稿，迟到成功不能清除用户发送期�
     f.model.draft('新草稿'); release(); await sending; assert.equal(store.read(sid), '新草稿');
     await f.model.dispose(); f.model.draft('迟到修改'); assert.equal(store.read(sid), '新草稿');
   } finally { release?.(); await f.model.dispose(); }
+});
+
+for (const scenario of ['wrong-id', 'new-draft', 'inbox', 'aside']) test(`未知发送重开核对：${scenario}保持请求身份与用户草稿`, async () => {
+  const database = new IDBFactory(), store = await RemoteDraftStore.open(draftBinding, database, null);
+  await store.write(sid, '原消息');
+  await store.prepareSubmission(sid, 'accepted-original', { text: '原消息' }, []);
+  if (scenario === 'new-draft') await store.write(sid, '新草稿');
+  const f = fixture(false, store), stream = f.transport.stream.bind(f.transport); let aside;
+  f.transport.stream = async function* (...args) {
+    for await (const frame of stream(...args)) yield args[1] === 'session/follow' && frame.type === 'snapshot' ? {
+      ...frame, ...(scenario === 'inbox' ? { projections: { asOfSeq: 0, values: { inbox: {
+        'next-turn': [{ id: 'queued', role: 'user', content: [{ type: 'text', text: '原消息' }], source: { kind: 'user', rpcId: 'accepted-original' } }], 'next-step': [],
+      } } } } : { cursor: 0, records: [{ type: 'event', event: { type: 'user/message', seq: 0, time: 1, surfaceOp: 'append', data: {
+        id: 'original', role: 'user', content: [{ type: 'text', text: '原消息' }], source: { kind: 'user', rpcId: scenario === 'wrong-id' ? 'someone-else' : 'accepted-original' },
+      } } }] }),
+    } : frame;
+  };
+  try {
+    await f.model.start();
+    const view = scenario === 'aside' ? (aside = new RemoteConversationModel(f.model)) : f.model;
+    await view.select(sid); await tick(); await f.model.reconcileSubmission(sid, view.reference.binding);
+    const expected = scenario === 'wrong-id' ? '原消息' : scenario === 'new-draft' ? '新草稿' : '';
+    assert.equal(f.model.snapshot.drafts[sid], expected); assert.equal(store.read(sid), expected);
+    assert.equal(f.calls.some(item => ['session/prompt', 'subagents/prompt'].includes(item.endpoint)), false);
+  } finally { aside?.dispose(); await f.model.dispose(); }
+});
+
+test('发送编号保存失败时不发送，保留原草稿并释放跨视图发送锁', async () => {
+  const f = fixture(false, { read: () => '', write() {}, prepareSubmission() { throw new Error('disk full'); } });
+  try {
+    await f.model.start(); await f.model.select(sid); await f.model.draft('仍未发送');
+    await assert.rejects(f.model.send(), /disk full/);
+    assert.equal(f.model.snapshot.drafts[sid], '仍未发送'); assert.equal(f.model.sending.has(sid), false);
+    assert.equal(f.calls.some(item => item.endpoint === 'session/prompt'), false);
+  } finally { await f.model.dispose(); }
+});
+
+test('发送前核对编号落盘失败，已有附件仍可重试且不会误标为电脑结果未知', async () => {
+  const store = await RemoteDraftStore.open(draftBinding, new IDBFactory(), null), f = fixture(false, store);
+  store.prepareSubmission = () => { throw new Error('journal full'); };
+  try {
+    await f.model.start(); await f.model.select(sid); await f.model.draft('待发送');
+    await f.model.changeAttachments(sid, () => [{ id: 'one', name: 'a.txt', source: new Blob(['a']), bytes: 1,
+      state: 'ready', receiptId: 'test-receipt', file: { attachmentId: 'one', name: 'a.txt', bytes: 1 } }]);
+    await assert.rejects(f.model.send(), /journal full/);
+    assert.equal(f.model.snapshot.attachments[sid][0].state, 'ready');
+    assert.equal(store.readAttachments(sid)[0].state, 'restored');
+    assert.equal(f.calls.some(item => item.endpoint === 'session/prompt'), false);
+  } finally { await f.model.dispose(); }
 });
 
 test('存储失败保留屏幕草稿并明确提示，恢复写入后清理错误', async () => {
@@ -900,6 +987,23 @@ test('返回父会话的迟到列表不能覆盖用户已选择的另一聊天',
   } finally { resolveList?.(); await f.model.dispose(); }
 });
 
+test('主聊天和独立视图拒绝把外部任务标识当成本地子会话，保留选择与草稿', async () => {
+  const f = fixture(), host = withSubagents(f);
+  host.catalogs.get(sid).entries.push({ kind: 'child', id: 'external', mode: 'external', label: 'ACP', activity: 'inactive' });
+  let view;
+  try {
+    await f.model.start(); await f.model.select(sid); await f.model.draft('保留父草稿');
+    await waitFor(() => f.model.snapshot.list.subagentsByParent[sid]?.state === 'ready');
+    view = new RemoteConversationModel(f.model); await view.select(sid);
+    await waitFor(() => view.getSnapshot().list.subagentsByParent[sid]?.state === 'ready');
+    const follows = host.follows.length;
+    await assert.rejects(f.model.openChild('external'), /执行结果显示在父会话/);
+    await assert.rejects(f.model.openChild('external', view), /执行结果显示在父会话/);
+    assert.equal(f.model.snapshot.selected, sid); assert.equal(view.getSnapshot().selected, sid);
+    assert.equal(f.model.snapshot.drafts[sid], '保留父草稿'); assert.equal(host.follows.length, follows);
+  } finally { await view?.dispose(); await f.model.dispose(); }
+});
+
 test('子会话续聊沿用原生成接口与回显 requestId，单次任务只读、父离线可停止不可发送', async () => {
   const f = fixture(), host = withSubagents(f);
   try {
@@ -932,6 +1036,32 @@ test('子会话续聊沿用原生成接口与回显 requestId，单次任务只�
     assert.match(subagentStatus(host.catalogs.get(sid).entries[0]), /当前未运行/);
     assert.doesNotMatch(subagentStatus(host.catalogs.get(sid).entries[0]), /完成/);
   } finally { await f.model.dispose(); }
+});
+
+test('主聊天与独立视图在子会话服务停用后拒绝旧发送和停止，恢复不自动重放', async () => {
+  const f = fixture(); withSubagents(f);
+  let aside;
+  try {
+    await f.model.start(); await f.model.select(sid);
+    await waitFor(() => f.model.snapshot.list.subagentsByParent[sid]?.state === 'ready');
+    await f.model.openChild('child'); await waitFor(() => subagentAccess(f.model.snapshot).canSend);
+    aside = new RemoteConversationModel(f.model);
+    await aside.select({ parentSessionId: sid, childSessionId: 'child', mode: 'continuable' });
+    f.model.draft('保留原草稿');
+    const requests = () => f.calls.filter(call => ['subagents/prompt', 'subagents/interruptByParent'].includes(call.endpoint)).length;
+    const before = requests();
+    f.model.publish({ subagentServiceAvailable: false });
+    for (const view of [f.model, f.model.sessionView, aside, aside.view]) {
+      await assert.rejects(view.send(), /停用子会话服务/);
+      await assert.rejects(view.stop(), /停用子会话服务/);
+    }
+    assert.equal(subagentAccess(aside.getSnapshot()).canSend, false);
+    assert.equal(requests(), before); assert.equal(f.model.snapshot.drafts.child, '保留原草稿');
+    f.model.publish({ subagentServiceAvailable: true });
+    assert.equal(subagentAccess(aside.getSnapshot()).canSend, true);
+    await tick(); assert.equal(requests(), before);
+    assert.equal(f.model.snapshot.drafts.child, '保留原草稿');
+  } finally { aside?.dispose(); await f.model.dispose(); }
 });
 
 test('子会话业务拒绝退休本地回显且保留草稿，文件不上传，目录失败保留错误', async () => {

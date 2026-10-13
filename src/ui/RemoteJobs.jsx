@@ -2,15 +2,16 @@ import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 
 import { useTranslate } from './locale.jsx';
+import { remoteJobs } from '../remote-jobs.mjs';
 
 const labels = { running: '运行中', stopping: '正在停止', completed: '已完成', killed: '已取消', failed: '已失败' };
 const live = job => job.status === 'running' || job.status === 'stopping';
 
-/** 数据来自原 session/control 的 jobs 镜像；不从聊天文案推断进程状态。 */
+/** 数据来自原任务服务或旧版控制流；不从聊天文案推断进程状态。 */
 export function RemoteJobs({ model, sessionId, onOpenOutput }) {
   const t = useTranslate();
   const state = useSyncExternalStore(model.subscribeView, model.getSnapshot);
-  const jobs = state.list?.jobsBySession[sessionId] ?? [];
+  const jobs = remoteJobs(state, sessionId);
   const connected = state.connectionState === 'connected';
   const [now, setNow] = useState(Date.now);
   const [confirm, setConfirm] = useState(null), [notice, setNotice] = useState(null);
@@ -44,7 +45,7 @@ export function RemoteJobs({ model, sessionId, onOpenOutput }) {
         {confirm?.id === job.id && job.status === 'running' && <div><p>{t('停止这个后台任务？已产生的结果会保留。')}</p>
           <Button disabled={!connected || model.jobActions.pending.has(model.jobActions.key(sessionId, job))} onClick={async () => {
             try { const status = await model.jobActions.stop(sessionId, confirm); setNotice({ job: confirm, message: status === 'already-finished' ? '任务已结束。' : '已请求停止，等待电脑确认任务结束。' }); }
-            catch (error) { setNotice({ message: error.message }); } finally { setConfirm(null); }
+            catch (error) { setNotice({ job: confirm, message: error.message }); } finally { setConfirm(null); }
           }}>{t('确认停止任务')}</Button><Button onClick={() => setConfirm(null)}>{t('继续运行')}</Button></div>}
       </li>;
     })}</ul>

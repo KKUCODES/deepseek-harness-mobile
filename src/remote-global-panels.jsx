@@ -11,12 +11,13 @@ export function installRemoteGlobalPanels(model) {
   const { ctx } = model;
   const state = createSnapshotStore({ panelInfo: { activePanelId: null }, sidebarOpen: false, panels: [], rightbar: null });
   const update = patch => state.set({ ...state.getSnapshot(), ...patch });
+  const panelInfo = { subscribe: state.subscribe, getSnapshot: () => state.getSnapshot().panelInfo };
   const controller = new LayoutController({
     selectPanel: id => update({ panelInfo: { activePanelId: id }, sidebarOpen: false }),
     toggleSidebar: () => update({ sidebarOpen: !state.getSnapshot().sidebarOpen }),
     openRightbar: (track, fullscreen) => update({ rightbar: { track, fullscreen } }),
     closeRightbar: () => update({ rightbar: null }),
-  }, id => ctx.slots.entries('main').some(entry => entry.options.key === id));
+  }, id => ctx.slots.entries('main').some(entry => entry.options.key === id), panelInfo);
   const sync = () => {
     const keys = new Set(ctx.slots.entries('main').map(entry => entry.options.key));
     const panels = ctx.slots.entriesOfSlot('sidebar.panellist')
@@ -28,7 +29,7 @@ export function installRemoteGlobalPanels(model) {
     if (selected !== null && !keys.has(selected)) controller.selectPanel(null);
   };
   ctx.provide('layout', controller);
-  ctx.slots.provideRoot({ hooks: { panelInfo: { subscribe: state.subscribe, getSnapshot: () => state.getSnapshot().panelInfo } } });
+  ctx.slots.provideRoot({ hooks: { panelInfo } });
   ctx.effect(() => ctx.slots.subscribe('main', sync));
   ctx.effect(() => ctx.slots.subscribe('sidebar.panellist', sync));
   ctx.effect(() => ctx.locale.subscribe(sync));

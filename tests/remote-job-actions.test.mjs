@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RemoteJobActions } from '../src/remote-job-actions.mjs';
 
-test('停止绑定同一会话任务，未知结果与并发不重放，状态以电脑事件为准', async () => {
+for (const latest of [false, true]) test(`${latest ? '新版任务服务' : '旧版控制流'}：停止绑定同一会话任务，未知结果与并发不重放，状态以电脑事件为准`, async () => {
   const job = { id: 'pwsh-1', startedAt: 1, status: 'running' }, requests = [];
   let settle, generation = 1;
   const state = { selected: 'one', session: { openState: 'open' }, connectionState: 'connected', list: { jobsBySession: { one: [job] } } };
+  if (latest) { state.jobs = { rows: { one: [job] }, observed: {} }; delete state.list.jobsBySession; }
   const model = { getSnapshot: () => state, publish() {}, transport: { capabilities: { jobControlGeneration: 'host-generation' } },
     connection: { generation: { getSnapshot: () => ({ id: generation }) } },
     client: { request(operation) { requests.push(operation); return { promise: new Promise(resolve => { settle = resolve }) }; } } };

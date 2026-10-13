@@ -4,13 +4,13 @@ import { toolRowModel } from '@upstream/ui-tool/src/client/tool/models/tool-call
 import { remoteToolCancellation, remoteToolVisibleContent } from './remote-tool-row.mjs';
 import { useTranslate } from './ui/locale.jsx';
 
-function CancelledTool({ toolName, block, cwd, home, inspect, t, message }) {
+function CancelledTool({ toolName, block, cwd, home, inspect, useDisclosure, t, message }) {
   const translate = useTranslate();
   const row = toolRowModel(toolName, block, cwd, home);
   const content = remoteToolVisibleContent(block).map(part => part.type === 'text' ? part.text : JSON.stringify(part)).join('\n');
   return <ToolRow t={t} variant={row.variant} toolName={toolName} state="stopped" icon={null}
     title={t(row.titleKey)} summary={translate(message)} bodyRaw={row.bodyRaw}
-    output={[translate(message), content].filter(Boolean).join('\n\n')} inspect={inspect}/>;
+    output={[translate(message), content].filter(Boolean).join('\n\n')} inspect={inspect} useDisclosure={useDisclosure}/>;
 }
 
 /** 原工具树仍负责分支、身份和递归。只替换有明确取消结果的原子视图，不改原记录。 */

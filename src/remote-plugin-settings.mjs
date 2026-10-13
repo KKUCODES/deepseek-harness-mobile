@@ -9,7 +9,8 @@ export class RemotePluginSettingsScope {
   constructor(model, namespace) {
     this.settings = new RemoteComputerSettings(model, namespace);
     this.off = model.remote.$on('settings/document-updated', ns => {
-      if (ns === namespace && !this.writing) this.invalidate();
+      // 新版原事件携带 profile 实例 ID；只匹配 Host 返回的真实文档身份，不猜测实例名称。
+      if ((ns === namespace || ns === this.settings.view?.documentId) && !this.writing) this.invalidate();
     });
     this.offGeneration = model.connection.generation.subscribe(() => this.invalidate());
   }
@@ -49,23 +50,26 @@ export class RemotePluginSettingsScope {
     // 原模型卡一次提交两个字段；只接受顶层路径，不能把局部 scope 扩成任意设置代理。
     if (!operations.every(edit => ['set', 'unset'].includes(edit.op) && Array.isArray(edit.path) && edit.path.length === 1)) {
       this.publish({ writable: false, error: '请输入有效的设置值。' });
-      return Promise.resolve();
+      return Promise.resolve(false);
     }
     return this.write(operations.map(edit => edit.op === 'set'
       ? { op: 'set', key: edit.path[0], value: edit.value } : { op: 'unset', key: edit.path[0] }), expectedRevision);
   }
   async write(edits, expectedRevision = this.snapshot.revision) {
-    if (!this.snapshot.writable || this.lifetime.signal.aborted || this.writing) return;
-    if (expectedRevision !== this.snapshot.revision) { this.invalidate(); return; }
+    if (!this.snapshot.writable || this.lifetime.signal.aborted || this.writing) return false;
+    if (expectedRevision !== this.snapshot.revision) { this.invalidate(); return false; }
     const version = this.version;
     this.writing = true;
     this.publish({ busy: true });
     try {
       const view = await this.settings.save(this.settings.view, edits, this.lifetime.signal);
-      if (version === this.version) this.accept(view);
+      if (version !== this.version || this.lifetime.signal.aborted) return false;
+      this.accept(view);
+      return true;
     } catch (error) {
       // 保留旧 user 层，原 CardForm 据此报告未保存；未知结果不重发。
       this.publish({ writable: false, error: error.message });
+      return false;
     } finally { this.writing = false; this.publish({ busy: false }); }
   }
   dispose() { this.lifetime.abort(); this.off(); this.offGeneration(); this.listeners.clear(); }

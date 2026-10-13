@@ -1,5 +1,101 @@
 # 手机通知接入状态
 
+新版后台子任务通知点击时误清父会话提醒的问题，候选修复已通过独立 Android 原生回归及发布/实际源码手机链路；原APK、原源码及完整构建资源已精确恢复归档。详见[子任务通知点击隔离](./latest-child-model.md#后台子任务通知与点击隔离2026-10-07)；不影响下文各专项已核验事实，也不表示全部通知标准已通过。
+
+## 新版待办通知与受阻显示（2026-10-06）
+
+- 状态：固定 npm 发布入口的提问/审批通知，以及发布和实际源码入口的受阻通知、点击与同一会话历史重入通过；新版受阻提示被折叠并误报成功的问题已在独立 App 修复。
+- 维护角色：项目协作 Agent；最近核验：2026-10-06。
+- 来源：[提问驱动](../../scripts/verify-latest-live-question-notice-android.mjs)、[审批驱动](../../scripts/verify-latest-live-approval-notice-android.mjs)、[受阻驱动](../../scripts/verify-latest-live-blocked-notice-android.mjs)、[手机构建适配](../../scripts/latest-turn-process-sources.mjs)。固定目标 `0.2.1-alpha.1 / 5badb150`、候选 `0.1.76-latest.0`，日常旧 DSH 和普通 App 保持。
+
+发布 Host76784、原 App14934 的提问仅一次 `call_00_ET_8QKSL8JTSsXiFMEu8Gdx4655`。后台收到原标题及“有问题等待你回答”，点击实际通知后手机选择绿色；电脑原结果为 `answers=[{id:"notice_check",selected:["绿色"]}]`，真实回复 `DSHM_NOTICE_ANSWER_绿色`。审批仅一次 `call_00_ET_9JVXwZvetnUhdt7hdiRW9573`，实际通知正文为“有操作等待你批准”；点击后查看原文件/拟写内容并拒绝，原工具结果明确 `user rejected escalating`、真实回复 `DSHM_NOTICE_WRITE_REJECTED`。原 UUID 文件未写入、随后移除，workspace-write 恢复。两项各 start/inspect/audit 退出0、无页面错误；历史不重复调用、通知已清除、输入为空。原源码对应证据见下方既有章节。
+
+证据：[发布提问送达](../../../plugin/artifacts/latest-runtime-check/latest-live-question-notice-android-start.json)、[手机回答](../../../plugin/artifacts/latest-runtime-check/latest-live-question-notice-android-inspect.json)、[历史核对](../../../plugin/artifacts/latest-runtime-check/latest-live-question-notice-android-audit.json)，[发布审批送达](../../../plugin/artifacts/latest-runtime-check/latest-live-approval-notice-android-start.json)、[拒绝与恢复](../../../plugin/artifacts/latest-runtime-check/latest-live-approval-notice-android-inspect.json)、[历史核对](../../../plugin/artifacts/latest-runtime-check/latest-live-approval-notice-android-audit.json)。
+
+受阻专项只在独立原 home 加载[有界 pre-step 诊断插件](../../../backend/tests/support/latest-blocked-diagnostic/index.mjs)。插件严格匹配控制文件中的原会话及随机输入，等待手机回到后台后返回原 `reject`；原 DSH 自己保存 `turn/end blocked`，没有注入事件、替换模型/通知帧或新增模型请求。发布 Host29000 在 seq397 收到一条“电脑任务受阻，请打开查看”，实际通知点击正确进入原聊天，但说明节点被 `hidden="until-found"` 隐藏，同时原过程控制器误显示“已完成，用时1秒”。[首次实际失败](../../../plugin/artifacts/latest-runtime-check/latest-live-blocked-notice-android-inspect.json)和[隐藏原因](../../../plugin/artifacts/latest-runtime-check/latest-live-blocked-notice-android-inspect-state-layout.json)保留为失败证据。
+
+手机最新构建仅适配两个原渲染函数：blocked 轮次保持展开，已有共享 turn-blocked 节点说明原因，成功用时/读屏通知不再呈现。原正常完成折叠、停止/失败和运行中展示保持，主聊天、旁栏及插件默认渲染使用同一路径；固定上游源文件不修改，锚点变化时构建明确拒绝。新版原 ChatNodeSeat/TurnProcessNodeView 的[修复前回放](../../artifacts/latest-turn-process-before.json)失败、[修复后回放](../../artifacts/latest-turn-process-after.json)通过；这是展示回放，不代替真实 Android 链路。旧版主/旁栏、中英文及草稿[回归](../../artifacts/blocked-chat-web.json)通过，模型/视图108项及后端恢复5项通过，新版普通启动/五轮输入生命周期回归与 Android assembleDebug/lintDebug 通过。首轮 Gradle 缺 ANDROID_HOME，补齐本进程现有 SDK 路径后构建成功，未修改全局环境。
+
+修复 APK 以 `install -r` 更新同一独立 UID，保留数据/绑定，165 Web 资源及实际安装包逐字节核对，SHA256 `a45e911e4f66ef4ab21309b06ce69bb69f85d14d68a7fd9b2ca05148205ea6b3`，见[产物核对](../../artifacts/latest-live-draft-receipt-apk-blocked.json)。App14934→18339 后只重读原 seq397，未重发标记、未再次点击已消费通知；[恢复检查](../../../plugin/artifacts/latest-runtime-check/latest-live-blocked-notice-android-recover-inspect.json)及[历史重入](../../../plugin/artifacts/latest-runtime-check/latest-live-blocked-notice-android-audit.json)均通过，错误成功文案消失。
+
+随后同一 home 的实际源码 `pnpm dsh web` / Host37540 / 30文件载荷在同 App18339 下执行独立严格匹配标记，原 seq402 blocked 结算、后台通知、实际点击、受阻说明及历史重入全部通过：[送达](../../../plugin/artifacts/latest-runtime-check/latest-live-source-blocked-notice-android-start.json)、[点击](../../../plugin/artifacts/latest-runtime-check/latest-live-source-blocked-notice-android-inspect.json)、[审计](../../../plugin/artifacts/latest-runtime-check/latest-live-source-blocked-notice-android-audit.json)。两种入口的受阻轮次均无用户/模型/工具/step-start事件，未伪造具体拒绝原因。
+
+两个诊断 Host 已按原控制器停止；最终正常发布 Host29812 恢复原网关/配对，诊断标志 false，控制文件、报告控制文件和诊断 overlay 均移除。原 seq397/402 与两条可见说明保留、workspace-write/空输入/无通知/管理false保持，当前 asOfSeq403。首次清理审计仅因截图名称未满足 helper 前缀失败，[失败报告](../../../plugin/artifacts/latest-runtime-check/latest-live-blocked-cleanup.json)保留；[严格恢复审计](../../../plugin/artifacts/latest-runtime-check/latest-live-blocked-cleanup-recovered.json)复核原失败、已移除 overlay 及全部同一记录后通过，未重发操作。四类通知的本机指定路径现有证据，自动审核、其他失败原因/断线/设备后台策略和所有其他有效标准仍待验；SOURCE 租约继续保留，最终完整恢复/交付未完成。
+
+## 发布入口的进程结束与草稿恢复（2026-10-06）
+
+- 状态：固定 npm DSH `0.2.1-alpha.1`、候选插件 `0.1.76-latest.0` 和独立 MuMu App 实际通过两条进程结束/重开流程，包含发送成功回执未处理与正常发送；原消息只一次，草稿与核对编号清除，通知不补发。
+- 维护角色：项目协作 Agent；最近核验：2026-10-06。
+- 来源：[原验证器](../../scripts/verify-latest-live-notice-process-android.mjs)、[原发送恢复实现与边界](./draft-migration-current.md#发送确认丢失后的恢复2026-10-06)。仅增加发布入口的实际包/命令校验与独立证据前缀，不修改生产通知、消息或认证代码。
+
+发布 Host76784 使用 `node dsh/lib/bin.js web`，沿用同一 home、网关、主会话、原配对和管理 false。最终已安装 APK 保持 SHA256 `64ad31f054844b1057173e969a9c3b4cb549c670fc29624da3f67c9cd56c7b39`。没有清除 App 数据、替换 Key 或自动重发模型请求。
+
+先只延迟原 `Session.prompt` 的真实成功回执交给输入层：原编号 `4beb6489-a899-4271-a802-72de4c638919` 在发送前落盘，电脑原 user/message seq330 仅一条。App8314 在回复seq334结算前实际结束，期间及结算后8秒无通知。冷启动新 PID12872 后，原普通首页首先核对原生通知连接 listening、5秒无补发，然后进入 Remote；原 asOfSeq336、指纹、workspace-write 保持，输入、持久草稿和发送核对记录均为空。返回列表后重进历史再次通过。
+
+证据：[回执未处理时结束](../../../plugin/artifacts/latest-runtime-check/latest-live-notice-process-force-draft-receipt-android-start.json)、[重新打开](../../../plugin/artifacts/latest-runtime-check/latest-live-notice-process-force-draft-receipt-android-reopen.json)及[历史/持久数据核对](../../../plugin/artifacts/latest-runtime-check/latest-live-notice-process-force-draft-receipt-android-audit.json)，三个阶段退出0、页面错误0。
+
+随后在未延迟回执的正常发送流程，App12872 在回复seq343结算前结束，期间及结算后8秒无通知。冷启动新 PID14934 从原普通首页自动恢复通知连接，再进入同一 Remote；原 asOfSeq345/单次用户消息/配对/权限保持，输入、持久草稿和核对记录为空，重连后5秒无旧通知，返回列表重开历史再次通过。
+
+证据：[正常发送后结束](../../../plugin/artifacts/latest-runtime-check/latest-live-notice-process-force-final-natural-android-start.json)、[重新打开](../../../plugin/artifacts/latest-runtime-check/latest-live-notice-process-force-final-natural-android-reopen.json)及[历史/持久数据核对](../../../plugin/artifacts/latest-runtime-check/latest-live-notice-process-force-final-natural-android-audit.json)，三个阶段退出0、页面错误0。每条流程仅一次真实请求，无工具调用、无重复消息；最终 App 在原主聊天前台，管理 false。
+
+这与下面固定源码两条流程的结论一致，仍限定本机 MuMu 与有界观察，不证明全部 OEM、省电/存储异常或无限后台。发布提问/审批及受阻等通知类别、其他原完整验收标准继续；源码30文件租约还在用于后续专项，尚未最终恢复。
+
+## 固定源码的进程结束与草稿恢复（2026-10-06）
+
+- 状态：固定 `0.2.1-alpha.1 / 5badb150` 的实际源码入口和独立 MuMu App 通过进程结束期间不推送、重新打开重连、不补发旧通知及已发送草稿清理。发布入口和其他设备的后台策略尚未由此证明。
+- 维护角色：项目协作 Agent；最近核验：2026-10-06。
+- 来源：[实际验证器](../../scripts/verify-latest-live-notice-process-android.mjs)、[草稿恢复规则](./draft-migration-current.md#发送确认丢失后的恢复2026-10-06)、[最终安装包核对](../../artifacts/latest-live-draft-receipt-apk-final.json)。
+
+原始 `am kill` 未结束进程20549，[该轮失败](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-android-start.json)及[通知清理](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-android-recover-live.json)保持失败状态，不能记为进程结束通过。随后 `force-stop` 在电脑回复结算前结束该进程，期间和结算后8秒无通知；但[重开失败](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-android-reopen.json)发现已发送的98字测试消息重新出现，[原症状](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-draft-regression.json)独立保留。电脑原用户消息seq300、`source.rpcId=ad29ee5c-2ecb-4220-9dd9-88806076c620`证明消息已收到；手机此前没有持久保存该核对编号。
+
+修复后先做受控回执时序：仅延迟原 `Session.prompt` 的真实成功结果交给输入shell，不替换电脑响应、不重发请求、不修改生产通知或认证。原编号 `fb1b150f-59c2-4837-9fe9-cae4045f1682` 在发出请求前严格落盘；电脑收到一次原消息seq309。App4409在回复seq312结算前结束，普通首页冷启动5519后先确认原生通知连接 listening，再打开Remote。原配对、权限与历史asOfSeq314保持，草稿和核对编号清理，输入为空、无iframe、无通知；返回列表后重新打开原聊天仍一致。[进程结束](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-draft-receipt-android-start.json)、[冷启动](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-draft-receipt-android-reopen.json)、[重入](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-draft-receipt-android-audit.json)、[持久数据审计](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-draft-receipt-android-local-audit.json)均退出0。
+
+补齐发送前存储失败时附件可重试的边界后，最终APK再次覆盖安装，仅保留同一测试UID的数据。在未延迟回执的正常路径再执行一次真实消息：App7251在电脑回复seq321之前结束，期间和结算后8秒无通知；冷启动8314自动重连，原用户消息只有一条、原asOfSeq323/配对/workspace-write保持，手机草稿和发送核对编号为空，重连后5秒无历史补发。[正常发送后的结束](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-final-natural-android-start.json)、[重新打开](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-final-natural-android-reopen.json)及[历史重入](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notice-process-force-final-natural-android-audit.json)分别保存；范围是本机MuMu和有界观察，不外推无限后台、省电或所有OEM。
+
+最终安装包SHA256为 `64ad31f054844b1057173e969a9c3b4cb549c670fc29624da3f67c9cd56c7b39`，165个Web资源逐字节与候选构建一致，设备已安装包哈希一致；旧日常App未替换。119项草稿/模型/独立视图回归、新旧Web构建、Android assembleDebug/lintDebug通过；17项原编辑器输入契约和主/旁栏输入隔离回放通过，页面错误为零。后者是隔离契约回放，不能替代上述实际模型与Android证据。源码Host71332、30文件租约与原聊天授权继续用于其他完整验收，管理权限保持false。
+
+之前遗留草稿只按已记录测试标记与电脑原用户请求核对后清理，没有推广为按文字删除用户草稿。[清理驱动前两轮失败](../../../plugin/artifacts/latest-runtime-check/latest-live-sent-legacy-draft-cleanup.json)、[再次失败](../../../plugin/artifacts/latest-runtime-check/latest-live-sent-legacy-draft-cleanup-retry.json)保留；[最终重新读取输入、数据库和原历史](../../../plugin/artifacts/latest-runtime-check/latest-live-sent-legacy-draft-cleanup-confirm.json)退出0、确认已为空且没有重发。输入专项最初漏开主聊天、APK核对最初未接受Android安装路径中的`~`，均修正验证器后重新通过；不作为产品缺陷或首次通过。
+
+## 固定源码的后台审批通知（2026-10-06）
+
+- 状态：固定源码 `pnpm dsh web` 的实际 Android 后台审批送达、通知点击、拒绝与历史重入通过；发布入口的审批通知尚未复验。
+- 维护角色：项目协作 Agent；最近核验：2026-10-06。
+- 来源：[实际验证器](../../scripts/verify-latest-live-approval-notice-android.mjs)、[同一通知送达观察](../../../plugin/artifacts/latest-runtime-check/latest-live-source-approval-notice-android-observe.json)、[点击与拒绝](../../../plugin/artifacts/latest-runtime-check/latest-live-source-approval-notice-android-inspect.json)、[历史核对](../../../plugin/artifacts/latest-runtime-check/latest-live-source-approval-notice-android-audit.json)。这三个阶段退出 0、页面错误为零。
+
+沿用 Host71332、30 个固定源码载荷、原主会话与管理 false 的配对，App 20549 保持。核对“需要批准”已开启，不修改通知设置；只对工作区中新建的 UUID 测试文件临时选择“仅可查看”。单次真实模型请求只读取这一文件，然后以 `workspace-write` 请求一次写入批准。原写入调用 `call_00_ET_iVs99TH89MjKb51a2edM3048` 待决定时，后台只产生一条原标题及“有操作等待你批准”的系统通知，文件仍为原字节。
+
+点击实际通知恢复同一聊天，在原工具详情中核对文件名与拟写文本，再拒绝这一审批。电脑原工具结果为错误并明确 `user rejected escalating`，手机显示真实模型回复 `DSHM_NOTICE_WRITE_REJECTED`，原文件没有变化；没有再调用工具。恢复原 `workspace-write` 后核对并移除本次测试文件，通知清除、输入为空、没有 iframe、App 进程不变。返回列表后重开历史，原拒绝和回复保持，序号不变，没有重复审批或调用。
+
+首轮[严格文本核对失败](../../../plugin/artifacts/latest-runtime-check/latest-live-source-approval-notice-android-start.json)保留：模型在拟写标记后增加一个换行，尚未点击或拒绝。验证器改为只接受原标记或原标记加一个末尾换行，并记录原完整拟写内容；没有批准写入。首次继续观察还因助手误操作后台暂停的普通页面超时，[入口失败记录](../../../plugin/artifacts/latest-runtime-check/latest-live-source-approval-notice-observe-entry-failed.json)保留。改为直接读取后台 Remote 页，再观察并点击同一已送达通知；没有重发模型请求。这些验证器失败不算首次通过，也没有修改生产通知逻辑。
+
+仅源码审批通知及本次拒绝路径通过；发布审批通知、受阻提醒、进程结束不补发和更多断线时序仍需新版专项。源码租约继续使用，最终统一恢复。
+
+## 固定源码的后台提问通知（2026-10-06）
+
+- 状态：固定 `0.2.1-alpha.1` 的实际源码 `pnpm dsh web` 通过后台提问送达、系统通知点击、手机回答与历史重入；发布入口的提问尚未复验。
+- 维护角色：项目协作 Agent；最近核验：2026-10-06。
+- 来源：[实际 Android 验证器](../../scripts/verify-latest-live-question-notice-android.mjs)、[送达](../../../plugin/artifacts/latest-runtime-check/latest-live-source-question-notice-android-start.json)、[点击与回答](../../../plugin/artifacts/latest-runtime-check/latest-live-source-question-notice-android-inspect.json)、[历史核对](../../../plugin/artifacts/latest-runtime-check/latest-live-source-question-notice-android-audit.json)。三个阶段均退出 0，页面错误为零。
+
+源码 Host71332、固定 commit `5badb15009ae1756c3afe0ae0cef1faafc290ccc` 和 30 个实际载荷逐阶段核对。沿用原测试主会话与配对，设备管理 false；只核对原“需要回答”已开启，不修改通知设置。只发送一次真实模型消息，唯一原调用为 `call_00_ET_6KF5qWNHFjmZcMUM96Kr6854`，问题正文 `DSHM_QUESTION_NOTICE_681036d8b3fb`。App 切后台后进程 20549 保持，通知栏显示原会话标题及“有问题等待你回答”，原工具仍待回答。
+
+点击真实系统通知恢复同一会话及原问题卡片，再选择“绿色”并提交；电脑原 `tool/result` 收到 `answers:[{id:"notice_check",selected:["绿色"]}]`，非错误，真实回复为 `DSHM_NOTICE_ANSWER_绿色`。通知清除、会话结算、输入为空、没有 iframe，App 进程未改变。返回 Remote 列表后重开同一会话，原结果和回复仍在，原序号保持，没有再次提问或通知；没有其他工具调用，也没有文件或权限变更。
+
+这项只证明固定源码的后台提问路径；源码审批另见上节，发布提问与审批、受阻提醒、进程结束不补发和更多断线时序仍需新版对应验收。源码租约与原测试授权继续保留，最后统一收尾。
+
+## 固定新版的后台完成通知（2026-10-06）
+
+- 状态：固定`0.2.1-alpha.1`的隔离发布和实际源码`pnpm dsh web`，均通过真实模型完成通知及原生通知点击。当前仅完成类型，不代替下面旧版四类型的新版重验。
+- 维护角色：项目协作Agent；最近核验：2026-10-06。
+- 来源：[实际Android验证器](../../scripts/verify-latest-live-notification-android.mjs)、[新版范围](./latest-compatibility.md)。
+
+使用原测试主聊天、同一配对与管理false，核对原“任务完成”已开启但不修改任何通知设置。每种入口只发送一次不调用工具的真实模型测试消息，然后将App切后台；原进程20549始终存活。只产生一条系统通知，标题为原会话标题、有限正文包含本次唯一标记；电脑原记录已有相应回复且没有工具调用。点击实际系统通知后打开同一聊天和回复、输入为空，通知移除，App进程不变；页面错误为零。验证只点击通知导航，不代答或批准。
+
+发布Host24584使用标记`DSHM_LATEST_NOTICE_85376fa3b4a6`，[送达](../../../plugin/artifacts/latest-runtime-check/latest-live-notification-android-start.json)和[点击](../../../plugin/artifacts/latest-runtime-check/latest-live-notification-android-inspect.json)通过。首次观察程序打印通过后仍持有空闲调试句柄；仅中断本验证进程，终端退出1，[收尾异常](../../../plugin/artifacts/latest-runtime-check/latest-live-notification-start-cleanup.json)保留，App与模型请求未中断/重发。加入200ms收尾退出后，同一已送达通知的点击验证正常退出0。
+
+源码Host69680（控制器13940、TTY80297）逐阶段核对固定commit`5badb15009ae1756c3afe0ae0cef1faafc290ccc`与30个实际载荷，使用独立seed和标记`DSHM_LATEST_NOTICE_df6dc9ce1f34`，[送达](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notification-android-start.json)和[点击](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notification-android-inspect.json)均正常退出0。第一次点击检查的启动助手误操作后台暂停的普通聊天WebView，30秒超时，[原失败](../../../plugin/artifacts/latest-runtime-check/latest-live-source-notification-inspect-first-failed.json)保留。修正为点击阶段直接由原生通知恢复Activity，只重观测同一通知，不重发请求。当前设备管理false、原配对与App数据保留；源码租约尚未收尾。
+
+先前[准备记录](../../../plugin/artifacts/latest-runtime-check/latest-live-notification-before.json)的自动审批拦截与旧APK启动问题属于当时未发送阶段；本轮在已经前台打开的原会话执行现有验证器，实际送达/点击结果以上述新报告为准。源码提问与审批另见上节；发布提问与审批、新版受阻提醒，进程结束不补发及更广断线时序仍需对应实际验收，不由单一完成提醒推断。
+
 ## 首版通知验收结论（2026-10-03）
 
 - 状态：A04 按已确认的本地验收范围通过；不代表整个 Remote 已交付。

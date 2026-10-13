@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { changesReviewAddress } from '@upstream/ui-deliverables/src/changes.ts';
 import { DiffBlock } from '@upstream/ui-primitives/src/DiffBlock.tsx';
-import { hunkRows, renderedHunks } from '@upstream/ui-deliverables/src/client/ReviewTab.tsx';
+import { hunkRows, renderedHunks } from '@dshm/review-diff';
 import { readChanges, changesError } from '../remote-changes.mjs';
 import { Surface, IconButton } from './Surface.jsx';
 import { FullscreenIcon } from './FullscreenIcon.jsx';

@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RemoteClient } from '../src/remote-client.mjs';
 import { RemoteTransport } from '../src/remote-transport.mjs';
+import { RemoteDraftStore } from '../src/remote-drafts.mjs';
+import { IDBFactory } from 'fake-indexeddb';
+import { draftBinding } from './fixtures/remote-draft-storage.mjs';
 
 function fixture() {
   const frames = [], generation = crypto.randomUUID();
@@ -169,5 +172,87 @@ test('切换绑定后，旧电脑迟到的列表不能污染新绑定摘要', as
     const current = f.transport.pluginOperations.list();
     f.reply(await f.next('remote.pluginOperations'), { generation: 'new-computer', items: [] });
     assert.deepEqual((await current).items, []);
+  } finally { f.close(); }
+});
+
+test('手机与电脑都重启后，严格落盘的原编号恢复为未知，只有授权读取且不重发安装', async () => {
+  const database = new IDBFactory(), store = await RemoteDraftStore.open(draftBinding, database, null);
+  const first = fixture(); let id;
+  try {
+    first.transport.pluginOperations.setScope('same-binding', store);
+    const call = first.transport.call('/api', 'pluginManager/installBundle', payload), rejected = assert.rejects(call);
+    const start = await first.next('remote.pluginOperationStart'); id = start.operation.operationId;
+    assert.equal(store.readPluginOperations()[0].id, id);
+    first.reply(start, { state: 'pending' }); await first.next('remote.pluginOperationRead');
+    first.transport.dispose(); await rejected; await first.transport.pluginOperations.settled();
+  } finally { first.close(); store.close(); }
+  const reopened = await RemoteDraftStore.open(draftBinding, database, null), next = fixture();
+  try {
+    next.transport.pluginOperations.setScope('same-binding', reopened);
+    const list = next.transport.pluginOperations.list();
+    next.reply(await next.next('remote.pluginOperations'), { generation: 'new-host', items: [] });
+    assert.deepEqual((await list).items.map(item => [item.id, item.state]), [[id, 'unknown']]);
+    assert.equal(next.frames.some(frame => frame.operation?.method === 'remote.pluginOperationStart'), false);
+    const denied = next.transport.pluginOperations.list(), rejection = assert.rejects(denied, /management_required/);
+    const frame = await next.next('remote.pluginOperations');
+    next.client.receive({ type: 'error', id: frame.id, code: 'management_required' }); await rejection;
+  } finally { next.close(); reopened.close(); }
+});
+
+test('摘要先严格提交再提交电脑写入，存储失败不发安装且不遗留虚假未知记录', async () => {
+  const f = fixture(); let release, writes = 0;
+  const store = { readPluginOperations: () => [], writePluginOperations: () => ++writes === 1
+    ? new Promise(resolve => { release = resolve; }) : Promise.resolve() };
+  try {
+    f.transport.pluginOperations.setScope('delayed-binding', store);
+    const call = f.transport.call('/api', 'pluginManager/installBundle', payload);
+    await new Promise(resolve => setTimeout(resolve, 10)); assert.equal(f.frames.length, 0);
+    release(); f.reply(await f.next('remote.pluginOperationStart'), { state: 'pending' });
+    f.reply(await f.next('remote.pluginOperationRead'), { state: 'complete', result: { ok: true, value: {} } });
+    await call;
+    f.transport.pluginOperations.setScope('broken-binding', { readPluginOperations: () => [],
+      writePluginOperations: () => Promise.reject(new Error('QuotaExceeded')) });
+    await assert.rejects(f.transport.call('/api', 'pluginManager/installBundle', payload), /QuotaExceeded/);
+    assert.equal(f.frames.filter(frame => frame.operation?.method === 'remote.pluginOperationStart').length, 1);
+    assert.equal(f.transport.pluginOperations.journal.size, 0);
+  } finally { f.close(); }
+});
+
+test('冷摘要重新核对电脑原回执后删除，原确认结果不被保存失败改成失败', async () => {
+  const database = new IDBFactory(), store = await RemoteDraftStore.open(draftBinding, database, null), f = fixture();
+  const pending = { id: crypto.randomUUID(), generation: f.generation, endpoint: 'pluginManager/installBundle',
+    target: 'original-package', requestId: payload.args.options.requestId, state: 'pending', startedAt: Date.now() };
+  await store.writePluginOperations([pending]);
+  try {
+    f.transport.pluginOperations.setScope('binding', store);
+    const list = f.transport.pluginOperations.list();
+    f.reply(await f.next('remote.pluginOperations'), { generation: f.generation, items: [{ ...pending, state: 'complete', ok: true }] });
+    assert.equal((await list).items[0].state, 'complete'); assert.deepEqual(store.readPluginOperations(), []);
+    const write = store.writePluginOperations.bind(store); let writes = 0;
+    store.writePluginOperations = items => ++writes === 1 ? write(items) : Promise.reject(new Error('disk-full'));
+    const call = f.transport.call('/api', 'pluginManager/installBundle', payload);
+    f.reply(await f.next('remote.pluginOperationStart'), { state: 'pending' });
+    const original = { ok: true, value: { application: 'applied' } };
+    f.reply(await f.next('remote.pluginOperationRead'), { state: 'complete', result: original });
+    assert.deepEqual(await call, original);
+  } finally { f.close(); store.close(); }
+});
+
+test('保存摘要期间切换绑定不提交旧安装；迟到保存不能返回新绑定记录', async () => {
+  const f = fixture(); let release;
+  try {
+    f.transport.pluginOperations.setScope('old', { readPluginOperations: () => [],
+      writePluginOperations: () => new Promise(resolve => { release = resolve; }) });
+    const call = f.transport.call('/api', 'pluginManager/installBundle', payload), rejected = assert.rejects(call, /remote_generation_changed/);
+    f.transport.pluginOperations.setScope('new'); release();
+    // finally 仍写旧存储，等它实际结算后才结束生命周期。
+    await new Promise(resolve => setTimeout(resolve, 0)); release(); await rejected;
+    assert.equal(f.frames.length, 0);
+    let finish;
+    f.transport.pluginOperations.setScope('new', { writePluginOperations: () => new Promise(resolve => { finish = resolve; }) });
+    const list = f.transport.pluginOperations.list(), failure = assert.rejects(list, /remote_generation_changed/);
+    f.reply(await f.next('remote.pluginOperations'), { generation: f.generation, items: [] });
+    await new Promise(resolve => setTimeout(resolve, 0));
+    f.transport.pluginOperations.setScope('third'); finish(); await failure;
   } finally { f.close(); }
 });

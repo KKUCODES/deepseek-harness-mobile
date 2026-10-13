@@ -49,6 +49,6 @@ export function desktopAppsError(error, opening) {
   if (error.message === 'remote_desktop_workspace_changed') return '工作区已变化，请重新选择应用并核对。';
   if (error.message === 'remote_desktop_app_missing') return '电脑上已找不到这个应用，请重新选择。';
   if (error.message === 'remote_desktop_stale') return '当前聊天或确认信息已变化，请重新选择应用。';
-  if (error.message === 'remote_desktop_unavailable') return '请更新电脑远程插件及兼容补丁，并确认电脑桌面可用。';
+  if (error.message === 'remote_desktop_unavailable') return '当前电脑不支持选择桌面应用。';
   return opening ? '打开结果尚未确认，请先在电脑上核对。' : '无法读取电脑应用，请检查连接后重试。';
 }

@@ -2,14 +2,15 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 
 /** 在手机构建目录派生原投影，保持上游参考只读、同一节点与插件注册契约。 */
-export function remoteConversationSources(root) {
-  const base = resolve(root, '../deepseek-harness/packages/client/ui-chat/src/client/conversation-nodes');
-  const output = resolve(root, 'artifacts/source/conversation');
+export function remoteConversationSources(root, { upstream = resolve(root, '../deepseek-harness'), generated = resolve(root, 'artifacts/source'), nativeNavigation = false } = {}) {
+  const base = resolve(upstream, 'packages/client/ui-chat/src/client/conversation-nodes');
+  const output = resolve(generated, 'conversation');
   const files = ['register.ts', 'chat-snapshot-builder.ts', 'turn-navigation.ts'];
   const aliases = {};
   for (const file of files) {
     let text = readFileSync(resolve(base, file), 'utf8');
-    if (file === 'chat-snapshot-builder.ts') {
+    // 新版已经重写增量导航；候选先使用原实现，不在未经验证的结构上套旧性能补丁。
+    if (file === 'chat-snapshot-builder.ts' && !nativeNavigation) {
       // 只复用内容和成员顺序都未变化的轮次；replace 仍完整重建，不能跨历史窗口猜测。
       const edits = [
         ['  private byTurn = new Map<number, TurnNavigationItem>()',
@@ -45,7 +46,7 @@ export function remoteConversationSources(root) {
         text = text.replace(anchor, replacement);
       }
     }
-    if (file === 'turn-navigation.ts') {
+    if (file === 'turn-navigation.ts' && !nativeNavigation) {
       for (const [name, kind] of [['promptText', 'user'], ['responseText', 'assistant-step']]) {
         const anchor = `function ${name}(node: ChatNode): string {`;
         if (text.split(anchor).length !== 2) throw new Error(`Conversation source changed: ${file}: ${name}`);

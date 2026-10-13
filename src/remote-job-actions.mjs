@@ -1,4 +1,6 @@
-/** 停止单个后台任务；结果由原控制流回传，不把接收请求等同于进程已退出。 */
+import { remoteJobs } from './remote-jobs.mjs';
+
+/** 停止单个后台任务；结果由原任务投影回传，不把接收请求等同于进程已退出。 */
 export class RemoteJobActions {
   pending = new Set();
   uncertain = new Map();
@@ -11,7 +13,7 @@ export class RemoteJobActions {
     if (!this.available || generation === undefined || state.connectionState !== 'connected') throw new Error('请连接支持停止后台任务的电脑。');
     if (this.pending.has(key)) throw new Error('正在请求停止，请稍候。');
     if (this.uncertain.get(key) === generation) throw new Error('停止结果尚未确认，请重新连接并核对任务状态。');
-    const current = state.list?.jobsBySession[sessionId]?.find(item => item.id === job.id);
+    const current = remoteJobs(state, sessionId).find(item => item.id === job.id);
     if (state.selected !== sessionId || state.session?.openState !== 'open' || !current
       || current.startedAt !== job.startedAt || current.status !== 'running') throw new Error('任务状态已变化，请重新查看。');
     this.pending.add(key); model.publish();

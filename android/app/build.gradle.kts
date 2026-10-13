@@ -3,6 +3,33 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val latestCompatibilityTest = providers.gradleProperty("latestCompatibilityTest").orNull == "true"
+val latestOfficeLifetimeTest = providers.gradleProperty("latestOfficeLifetimeTest").orNull == "true"
+val latestCordisPeerTest = providers.gradleProperty("latestCordisPeerTest").orNull == "true"
+val latestNoticeLifecycleTest = providers.gradleProperty("latestNoticeLifecycleTest").orNull == "true"
+val latestFinalTest = providers.gradleProperty("latestFinalTest").orNull == "true"
+val officialPluginOnlyTest = providers.gradleProperty("officialPluginOnlyTest").orNull == "true"
+val officialDshVersion = providers.gradleProperty("officialDshVersion").orNull ?: "0.2.1-alpha.1"
+check(officialDshVersion in listOf("0.2.1-alpha.1", "0.2.1-alpha.2")) { "Unreviewed official DSH version" }
+val officialAlpha2 = officialDshVersion == "0.2.1-alpha.2"
+check(!officialAlpha2 || (officialPluginOnlyTest && latestCompatibilityTest)) { "Alpha.2 requires the isolated official candidate" }
+val latestNoticeBaselineAssets = providers.gradleProperty("latestNoticeBaselineAssets").orNull == "true"
+check(!latestOfficeLifetimeTest || latestCompatibilityTest) { "Office lifetime validation requires the latest SDK" }
+check(!latestCordisPeerTest || latestCompatibilityTest) { "Cordis peer validation requires the latest SDK" }
+check(!latestNoticeLifecycleTest || latestCompatibilityTest) { "Notice lifecycle validation requires the latest SDK" }
+check(!latestFinalTest || latestCompatibilityTest) { "Final validation requires the latest SDK" }
+check(!officialPluginOnlyTest || latestCompatibilityTest) { "Official plugin validation requires the latest SDK" }
+check(!latestNoticeBaselineAssets || latestCompatibilityTest) { "Notice baseline assets require the latest SDK" }
+check(listOf(latestOfficeLifetimeTest, latestCordisPeerTest, latestNoticeLifecycleTest, latestFinalTest, officialPluginOnlyTest).count { it } <= 1) { "Choose only one latest test package" }
+if (latestCompatibilityTest) layout.buildDirectory.set(file(when {
+    latestOfficeLifetimeTest -> "../../artifacts/latest-office-android-build"
+    latestCordisPeerTest -> "../../artifacts/latest-cordis-peer-android-build"
+    latestNoticeLifecycleTest -> "../../artifacts/latest-notice-android-build"
+    latestFinalTest -> "../../artifacts/latest-final-android-build"
+    officialPluginOnlyTest -> if (officialAlpha2) "../../artifacts/official-alpha2-android-build" else "../../artifacts/official-android-build"
+    else -> "../../artifacts/latest-android-build"
+}))
+
 android {
     namespace = "dev.dshmobile.validation"
     compileSdk = 35
@@ -12,6 +39,7 @@ android {
         targetSdk = 35
         versionCode = 2
         versionName = "0.1.0-ordinary"
+        buildConfigField("String", "DSH_SDK_VERSION", "\"${if (latestCompatibilityTest) officialDshVersion else "0.1.6-alpha.2"}\"")
         testInstrumentationRunner = "dev.dshmobile.validation.OrdinarySecurityInstrumentation"
     }
     buildFeatures { buildConfig = true }
@@ -19,7 +47,16 @@ android {
     bundle { language { enableSplit = false } }
     // 独立配对验收包使用另一个 UID/存储，不能为了测未绑定入口清除用户数据。
     buildTypes.getByName("debug") {
+        if (latestCompatibilityTest) applicationIdSuffix = when {
+            latestOfficeLifetimeTest -> ".latestofficetest"
+            latestCordisPeerTest -> ".latestcordispeer"
+            latestNoticeLifecycleTest -> ".latestnoticetest"
+            latestFinalTest -> ".latestfinaltest"
+            officialPluginOnlyTest -> ".officialtest"
+            else -> ".latesttest"
+        }
         if (providers.gradleProperty("isolatedPairingTest").orNull == "true") applicationIdSuffix = ".pairingtest"
+        check(!(latestCompatibilityTest && providers.gradleProperty("isolatedPairingTest").orNull == "true")) { "Choose only one isolated test package" }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -30,11 +67,17 @@ android {
 }
 
 // 同一个已验证的 Web 产物进入 APK，避免另维护一套插件加载逻辑。
+val webAssets = file(when {
+    officialPluginOnlyTest -> if (officialAlpha2) "../../artifacts/official-alpha2-mobile-dist" else "../../artifacts/official-mobile-dist"
+    latestNoticeBaselineAssets -> "../../artifacts/latest-notice-baseline-web"
+    latestCompatibilityTest -> "../../artifacts/latest-mobile-dist"
+    else -> "../../dist"
+})
 val syncWebAssets by tasks.registering(Sync::class) {
-    from("../../dist") { exclude("bundle-analysis.json") }
+    from(webAssets) { exclude("bundle-analysis.json") }
     into(layout.buildDirectory.dir("generated/webAssets/web"))
     doFirst {
-        check(file("../../dist/index.html").exists()) { "Run npm run build:web first" }
+        check(webAssets.resolve("index.html").exists()) { "Build the selected Web assets first" }
     }
 }
 tasks.named("preBuild").configure { dependsOn(syncWebAssets) }

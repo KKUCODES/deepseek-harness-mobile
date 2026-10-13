@@ -26,7 +26,7 @@ test('原表单 scope 读取实际继承层、逐字段保存并恢复默认', a
   const f = fixture(), scope = new RemotePluginSettingsScope(f.model, 'shell');
   await scope.load();
   assert.deepEqual(scope.getSnapshot().base, { timeoutMs: 120000, maxOutputBytes: 64000 });
-  await scope.set('timeoutMs', 120001);
+  assert.equal(await scope.set('timeoutMs', 120001), true);
   assert.equal(scope.getSnapshot().user.timeoutMs, 120001);
   await scope.unset('timeoutMs');
   assert.equal(scope.getSnapshot().value.timeoutMs, 120000);
@@ -58,6 +58,18 @@ test('插件专用能力、namespace 与返回投影必须相符', async () => {
   assert.throws(() => new RemoteComputerSettings(f.model, 'credentials'));
 });
 
+test('新版真实文档身份对应的变更使表单失效，其他实例不影响当前表单', async () => {
+  const f = fixture();
+  f.model.client.request = operation => ({ cancel() {}, promise: Promise.resolve({ ...f.view(), documentId: 'pwsh-profile-entry' }) });
+  const scope = new RemotePluginSettingsScope(f.model, 'shell');
+  await scope.load();
+  f.listeners.get('settings/document-updated')('other-profile-entry');
+  assert.equal(scope.getSnapshot().writable, true);
+  f.listeners.get('settings/document-updated')('pwsh-profile-entry');
+  assert.equal(scope.getSnapshot().writable, false);
+  scope.dispose();
+});
+
 test('模型 scope 原子提交精确路由，保留草稿版本，拒绝嵌套路径与旧电脑能力', async () => {
   const f = fixture(), namespace = 'subagent-model-selection';
   let value = { enabled: false, allowedModels: [] }, revision = 3;
@@ -79,13 +91,13 @@ test('模型 scope 原子提交精确路由，保留草稿版本，拒绝嵌套�
   await scope.load();
   const operations = [{ op: 'set', path: ['enabled'], value: true },
     { op: 'set', path: ['allowedModels'], value: [{ provider: 'deepseek', model: 'deepseek-chat' }] }];
-  await scope.mutate(operations, 3);
+  assert.equal(await scope.mutate(operations, 3), true);
   assert.deepEqual(scope.getSnapshot().value, value);
   assert.equal(f.calls.length, 2);
-  await scope.mutate(operations, 3); // 新快照不能给旧草稿绕过 revision。
+  assert.equal(await scope.mutate(operations, 3), false); // 新快照不能给旧草稿绕过 revision。
   assert.equal(f.calls.length, 2); assert.equal(scope.getSnapshot().writable, false);
   await scope.load();
-  await scope.mutate([{ op: 'set', path: ['allowedModels', '0'], value: 'secret' }], revision);
+  assert.equal(await scope.mutate([{ op: 'set', path: ['allowedModels', '0'], value: 'secret' }], revision), false);
   assert.equal(f.calls.length, 3); assert.equal(scope.getSnapshot().writable, false);
   f.model.transport.capabilities.subagentSettings = false;
   await scope.load(); assert.equal(f.calls.length, 3);

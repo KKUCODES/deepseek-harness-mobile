@@ -138,7 +138,8 @@ internal class RemoteNotifications(private val context: Context, private val app
     }
     fun resumed(activity: Activity) {
         foreground = WeakReference(activity)
-        visible[activity]?.let { current(activity, it) }
+        // 通知唤醒时仍保留旧页面；等原导航发布真实选择，避免先消费旧会话的其他提醒。
+        if (requested == null) visible[activity]?.let { current(activity, it) }
         waitingBanner?.let { waitingBanner = null; display(it) }
     }
     fun paused(activity: Activity) {

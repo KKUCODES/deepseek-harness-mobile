@@ -9,6 +9,7 @@ import { RemoteEmptyConversation } from './ui/RemoteEmptyConversation.jsx';
 import { RemotePanelActive, RemotePanelIdentity } from './remote-plugin-panels.jsx';
 import { captureConversationResume } from './remote-resume.mjs';
 import { installRemoteSubagentLineage } from './remote-subagent-lineage.jsx';
+import { assertLocalSubagent } from './remote-subagents.mjs';
 import { NS as conversationNS } from '@upstream/ui-conversation/src/client/locales.ts';
 
 const ConversationBody = createContext(null);
@@ -94,6 +95,7 @@ export function installRemoteSidebarChat(model) {
     const entry = state.list?.subagentsByParent[parentSessionId]?.entries.find(item => item.id === id && item.kind === 'child');
     model.sessionFor(view);
     if (!entry) throw new Error('子会话已变化，请刷新后重试。');
+    assertLocalSubagent(entry);
     ctx.sidebarRight.openResource(subagentChatAddress({ parentSessionId, childSessionId: id, mode: entry.mode }), { kind: 'subagentchat', preferNewPane: true });
   };
 }

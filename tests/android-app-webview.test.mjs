@@ -31,3 +31,20 @@ test('Android 主进程缺失或不唯一时拒绝连接任意 WebView', async (
     await assert.rejects(androidAppWebView({ shell: async () => Buffer.from(value) }), /主进程必须/);
   }
 });
+
+test('新增并发测试包仍按自己的 PID 选择，拒绝任意其他包名', async () => {
+  const target = { pid: () => 566 };
+  const device = { shell: async command => {
+    assert.equal(command, 'pidof dev.dshmobile.validation.latestcordispeer'); return Buffer.from('566');
+  }, webViews: () => [target] };
+  assert.equal(await androidAppWebView(device, 'dev.dshmobile.validation.latestcordispeer'), target);
+  await assert.rejects(androidAppWebView(device, 'dev.dshmobile.validation.other'), /match/);
+});
+
+test('纯官方独立测试包只选择自己的进程，不连接原凭据 App', async () => {
+  const own = { pid: () => 120 }, original = { pid: () => 1200 };
+  const device = { shell: async command => {
+    assert.equal(command, 'pidof dev.dshmobile.validation.officialtest'); return Buffer.from('120');
+  }, webViews: () => [original, own] };
+  assert.equal(await androidAppWebView(device, 'dev.dshmobile.validation.officialtest'), own);
+});

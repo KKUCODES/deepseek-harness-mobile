@@ -46,7 +46,8 @@ export class RemoteInputSession {
         try {
           this.check();
           const reference = this.reference;
-          await model.send(mode, { reference, generation: this.generation, text, attachmentIds, signal }, view);
+          await model.send(mode, { reference, generation: this.generation, text, attachmentIds, signal,
+            displayDraft: this.pending?.draft ?? this.captureDraft() }, view);
           if (this.pending) this.pending.result = 'success';
           // 附件单独发送成功时原 shell 不再发布 state，因此主动结束手机提交锁。
           queueMicrotask(() => this.settle());

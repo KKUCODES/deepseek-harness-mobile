@@ -46,3 +46,22 @@ test('不接受未知服务、原型属性或被修改的外部快照', async ()
   assert.throws(() => { theme.getSnapshot().value.fontSize = 99; }, TypeError);
   assert.equal(provider.facade().session, undefined);
 });
+
+test('新版ConfigForm共用原手机设置、订阅与存储；未知namespace或失败不报告接受', async () => {
+  const disk = storage(), provider = new LocalSettings(disk), forms = provider.configForms();
+  const form = forms.get('ui-theme'), scope = provider.bind({ namespace: 'ui-theme' });
+  assert.equal(forms.get('ui-theme'), form);
+  assert.equal(form.getSnapshot(), scope.getSnapshot());
+  let changes = 0; const stop = form.subscribe(() => changes++);
+  assert.equal(await form.set('preference', 'dark'), true);
+  assert.equal(scope.getSnapshot().value.preference, 'dark');
+  await scope.set('fontSize', 16); assert.equal(form.getSnapshot().value.fontSize, 16);
+  assert.equal(changes, 2); assert.equal(await form.unset('preference'), true);
+  assert.equal(new LocalSettings(disk).configForms().get('ui-theme').getSnapshot().value.preference, 'system');
+  assert.throws(() => forms.get('workspace'), /unsupported/);
+  assert.throws(() => forms.get('__proto__'), /unsupported/);
+  await assert.rejects(form.mutate([{ op: 'set', path: ['fontSize'], value: 15 }], 0), /conflict/);
+  disk.setItem = () => { throw Error('quota'); };
+  await assert.rejects(form.set('fontSize', 15), /quota/);
+  assert.equal(form.getSnapshot().value.fontSize, 16); stop();
+});

@@ -54,6 +54,16 @@ export class RemotePlugins {
     this.followGraphs();
     await first;
   }
+  async installJobs() {
+    if (!this.model.transport.capabilities?.endpoints?.streams?.includes('job/list')) return;
+    // 用本台电脑的原客户端服务管理引用计数和重连，不在手机复制一套任务流状态机。
+    const plugin = await this.runtime.modules.import('@deepseek-ai/dsh-api-job-controller/client', '', {});
+    this.controller.signal.throwIfAborted();
+    const fiber = this.model.ctx.plugin(plugin);
+    await fiber.await();
+    this.controller.signal.throwIfAborted();
+    if (!this.model.ctx.get('jobs')) throw Error('remote_jobs_service_missing');
+  }
   stopFollowing() {
     this.followRevision++;
     this.follow?.cancel(); this.follow = null;
@@ -179,6 +189,6 @@ export class RemotePlugins {
 }
 
 function coreRevision(graph) {
-  const core = new Set([modulesId, '@deepseek-ai/dsh-api-remotes', '@deepseek-ai/dsh-api-gateway', '@deepseek-ai/dsh-typert-registry', '@deepseek-ai/dsh-client-connection']);
+  const core = new Set([modulesId, '@deepseek-ai/dsh-api-remotes', '@deepseek-ai/dsh-api-gateway', '@deepseek-ai/dsh-typert-registry', '@deepseek-ai/dsh-client-connection', '@deepseek-ai/dsh-api-job-controller']);
   return JSON.stringify(graph.entries.filter(row => core.has(row.id)).map(({ id, rev }) => [id, rev]).sort(([a], [b]) => a.localeCompare(b)));
 }

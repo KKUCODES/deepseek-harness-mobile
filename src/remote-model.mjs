@@ -1,6 +1,7 @@
 import { Context } from '@deepseek-ai/cordis';
 import { RemoteError } from '../../deepseek-harness/packages/typert/protocol/src/index.ts';
 import { RemoteSessions } from './remote-sessions.mjs';
+import { remoteSessionCatalogs } from './remote-session-catalogs.mjs';
 import { createSessionControlStream } from '../../deepseek-harness/packages/api/session-controller/src/client/transport.ts';
 import { ClientWorkspaceModel, createWorkspaceStateStream } from '../../deepseek-harness/packages/api/workspace-controller/src/client/index.ts';
 import { UiConversation } from '../../deepseek-harness/packages/client/ui-conversation/src/client/conversation/assembly.ts';
@@ -23,13 +24,15 @@ import { RemoteWorkspaceActions } from './remote-workspaces.mjs';
 import { RemoteComputerSettings, RemoteProviderSettings, RemoteDeepSeekModels } from './remote-settings.mjs';
 import { RemoteComputerKey } from './remote-key.mjs';
 import { RemoteComputerEndpoint } from './remote-endpoint.mjs';
-import { subagentAccess, SUBAGENT_MODEL_READ_ONLY } from './remote-subagents.mjs';
+import { subagentAccess, watchSubagentService, SUBAGENT_MODEL_READ_ONLY, assertLocalSubagent } from './remote-subagents.mjs';
 import { workflowMemberTarget } from './remote-workflows.mjs';
 import { MAX_UPLOAD_BYTES } from '../../backend/packages/protocol/dist/index.js';
 import { RemoteNoticeLedger, watchTaskNotifications } from './remote-task-notifications.mjs';
 import { RemoteSessionView } from './remote-session-view.mjs';
 import { RemoteWorkspaceNavigation } from './remote-workspace-navigation.mjs';
 import { RemoteViewNotifications } from './remote-view-notifications.mjs';
+import { sameRemoteDraft } from './remote-drafts.mjs';
+import { RemoteEndpointJournal } from './remote-endpoint-journal.mjs';
 
 /** 只组装数据和会话投影；不启动 bootClient，不挂载电脑页面。 */
 export class RemoteModel {
@@ -44,16 +47,19 @@ export class RemoteModel {
   answering = new Set();
   uploads = new Map();
   sending = new Set();
+  reconcilingDrafts = new Map();
   draftTransfers = new Set();
   selectingModels = new Set();
   pendingImageUrls = new Set();
   constructor(client, { transport = new RemoteTransport(client), loadRemotes, draftStore, notificationKey } = {}) {
     this.client = client;
     this.transport = transport;
-    this.transport.pluginOperations?.setScope(notificationKey);
+    this.transport.pluginOperations?.setScope(notificationKey, draftStore);
     this.ctx = new Context();
     this.loadRemotes = loadRemotes;
     this.draftStore = draftStore;
+    this.endpointJournal = new RemoteEndpointJournal(draftStore, () => this.publish({ endpointRecoveries: this.endpointJournal.summaries() }));
+    this.snapshot.endpointRecoveries = this.endpointJournal.summaries();
     // 同一绑定的核心模块重建沿用去重记录；新绑定不沿用旧电脑的通知身份。
     if (!client.noticeLedger || client.noticeLedgerKey !== notificationKey) {
       client.noticeLedger = new RemoteNoticeLedger(); client.noticeLedgerKey = notificationKey;
@@ -64,6 +70,10 @@ export class RemoteModel {
       ...[this.transport.lifetime?.signal].filter(Boolean)]));
   }
   assembleSessions() {
+    this.disposers.push(watchSubagentService(this));
+    this.jobs = this.ctx.get('jobs');
+    if (this.transport.capabilities?.endpoints?.streams?.includes('job/list') && !this.jobs) throw Error('remote_jobs_service_missing');
+    if (this.jobs) this.disposers.push(this.jobs.state.subscribe(() => this.publish()));
     this.sessions = new RemoteSessions(this.ctx, this.remote);
     this.workspaces = new ClientWorkspaceModel(this.remote.workspace);
     this.workspaceActions = new RemoteWorkspaceActions(this);
@@ -151,7 +161,8 @@ export class RemoteModel {
     if (this.lifetime.signal.aborted) return;
     const previous = this.snapshot;
     this.snapshot = { ...this.snapshot, ...patch, lastReceivedAt: this.transport.lastReceivedAt,
-      list: this.sessions?.list.getSnapshot(), workspaces: this.workspaces?.getSnapshot() };
+      list: remoteSessionCatalogs(this.sessions?.list.getSnapshot()), workspaces: this.workspaces?.getSnapshot(),
+      jobs: this.jobs?.state.getSnapshot() };
     if (this.snapshot.connectionState === 'connected' && this.capabilityGeneration !== this.connection?.generation.getSnapshot()?.id) this.snapshot.connectionState = 'connecting';
     for (const listener of this.listeners) listener();
     if (!this.lifetime.signal.aborted) this.viewNotifications.publish(previous, this.snapshot);
@@ -171,6 +182,7 @@ export class RemoteModel {
     const core = installRemoteCore(this);
     this.connection = core.connection; this.remote = this.ctx.remote;
     await remotes.apply(this.ctx);
+    await this.pluginRuntime?.installJobs();
     this.lifetime.signal.throwIfAborted();
     this.assembleSessions();
     await this.onAssembled?.();
@@ -228,11 +240,15 @@ export class RemoteModel {
     }
     return restored;
   }
-  get subagentsAvailable() { return this.transport.capabilities?.endpoints?.calls?.includes('subagents/list') === true; }
+  get subagentsAvailable() {
+    const calls = this.transport.capabilities?.endpoints?.calls;
+    return calls?.includes('subagents/list') === true || calls?.includes('session/projections') === true;
+  }
   async openChild(id, view = this) {
     const { selected, selectedTarget, selectionTrail = [], list } = view.getSnapshot();
     const child = list?.subagentsByParent[selected]?.entries.find(item => item.id === id && item.kind === 'child');
     if (!this.subagentsAvailable || !child) throw new Error('子会话已变化，请刷新后重试。');
+    assertLocalSubagent(child);
     await view.select({ parentSessionId: selected, childSessionId: child.id, mode: child.mode }, { trail: [...selectionTrail, selectedTarget] });
   }
   async back(view = this) {
@@ -255,7 +271,9 @@ export class RemoteModel {
   }
   async stop(view = this) {
     const reference = this.sessionFor(view);
-    if (!subagentAccess(view.getSnapshot()).canStop) throw new Error('此子任务只能查看执行记录。');
+    const access = subagentAccess(view.getSnapshot(), this.snapshot.subagentServiceAvailable);
+    if (!access.canStop) throw new Error(access.address?.mode === 'continuable'
+      ? access.message : '此子任务只能查看执行记录。');
     return unwrap(await reference.binding.session.cancel());
   }
   draft(value) { return this.writeDraft(this.snapshot.selected, value); }
@@ -272,6 +290,42 @@ export class RemoteModel {
         ? '本机草稿未能清理，重启后可能仍显示旧内容，请勿重复发送。'
         : '草稿未能保存到手机，请勿关闭 App，检查存储后重试。' } });
     } finally { if (this.draftVersions.get(id) === version) this.publish({ draftSaving: { ...this.snapshot.draftSaving, [id]: false } }); }
+  }
+  async reconcileSubmission(id, binding, acceptedRequestId) {
+    if (!this.draftStore?.readSubmission || this.lifetime.signal.aborted) return;
+    if (this.reconcilingDrafts.has(id)) {
+      await this.reconcilingDrafts.get(id);
+      return this.reconcileSubmission(id, binding, acceptedRequestId);
+    }
+    const operation = (async () => {
+      try {
+        const pending = this.draftStore.readSubmission(id);
+        if (!pending) return;
+        const inbox = binding.session.projections.faceOf('inbox').getSnapshot();
+        const matches = source => source?.kind === 'user' && source.rpcId === pending.requestId;
+        const received = acceptedRequestId === pending.requestId
+          || binding.eventSource.getSnapshot().entries.some(entry => entry.type === 'event'
+            && entry.event.type === 'user/message' && matches(entry.event.data.source))
+          || ['next-turn', 'next-step'].some(key => inbox?.[key]?.some(item => matches(item.source)));
+        if (!received) return;
+        const version = this.draftVersions.get(id), filesVersion = this.attachmentDraftVersions.get(id);
+        const current = () => !this.lifetime.signal.aborted && this.draftVersions.get(id) === version
+          && this.attachmentDraftVersions.get(id) === filesVersion;
+        const result = await this.draftStore.settleSubmission(id, pending.requestId, current);
+        if (!result || !current()) return;
+        const draft = { text: this.snapshot.drafts[id] ?? '', editor: this.snapshot.draftEditors[id] };
+        this.publish({ ...(result.clearedDraft && sameRemoteDraft(draft, pending.draft) ? {
+          drafts: { ...this.snapshot.drafts, [id]: '' }, draftEditors: { ...this.snapshot.draftEditors, [id]: undefined },
+          draftErrors: { ...this.snapshot.draftErrors, [id]: null },
+        } : {}), attachments: { ...this.snapshot.attachments,
+          [id]: (this.snapshot.attachments[id] ?? []).filter(item => !result.attachmentIds.includes(item.id)) } });
+      } catch {
+        if (!this.lifetime.signal.aborted) this.publish({ draftErrors: { ...this.snapshot.draftErrors,
+          [id]: '发送记录尚未核对或草稿未能清理，请检查聊天记录，勿重复发送。' } });
+      }
+    })();
+    this.reconcilingDrafts.set(id, operation);
+    try { await operation; } finally { if (this.reconcilingDrafts.get(id) === operation) this.reconcilingDrafts.delete(id); }
   }
   changeAttachments(id, update) {
     this.publish({ attachments: { ...this.snapshot.attachments, [id]: update(this.snapshot.attachments[id] ?? []) } });
@@ -367,6 +421,7 @@ export class RemoteModel {
     };
     checkInput();
     const text = input ? input.text : this.snapshot.drafts[id] ?? '';
+    const displayDraft = input?.displayDraft ?? (!input ? { text, editor: this.snapshot.draftEditors[id] } : undefined);
     if (typeof text !== 'string' || text.length > 100000) throw new Error('remote_draft_invalid');
     const available = this.snapshot.attachments[id] ?? [];
     const ids = input?.attachmentIds;
@@ -379,7 +434,7 @@ export class RemoteModel {
     if (this.planMode.pendingSessions.has(id)) throw new Error('计划模式正在切换，请稍候再发送。');
     if (this.agentPresets.pendingSessions.has(id)) throw new Error('Agent 模式正在切换，请稍候再发送。');
     if (attachments.some(item => item.state !== 'ready')) throw new Error('remote_attachments_not_ready');
-    const access = subagentAccess(view.getSnapshot());
+    const access = subagentAccess(view.getSnapshot(), this.snapshot.subagentServiceAvailable);
     if (!access.canSend) throw new Error(access.message);
     if (access.address && attachments.some(item => item.kind !== 'image')) throw new Error('子会话不支持发送文件附件。');
     const session = reference.binding.session;
@@ -403,6 +458,10 @@ export class RemoteModel {
       }), onRetire: () => { for (const url of urls) { URL.revokeObjectURL(url); this.pendingImageUrls.delete(url); } } });
       let result;
       try {
+        if (displayDraft && this.draftStore?.prepareSubmission) {
+          await this.draftStore.prepareSubmission(id, submission.requestId, displayDraft, attachments.map(item => item.id));
+          checkInput();
+        }
         dispatched = true;
         // 基线上游 Session.prompt 的子会话分支会重新生成 requestId，导致本地回显无法退休。
         // 调用同一原生成接口并保留 beginSubmission 的 id，电脑记录仍是唯一事实来源。
@@ -414,12 +473,16 @@ export class RemoteModel {
         if (!result.ok && ['gateway/internal', 'gateway/cancelled'].includes(result.error.code)) throw result.error;
       } catch (error) {
         submission.abandon();
-        await this.changeAttachments(id, items => items.map(item => attachments.includes(item) ? { ...item, state: 'uncertain' } : item));
+        if (dispatched) await this.changeAttachments(id, items => items.map(item => attachments.includes(item) ? { ...item, state: 'uncertain' } : item));
+        else await this.draftStore?.forgetSubmission?.(id, submission.requestId);
         throw error;
       }
       this.sendingAttachmentIds.delete(id);
-      if (!result.ok) { submission.abandon(); await this.saveAttachmentDrafts(id); }
+      if (!result.ok) {
+        submission.abandon(); await this.draftStore?.forgetSubmission?.(id, submission.requestId); await this.saveAttachmentDrafts(id);
+      }
       unwrap(result);
+      await this.reconcileSubmission(id, reference.binding, submission.requestId);
       // 原 shell 自己提交/恢复编辑器；它的持久化草稿可能是引用的展示形式。
       if (!input && this.snapshot.drafts[id] === text) await this.writeDraft(id, '');
       await this.changeAttachments(id, items => items.filter(item => !attachments.includes(item)));
@@ -503,7 +566,6 @@ export class RemoteModel {
     if (this.closing) return this.closing;
     this.releaseSelection(); this.lifetime.abort();
     this.viewNotifications.dispose();
-    this.draftStore?.close?.();
     this.skills?.dispose();
     this.permissions?.dispose();
     this.planMode?.dispose();
@@ -512,7 +574,8 @@ export class RemoteModel {
     for (const url of this.pendingImageUrls) URL.revokeObjectURL(url);
     this.pendingImageUrls.clear();
     this.disposers.forEach(off => off()); this.transport.dispose();
-    this.closing = Promise.allSettled([this.pluginRuntime?.dispose(), this.control?.dispose(), this.workspaceStream?.dispose(), this.ctx.fiber.dispose()]);
+    this.closing = Promise.allSettled([this.transport.pluginOperations?.settled?.(), this.pluginRuntime?.dispose(),
+      this.control?.dispose(), this.workspaceStream?.dispose(), this.ctx.fiber.dispose()]).finally(() => this.draftStore?.close?.());
     return this.closing;
   }
 }

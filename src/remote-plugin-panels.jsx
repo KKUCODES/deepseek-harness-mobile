@@ -27,6 +27,9 @@ import { RemotePanelMemory } from './remote-panel-memory.mjs';
 import { retainRemoteSurface } from './remote-surface-inert.mjs';
 
 const FILE_ID = 'dshm/file-preview';
+// 旧版没有快捷键目录；新版读取真实客户端服务，不能以电脑目录代替手机绑定。
+const EMPTY_SHORTCUTS = Object.freeze([]);
+const emptyShortcutCatalog = { subscribe: () => () => {}, getSnapshot: () => EMPTY_SHORTCUTS };
 export const RemotePanelActive = createContext(false);
 export const RemotePanelIdentity = createContext(null);
 
@@ -35,16 +38,25 @@ export function installRemotePluginPanels(model) {
   const { ctx } = model;
   ctx.locale.register('sidebarRight', { zh, en });
   const tabs = new SidebarRightTabRegistry(ctx);
-  const { controller, adopt, forget } = createSidebarRightController(tabs, (address, signal) => {
+  const { controller, adopt, forget, show, measure } = createSidebarRightController(tabs, (address, signal) => {
     const resources = ctx.get('resources');
     if (!resources) throw new Error('Plugin resources are not ready');
     resources.pin(address, signal);
-  });
+  }, { autoFullscreen: () => true, openWithFocus: (_id, open) => open(), closeWithFocus: (_id, _pane, close) => close() });
   ctx.provide('sidebarRightTabs', tabs);
   ctx.provide('sidebarRight', controller);
   model.pluginPanels = controller;
   const memory = model.panelMemory = new RemotePanelMemory();
   const adoptions = [], snapshots = memory.layouts, subscriptions = new Map();
+  if (show) {
+    // 新版控制器由组合层指定屏幕上的 Session；React 只报告尺寸，不再反向绑定 controller。
+    const sync = () => show(model.globalPanels.state.getSnapshot().panelInfo.activePanelId === null
+      ? model.getSnapshot().selected ?? undefined : undefined);
+    ctx.effect(() => model.subscribe(sync));
+    ctx.effect(() => model.globalPanels.state.subscribe(sync));
+    ctx.effect(() => () => show(undefined));
+    sync();
+  }
   ctx.effect(() => () => {
     controller.tabDomain.dispose();
     for (const release of adoptions) release();
@@ -74,8 +86,9 @@ export function installRemotePluginPanels(model) {
       'sidebar.right.pane.tab.title': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: tabInfoFactory } } },
       'sidebar.right.tab.menu.item': { kind: 'list', scope: 'session' },
     },
-    inject: sessionId => ({ controller, model,
-      hooks: { tabTypes: { subscribe: listener => tabs.subscribe(listener), getSnapshot: () => tabs.entries() } },
+    inject: sessionId => ({ controller, model, measure,
+      hooks: { shortcuts: ctx.get('shortcuts')?.catalog ?? emptyShortcutCatalog,
+        tabTypes: { subscribe: listener => tabs.subscribe(listener), getSnapshot: () => tabs.entries() } },
       keyedHooks: { tabNavigation: key => controller.tabDomain.occurrence(sessionId, { id: key }).navigation },
     }),
   }, MobilePluginPanels);
@@ -83,7 +96,8 @@ export function installRemotePluginPanels(model) {
     children: {
       'sidebar.right.tab.guide.entry': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: guideTabInfoFactory } } },
       'sidebar.right.tab.guide': { kind: 'chain', scope: 'session', inject: { hooks: { tabInfo: guideTabInfoFactory } } },
-    }, inject: () => ({ hooks: { guideEntries: { subscribe: listener => tabs.subscribe(listener), getSnapshot: () => tabs.guide() } } }),
+    }, inject: () => ({ hooks: { shortcuts: ctx.get('shortcuts')?.catalog ?? emptyShortcutCatalog,
+      guideEntries: { subscribe: listener => tabs.subscribe(listener), getSnapshot: () => tabs.guide() } } }),
   }, GuideBody);
   ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: GUIDE_ID }, GuideTitle);
   if (!installRemoteDocumentPreviews(model)) {
@@ -102,11 +116,12 @@ function MobileFileTab({ sessionId, useTabInfo, model, controller }) {
   return file && <RemoteFilePreview file={file} model={model} onClose={() => { if (controller.isExpanded()) controller.toggleExpanded(); }}/>;
 }
 
-function PanelTab({ tab, title = false, controller, sessionId, useStore, useTabNavigation, useTabTypes, renderSlot, fallback }) {
+function PanelTab({ tab, title = false, active = false, controller, sessionId, useStore, useTabNavigation, useTabTypes, useShortcuts, renderSlot, fallback }) {
   const occurrence = controller.tabDomain.occurrence(sessionId, tab);
   const definition = useTabTypes(types => types.find(item => item.kind === tab.kind));
-  const hookContext = useMemo(() => ({ tabId: tab.id, title, fullscreen: true, signal: occurrence.signal,
-    actions: occurrence.tabActions, useStore, useTabNavigation }), [tab.id, title, occurrence, useStore, useTabNavigation]);
+  const shortcuts = useShortcuts(entries => entries);
+  const hookContext = useMemo(() => ({ tabId: tab.id, title, fullscreen: true, active, shortcuts, signal: occurrence.signal,
+    actions: occurrence.tabActions, useStore, useTabNavigation }), [tab.id, title, active, shortcuts, occurrence, useStore, useTabNavigation]);
   return renderSlot(title ? 'sidebar.right.pane.tab.title' : 'sidebar.right.pane.tab', {}, { entryKey: definition?.id ?? tab.kind, hookContext, fallback });
 }
 
@@ -149,13 +164,16 @@ export function PanelSurface({ open, title, onClose, model, children, backKey = 
 }
 
 function MobilePluginPanels(props) {
-  const { sessionId, useStore, actions, controller, useTabTypes, model, renderSlot, footer } = props;
+  const { sessionId, useStore, actions, controller, useTabTypes, model, renderSlot, footer, measure } = props;
   const [menu, setMenu] = useState(null);
   const t = useTranslate(), surfaces = useStore(state => state.bySession);
   const types = useTabTypes(types => types);
   const surface = surfaces[sessionId], layout = surface?.layout;
   const close = useCallback(() => actions.setExpanded(sessionId, false), [actions, sessionId]);
-  useLayoutEffect(() => controller.bind({ sessionId, actions, surfaces, canSplitPane: () => false }), [controller, sessionId, actions, surfaces]);
+  useLayoutEffect(() => {
+    if (measure) { measure(sessionId, () => false); return; }
+    return controller.bind({ sessionId, actions, surfaces, canSplitPane: () => false });
+  }, [controller, sessionId, actions, surfaces, measure]);
   useEffect(() => { if (!surface) actions.open(sessionId); }, [actions, sessionId, surface]);
   useEffect(() => { setMenu(null); }, [sessionId, layout?.expanded, layout?.activePaneId && layout.nodes[layout.activePaneId]?.activeTabId]);
   if (!layout) return null;
@@ -176,7 +194,7 @@ function MobilePluginPanels(props) {
     </header>
     <nav aria-label={t('已打开的面板')}>
       {records.map(tab => <Button key={tab.id} aria-pressed={tab.id === active?.id} onClick={() => controller.focus(tab.id)}>
-        <PanelTab {...props} tab={tab} title fallback={tab.title}/>
+        <PanelTab {...props} tab={tab} title active={layout.expanded && tab.id === active?.id} fallback={tab.title}/>
       </Button>)}
       <Button onClick={() => controller.openTab('guide')}>{t('打开面板')}</Button>
     </nav>
@@ -187,7 +205,7 @@ function MobilePluginPanels(props) {
     <div className={`remote-plugin-panel-content${fillsPanel(active) ? ' is-document' : ''}`}>{records.filter(tab => types.find(type => type.kind === tab.kind)?.id !== FILE_ID).map(tab => <div className={fillsPanel(tab) ? 'remote-document-tab' : undefined} key={tab.id} hidden={tab.id !== active?.id}>
       <RemotePanelActive.Provider value={layout.expanded && tab.id === active?.id}>
       <RemotePanelIdentity.Provider value={{ key: JSON.stringify([sessionId, tab.id]), signal: controller.tabDomain.occurrence(sessionId, tab).signal }}>
-        <PanelTab {...props} tab={tab} fallback={<p role="status">{t('此面板的插件暂不可用。')}</p>}/>
+        <PanelTab {...props} tab={tab} active={layout.expanded && tab.id === active?.id} fallback={<p role="status">{t('此面板的插件暂不可用。')}</p>}/>
       </RemotePanelIdentity.Provider>
       </RemotePanelActive.Provider>
     </div>)}</div>
@@ -197,5 +215,5 @@ function MobilePluginPanels(props) {
   {layout.expanded && !fileActive && menu && menu.tabId === active?.id && <TabMenu labels={{ closeTab: t('关闭当前面板') }} anchor={menu.anchor}
     onClose={active.kind === 'guide' ? undefined : () => { dismissMenu(); controller.close(active.id); }} onDismiss={dismissMenu}
     extras={renderSlot('sidebar.right.tab.menu.item', { tab: active, dismiss: dismissMenu })}/>}
-  {layout.expanded && fileActive && <PanelTab {...props} tab={active}/>}</>;
+  {layout.expanded && fileActive && <PanelTab {...props} tab={active} active/>}</>;
 }

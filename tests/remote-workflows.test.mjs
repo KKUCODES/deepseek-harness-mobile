@@ -20,3 +20,22 @@ test('工作流成员导航保留原直接父子地址，只打开真实运行�
   ]) { const value = state(); mutate(value); assert.throws(() => workflowMemberTarget(value, target)); }
   assert.throws(() => workflowMemberTarget(state(), { ...target, mode: 'continuable' }));
 });
+
+test('新版工作流保留官方可继续身份，缺失、冲突或未知身份不接受导航', () => {
+  const value = state(), address = { ...target, mode: 'continuable' };
+  value.list.projectionsBySession = { child: { values: { subagent: { mode: 'continuable' } } } };
+  assert.deepEqual(workflowMemberTarget(value, address), address);
+  assert.throws(() => workflowMemberTarget(value, target));
+  value.list.projectionsBySession.child.values.subagent = null;
+  assert.throws(() => workflowMemberTarget(value, address));
+  assert.throws(() => workflowMemberTarget(value, target));
+  value.list.projectionsBySession.child.values.subagent = { mode: 'external' };
+  assert.throws(() => workflowMemberTarget(value, { ...target, mode: 'external' }));
+  for (const mode of ['one-shot', 'continuable']) {
+    value.list.projectionsBySession.child.values.subagent = { mode };
+    assert.deepEqual(workflowMemberTarget(value, { ...target, mode }), { ...target, mode });
+    value.list.byId.child.parentId = 'other';
+    assert.throws(() => workflowMemberTarget(value, { ...target, mode }));
+    value.list.byId.child.parentId = 'parent';
+  }
+});

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RemoteClient } from '../src/remote-client.mjs';
 import { RemoteTransport } from '../src/remote-transport.mjs';
+import { downloadRemoteFile } from '../src/remote-download.mjs';
 
 function fixture() {
   const frames = [];
@@ -14,13 +15,93 @@ function fixture() {
   const resources = [];
   const transport = new RemoteTransport(client, { fetchResource: async url => { resources.push(url); return new Response('script'); }, loadScript: async url => resources.push(url) });
   const reply = value => client.receive({ type: 'result', id: frames.at(-1).id, value });
-  return { client, frames, resources, transport, reply };
+  return { client, frames, resources, transport, reply, bridge };
 }
 async function negotiated() {
   const f = fixture(), negotiation = f.transport.negotiate();
   f.reply({ transport: 2, dshVersion: '0.1.6-alpha.2' }); await negotiation;
   return f;
 }
+
+test('载体重连后的订阅抢在能力确认前，不应使正在进行的确认失效', async () => {
+  const f = await negotiated();
+  f.client.receive({ type: 'closed' });
+  f.client.receive({ type: 'ready', protocol: 1, hostOnline: true });
+  const generation = f.transport.generation, lifetime = f.transport.lifetime.signal;
+  const negotiation = f.transport.negotiate();
+  // RemoteApp 确认能力与原 Gateway 恢复只读订阅是两个真实调用入口。
+  const stream = f.transport.stream('/api', '$events', { args: {} }, new AbortController().signal);
+  await assert.rejects(stream.next(), /remote_not_connected/);
+  f.reply({ transport: 2, dshVersion: '0.1.6-alpha.2' });
+  await negotiation;
+  assert.equal(f.transport.generation, generation);
+  assert.equal(lifetime.aborted, false);
+  assert.equal(f.transport.capabilities.dshVersion, '0.1.6-alpha.2');
+  assert.equal(f.transport.hostOffline, false);
+  assert.equal(f.frames.filter(frame => frame.operation.method === 'remote.stream').length, 0);
+  f.transport.dispose();
+});
+
+for (const operation of ['subscription', 'rpc']) test(`电脑离线但手机socket仍在线时取消原生保存等待（${operation}）`, async () => {
+  const f = await negotiated(), caller = new AbortController(), streamSignal = new AbortController();
+  const native = [], saving = Promise.withResolvers();
+  let saveId, bytes = 0;
+  const original = f.bridge.postMessage;
+  const respond = (id, data = {}, error) => queueMicrotask(() => f.bridge.onmessage({ data: JSON.stringify({ id, data, error }) }));
+  f.bridge.postMessage = raw => {
+    const message = JSON.parse(raw);
+    if (!message.op.startsWith('file.')) return original(raw);
+    native.push(message.op);
+    if (message.op === 'file.save') { saveId = message.id; saving.resolve(); return; }
+    if (message.op === 'file.abort' && saveId) { respond(saveId, {}, 'download_canceled'); saveId = undefined; }
+    if (message.op === 'file.chunk') bytes += Buffer.from(message.data.data, 'base64').length;
+    respond(message.id, message.op === 'file.begin' ? { downloadId: 'download-1' } : message.op === 'file.chunk' ? { bytes } : {});
+  };
+  const scope = f.transport.lifetime.signal;
+  const files = { scopedSignal: signal => AbortSignal.any([signal, f.transport.lifetime.signal]),
+    async *read() { yield Uint8Array.of(1, 2, 3); } };
+  const outcome = downloadRemoteFile({ files, client: f.client, sessionId: 's', path: 'a.txt', signal: caller.signal })
+    .then(value => ({ value }), error => ({ error }));
+  let delayed;
+  try {
+    const pending = operation === 'subscription'
+      ? f.transport.stream('/api', 'session/follow', { args: {} }, streamSignal.signal).next()
+      : f.transport.call('/api', 'session/list', { args: {} });
+    const id = f.frames.at(-1).id;
+    delayed = f.transport.call('/api', 'session/list', { args: {} }).then(value => ({ value }), error => ({ error }));
+    const delayedId = f.frames.at(-1).id;
+    await saving.promise;
+    assert.equal(native.at(-1), 'file.save');
+    f.client.receive({ type: 'error', id, code: 'host_disconnected_outcome_unknown' });
+    await assert.rejects(pending, /host_disconnected_outcome_unknown/);
+    assert.equal(f.client.connected, true);
+    assert.equal(scope.aborted, true);
+    assert.equal((await outcome).error.message, 'remote_file_connection_changed');
+    assert.equal(native.filter(op => op === 'file.save').length, 1);
+    assert.ok(native.includes('file.abort'));
+    const generation = f.transport.generation;
+    const again = f.transport.call('/api', 'session/list', { args: {} });
+    f.client.receive({ type: 'error', id: f.frames.at(-1).id, code: 'host_offline' });
+    await assert.rejects(again, /host_offline/);
+    assert.equal(f.transport.generation, generation);
+    const recovered = f.transport.negotiate();
+    f.reply({ transport: 2, dshVersion: '0.1.6-alpha.2' }); await recovered;
+    assert.equal(f.transport.lifetime.signal.aborted, false);
+    const recoveredScope = f.transport.lifetime.signal;
+    f.client.receive({ type: 'error', id: delayedId, code: 'host_disconnected_outcome_unknown' });
+    assert.equal((await delayed).error.message, 'host_disconnected_outcome_unknown');
+    assert.equal(recoveredScope.aborted, false);
+    assert.equal(f.transport.generation, generation);
+    const disconnectedAgain = f.transport.call('/api', 'session/list', { args: {} });
+    f.client.receive({ type: 'error', id: f.frames.at(-1).id, code: 'host_offline' });
+    await assert.rejects(disconnectedAgain, /host_offline/);
+    assert.equal(recoveredScope.aborted, true);
+    assert.equal(f.transport.generation, generation + 1);
+  } finally {
+    caller.abort(); await outcome; streamSignal.abort(); f.client.reset(); await delayed; f.transport.dispose();
+    assert.equal(f.client.pending.size, 0);
+  }
+});
 
 test('通信版本和DSH版本不兼容分别拒绝，不能发布能力', async () => {
   for (const [value, code] of [
@@ -46,6 +127,32 @@ test('原 DSH RPC 保留参数和结果，不伪装电脑本地连接', async ()
   f.reply({ ok: false, error: { code: 'workspace/not-found', message: 'missing', details: {} } });
   assert.equal((await call).error.code, 'workspace/not-found');
   await assert.rejects(f.transport.hooks.rpc.call('/local-admin', 'read', {}), /unsupported_remote_channel/);
+});
+
+for (const version of ['0.2.1-alpha.1', '0.2.1-alpha.2']) test(`${version}文件Client恢复原生字节，自有range下载与旧版保持base64，损坏附件拒绝`, async () => {
+  const f = await negotiated();
+  try {
+    f.transport.capabilities.dshVersion = version;
+    const bytes = Buffer.from('中文 🐳\0');
+    const value = { absolutePath: '/work/a', version: 'v1', offset: 0, eof: true, bytes: bytes.length, data: bytes.toString('base64') };
+    for (const native of [true, false]) {
+      const payload = { args: { workspaceFileScopeId: 's', path: 'a', ...(native ? { options: { range: { offset: 0, length: 65536 } } } : { range: { offset: 0, length: 65536 } }) } };
+      const call = f.transport.call('/api', 'workspaceFiles/readBytes', payload);
+      f.reply({ ok: true, value });
+      const result = await call;
+      assert.deepEqual(result.value.data, native ? new Uint8Array(bytes) : value.data);
+      assert.deepEqual(value.data, bytes.toString('base64'));
+    }
+    for (const data of ['bad', 'Zh==', Buffer.alloc(65537).toString('base64'), null]) {
+      const call = f.transport.call('/api', 'workspaceFiles/readBytes', { args: { options: { range: { offset: 0, length: 1 } } } });
+      f.reply({ ok: true, value: { ...value, data } });
+      await assert.rejects(call, /invalid_remote_result/);
+    }
+    f.transport.capabilities.dshVersion = '0.1.6-alpha.2';
+    const call = f.transport.call('/api', 'workspaceFiles/readBytes', { args: { options: {} } });
+    f.reply({ ok: true, value });
+    assert.equal((await call).value.data, value.data);
+  } finally { f.transport.dispose(); }
 });
 
 test('主聊天和子会话提交将Android GMT转为UTC，保留其他时区和原请求', async () => {

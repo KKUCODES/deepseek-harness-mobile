@@ -1,10 +1,11 @@
 import { parsedToolCall } from '../../deepseek-harness/packages/client/ui-tool/src/client/tool/models/raw-tool-call.ts';
 import { remoteToolRow } from './remote-tool-row.mjs';
+import { remoteJobs } from './remote-jobs.mjs';
 
 /** 只读原会话中的 job_output 记录，不触碰 jobs.read 的共享消费游标。 */
 export function jobOutputRecords(state, sessionId, target) {
   if (state.selected !== sessionId) return null;
-  const current = state.list?.jobsBySession[sessionId]?.find(job => job.id === target.id);
+  const current = remoteJobs(state, sessionId).find(job => job.id === target.id);
   if (!current || current.startedAt !== target.startedAt) return null;
   const records = [];
   const visit = (tool, nodeId) => {

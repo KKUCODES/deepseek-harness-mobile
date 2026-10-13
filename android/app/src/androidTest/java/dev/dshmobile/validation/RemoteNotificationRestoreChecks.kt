@@ -1,9 +1,11 @@
 package dev.dshmobile.validation
 
 import android.app.Instrumentation
+import android.app.Activity
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,7 +16,7 @@ internal object RemoteNotificationRestoreChecks {
     var stage = "start"
     fun run(instrumentation: Instrumentation) {
         val context = instrumentation.targetContext
-        check(context.packageName.endsWith(".pairingtest"))
+        check(context.packageName in setOf("dev.dshmobile.validation.pairingtest", "dev.dshmobile.validation.latestnoticetest"))
         val manager = context.getSystemService(NotificationManager::class.java)
         val preferences = context.getSharedPreferences("dshm.notifications.v1", Context.MODE_PRIVATE)
         check(manager.areNotificationsEnabled())
@@ -63,6 +65,38 @@ internal object RemoteNotificationRestoreChecks {
             reopen(); expect(emptySet())
             main { notices.push(binding, "clear-all", "session-one", "question") }; expect(setOf("clear-all"))
             reopen(); main { notices.retainBinding(null) }; expect(emptySet())
+
+            // 真实通知管理器与生产生命周期回调：新点击目标未完成前不能消费旧会话通知。
+            stage = "notification-click-before-resume"
+            lateinit var activity: Activity
+            main {
+                activity = Activity()
+                notices.current(activity, "click-parent")
+                notices.push(binding, "click-parent-result", "click-parent", "completed")
+                notices.push(binding, "click-child-result", "click-child", "completed")
+                notices.accept(Intent().putExtra(RemoteNotifications.TARGET,
+                    JSONObject().put("binding", binding).put("sessionId", "click-child").toString()))
+                notices.resumed(activity)
+            }
+            expect(setOf("click-parent-result", "click-child-result"))
+            main {
+                val target = notices.take(binding)
+                check(target.getString("sessionId") == "click-child")
+                notices.current(activity, "click-child")
+                notices.acknowledge(binding, target.getString("id"))
+            }
+            expect(setOf("click-parent-result"))
+            main { notices.paused(activity); notices.resumed(activity) }
+            expect(setOf("click-parent-result"))
+            main { notices.current(activity, "click-parent") }; expect(emptySet())
+            // 没有点击目标的普通前台恢复仍消费当前会话的通知。
+            main {
+                notices.paused(activity)
+                notices.push(binding, "ordinary-resume", "click-parent", "completed")
+            }
+            expect(setOf("ordinary-resume"))
+            main { notices.resumed(activity) }; expect(emptySet())
+            main { notices.destroyed(activity) }
 
             // 结束事件经过生产账本再进入真实系统通知，检查三种失败原因不会互相混淆。
             val ledger = RemoteNoticeLedger()

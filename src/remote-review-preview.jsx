@@ -11,6 +11,7 @@ import { desktopRequest, desktopError } from './remote-desktop.mjs';
 import { changesError } from './remote-changes.mjs';
 import { RemoteDesktopOpen } from './ui/RemoteDesktopOpen.jsx';
 import { useTranslate } from './ui/locale.jsx';
+import { isProfileDshVersion } from './remote-dsh-version.mjs';
 
 export { CHANGES_REVIEW_ID };
 
@@ -38,6 +39,8 @@ export function installRemoteReviewPreview(model) {
   ctx.locale.register(NS, { zh, en });
   ctx.sidebarRightTabs.register(changesReviewDefinition(ctx.locale.bind(NS)));
   ctx.slots.register({ name: 'sidebar.right.pane.tab', key: CHANGES_REVIEW_ID, locale: NS, store: createReviewStore(),
+    ...(isProfileDshVersion(model.transport.capabilities.dshVersion)
+      ? { children: { 'deliverables.review.file.actions': { kind: 'list', scope: 'session' } } } : {}),
     inject: () => ({ model, records, opened,
       hooks: { changesSummary: records.summaries, changesDiff: records.diffs, reviewErrors: records.errors,
         presentedOpen: opened, presentedHost: host },

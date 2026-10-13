@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <application android:name=".DshmApplication" android:label="DSHM" android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round"
         android:dataExtractionRules="@xml/data_extraction_rules" android:fullBackupContent="false"
         android:theme="@style/Theme.DSHM"
         android:usesCleartextTraffic="true" android:supportsRtl="true">

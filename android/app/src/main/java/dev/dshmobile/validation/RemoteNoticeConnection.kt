@@ -178,7 +178,7 @@ internal class RemoteNoticeConnection(context: Context, private val notices: Rem
         if (stage == "negotiating") {
             require(type == "result")
             val value = frame.getJSONObject("value")
-            if (value.optInt("transport") != 2 || value.optString("dshVersion") != "0.1.6-alpha.2" || value.opt("taskNotifications") != true) {
+            if (value.optInt("transport") != 2 || value.optString("dshVersion") != BuildConfig.DSH_SDK_VERSION || value.opt("taskNotifications") != true) {
                 failed("unsupported"); return
             }
             stage = "subscribing"; followId = UUID.randomUUID().toString(); deadline(owner)

@@ -118,7 +118,7 @@ function RemoteConnection({ client, language }) {
         if (!mounted.current || !client.connected) return;
         const draftStore = await RemoteDraftStore.open(identity).catch(error => new RemoteDraftStore(identity, () => { throw error; }));
         if (!mounted.current || !client.connected) { draftStore.close(); return; }
-        const next = new RemoteModel(client, { draftStore, notificationKey: `${identity.origin}:${identity.deviceId}` });
+        const next = new RemoteModel(client, { draftStore, notificationKey: JSON.stringify([identity.origin, identity.deviceId, identity.fingerprint]) });
         runtime.current = next;
         let rebuilding = false;
         next.requestRebuild = () => {

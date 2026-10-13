@@ -107,6 +107,32 @@ export class LocalSettings {
     return scope;
   }
 
+  /** 新版 ConfigForm 的本地适配；仅开放已校验的手机设置。 */
+  configForms({ themeDefaults = {} } = {}) {
+    const forms = new Map();
+    return Object.freeze({ get: namespace => {
+      if (forms.has(namespace)) return forms.get(namespace);
+      // 新版 ConfigForm 与旧 SettingsScope 共用手机存储、订阅和原子校验。
+      // get仍经bind校验固定namespace；不加载电脑配置目录或开放任意路径。
+      const scope = this.bind({ namespace });
+      let source, snapshot;
+      const getSnapshot = namespace !== 'ui-theme' || Object.keys(themeDefaults).length === 0 ? scope.getSnapshot : () => {
+        const next = scope.getSnapshot();
+        if (source !== next) {
+          source = next;
+          // 新 SDK 的固定字体默认值属于手机 composition；写入仍受原本地字段校验约束。
+          snapshot = freeze({ ...next, value: { ...themeDefaults, ...next.value }, base: { ...themeDefaults, ...next.base } });
+        }
+        return snapshot;
+      };
+      const form = Object.freeze({ getSnapshot, subscribe: scope.subscribe,
+        mutate: (ops, revision) => scope.mutate(ops, revision).then(() => true),
+        set: (field, value) => scope.set(field, value).then(() => true),
+        unset: field => scope.unset(field).then(() => true) });
+      forms.set(namespace, form); return form;
+    } });
+  }
+
   /** 明确的本地 service face；不提供 workspace、Agent、文件或电脑登录事实。 */
   facade() {
     return Object.freeze({

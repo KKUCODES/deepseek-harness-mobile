@@ -1,14 +1,15 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname, posix } from 'node:path';
+import { isProfileDshVersion } from '../src/remote-dsh-version.mjs';
 
 /** 在手机产物目录派生原组件；只扩展来源解析，不修改上游参考或插件内部布局。 */
-export function remoteDocumentSources(root) {
+export function remoteDocumentSources(root, { upstream = resolve(root, '../deepseek-harness'), generated = resolve(root, 'artifacts/source'), version } = {}) {
   const base = 'ui-sidebar-documentpreview/src/client';
-  const output = resolve(root, 'artifacts/source/document-preview');
+  const output = resolve(generated, 'document-preview');
   const files = ['TextPreview.tsx', 'face.ts', 'image/ImageBody.tsx', 'code/CodeBody.tsx', 'office/OfficeBody.tsx', 'image/index.ts', 'code/index.ts'];
   const aliases = {};
   for (const file of files) {
-    let text = readFileSync(resolve(root, '../deepseek-harness/packages/client', base, file), 'utf8');
+    let text = readFileSync(resolve(upstream, 'packages/client', base, file), 'utf8');
     const replace = (from, to) => {
       if (text.split(from).length !== 2) throw new Error(`Document source changed: ${file}: ${from}`);
       text = text.replace(from, to);
@@ -28,8 +29,13 @@ export function remoteDocumentSources(root) {
     }
     if (file === 'office/OfficeBody.tsx') {
       // 缓存保存稳定的提示键；切语言只更新显示，不重新读取或转换原文档。
-      replace('readonly describeFailure: (failure: RemoteFailure | { readonly message: string }) => string',
-        'readonly describeFailure: (failure: RemoteFailure | { readonly message: string }) => string\n  readonly renderFailure: (message: string) => string');
+      if (isProfileDshVersion(version)) {
+        replace('export interface OfficeBodyInjected extends OfficeLoadInjected {',
+          'export interface OfficeBodyInjected extends OfficeLoadInjected {\n  readonly renderFailure: (message: string) => string');
+      } else {
+        replace('readonly describeFailure: (failure: RemoteFailure | { readonly message: string }) => string',
+          'readonly describeFailure: (failure: RemoteFailure | { readonly message: string }) => string\n  readonly renderFailure: (message: string) => string');
+      }
       replace('{view.failure.message}', '{props.renderFailure(view.failure.message)}');
     }
     // CSS和其余依赖仍来自同一基线；生成文件不持有第二份上游实现。

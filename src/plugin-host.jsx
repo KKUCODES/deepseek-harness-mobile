@@ -24,6 +24,9 @@ let host;
 const ctx = new Cordis.Context();
 const settings = new LocalSettings(localStorage);
 ctx.provide('settingsScope', settings);
+ctx.provide('configForms', settings.configForms({ themeDefaults: DSHM_MOBILE_SDK_VERSION === '0.2.1-alpha.2' ? {
+  codeFontSize: 11, terminalFontSize: 13, textFontFamily: '', codeFontFamily: '', terminalFontFamily: '',
+} : {} }));
 ctx.provide('remote', settings.facade());
 const moduleId = '@deepseek-ai/dsh-client-modules';
 const fixtureId = '@fixture/live-client';

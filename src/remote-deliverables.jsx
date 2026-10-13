@@ -8,6 +8,7 @@ import { presentedFileUrl } from '@upstream/ui-deliverables/src/presented.ts';
 import { NS } from '@upstream/ui-deliverables/src/client/locales.ts';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { supportsDeliverables } from './remote-plugin-policy.mjs';
+import { isProfileDshVersion } from './remote-dsh-version.mjs';
 import { changesError } from './remote-changes.mjs';
 import { RemoteDesktopOpen } from './ui/RemoteDesktopOpen.jsx';
 import { RemoteFilePreview } from './ui/RemoteFilePreview.jsx';
@@ -15,24 +16,31 @@ import { useTranslate } from './ui/locale.jsx';
 
 /** 原轮数据、卡片与工具行共用 ReviewTab 的读取状态；桌面动作由手机确认。 */
 export function installRemoteDeliverables(model, face) {
-  if (!face || !model.documentPreviews || !supportsDeliverables(model.transport.capabilities)) return;
-  const { ctx } = model, { records, host, opened, loadHost } = face;
-  ctx.slots.register({ name: 'conversation.chat.turnTail', id: '@deepseek-ai/dsh-client-ui-deliverables', locale: NS,
-    inject: () => ({ model, opened,
-      hooks: { presentedOpen: opened, presentedHost: host, changesSummary: records.summaries, reviewErrors: records.errors },
-      reloadPresentedHost: loadHost, loadChangesSummary: records.loadSummary,
-      openChangesReview: (coordinates, index) => ctx.sidebarRight.openResource(changesReviewAddress(coordinates), { params: { index } }),
-    }),
-  }, MobileDeliverablesTail);
-  ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key: 'present', locale: NS }, PresentRow));
-  const t = ctx.locale.bind(NS);
-  ctx.provide('chatFileMentions', { forClosing(owner) {
-    const paths = selectProducedFiles(owner), presented = presentedForClosing(owner);
-    if (paths === null && presented.length === 0) return undefined;
-    return producedFileMentions([...new Set([...paths ?? [], ...presented.map(file => file.path)])], owner.openFile,
-      path => t('presented.previewButton', { name: path }));
-  } });
-  model.deliverablesPreview = true;
+  if (!face || !supportsDeliverables(model.transport.capabilities)) return;
+  const latest = isProfileDshVersion(model.transport.capabilities.dshVersion);
+  const { records, host, opened, loadHost } = face;
+  // 文档服务随资源模块异步注册；依赖注入必须等待就绪，不能只在启动时检查一次。
+  model.ctx.inject(['documentPreviews', ...(latest ? ['configForms'] : [])], ctx => {
+    ctx.slots.register({ name: 'conversation.chat.turnTail', id: '@deepseek-ai/dsh-client-ui-deliverables', locale: NS,
+      ...(latest ? { children: { 'deliverables.file.actions': { kind: 'list', scope: 'session' } } } : {}),
+      inject: () => ({ model, opened,
+        hooks: { presentedOpen: opened, presentedHost: host, changesSummary: records.summaries, reviewErrors: records.errors,
+          ...(latest ? { changesDiff: records.diffs, showCodeDiff: ctx.configForms.developerTools.enabled } : {}) },
+        reloadPresentedHost: loadHost, loadChangesSummary: records.loadSummary, loadChangesDiff: records.loadDiff,
+        openChangesReview: (coordinates, index) => ctx.sidebarRight.openResource(changesReviewAddress(coordinates), { params: { index } }),
+      }),
+    }, MobileDeliverablesTail);
+    ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key: 'present', locale: NS }, PresentRow));
+    const t = ctx.locale.bind(NS);
+    ctx.provide('chatFileMentions', { forClosing(owner) {
+      const paths = selectProducedFiles(owner), presented = presentedForClosing(owner);
+      if (paths === null && presented.length === 0) return undefined;
+      return producedFileMentions([...new Set([...paths ?? [], ...presented.map(file => file.path)])], owner.openFile,
+        path => t('presented.previewButton', { name: path }));
+    } });
+    model.deliverablesPreview = true;
+    ctx.effect(() => () => { model.deliverablesPreview = false; });
+  });
 }
 
 function MobileDeliverablesTail(props) {

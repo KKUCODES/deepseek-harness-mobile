@@ -30,7 +30,7 @@ export class RemoteComputerSettings {
     this.model = model;
     this.namespace = namespace === undefined ? undefined : pluginSettingsNamespaceSchema.parse(namespace);
   }
-  get supported() { return this.model.transport.capabilities?.[this.namespace === 'web-search-deepseek' ? 'webSearchSettings' : this.namespace?.startsWith('subagent') ? 'subagentSettings' : this.namespace ? 'pluginSettings' : 'computerSettings'] === true; }
+  get supported() { return this.model.transport.capabilities?.[this.namespace === 'ui-settings' ? 'codingToolsSettings' : this.namespace === 'agent-preset-registry' ? 'presetDefaultSettings' : this.namespace === 'web-search-deepseek' ? 'webSearchSettings' : this.namespace?.startsWith('subagent') ? 'subagentSettings' : this.namespace ? 'pluginSettings' : 'computerSettings'] === true; }
   get permitted() { return this.model.transport.capabilities?.management === true; }
   currentGeneration() {
     const model = this.model;

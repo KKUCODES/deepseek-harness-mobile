@@ -1,3 +1,4 @@
+import { isProfileDshVersion } from './remote-dsh-version.mjs';
 import { OfficePreviewCache } from '../../deepseek-harness/packages/client/ui-sidebar-documentpreview/src/client/office/cache.ts';
 import { readOffice } from './remote-office.mjs';
 import { attachmentDocumentAddress } from './remote-document-address.mjs';
@@ -10,7 +11,9 @@ export function createRemoteOfficeReader(model) {
     return { ok: true, value: file.attachment ? { ...value, version: attachmentDocumentAddress(file) } : value };
   };
   const create = () => new OfficePreviewCache(async (file, signal) => {
-    const authorized = await model.remote.workspaceFiles.readBytes(file.sessionId, file.path, { offset: 0, length: 1 }, signal);
+    const range = { offset: 0, length: 1 };
+    const options = isProfileDshVersion(transport.capabilities?.dshVersion) ? { range } : range;
+    const authorized = await model.remote.workspaceFiles.readBytes(file.sessionId, file.path, options, signal);
     signal.throwIfAborted();
     if (!authorized.ok) return authorized;
     const stat = await model.remote.workspaceFiles.stat(file.sessionId, file.path, signal);

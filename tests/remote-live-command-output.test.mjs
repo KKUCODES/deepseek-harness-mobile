@@ -103,3 +103,40 @@ test('完整重建交接前台输出身份、游标和UTF-8半字符，旧响应
     assert.match(stale.snapshot.error, /命令已变化/); stale.dispose();
   } finally { restored.dispose(); }
 });
+
+test('原调用先到、读者稍后注册时只重试尚未确认身份的实时读取', async () => {
+  const f = fixture(); f.rootCall.subCalls[0].kind = 'tool-call';
+  const reader = new Reader(f.model, f.target);
+  try {
+    const first = reader.read(); f.requests[0].reject(Error('remote_command_missing')); await first;
+    assert.equal(reader.snapshot.phase, 'waiting'); assert.equal(reader.snapshot.text, '');
+    await new Promise(done => setTimeout(done, 300));
+    assert.equal(f.requests.length, 2); assert.equal(f.requests[1].operation.fromByte, 0);
+    assert.equal(f.requests[1].operation.outputId, undefined);
+    f.requests[1].resolve(response(randomUUID(), Buffer.from('中文🙂'), 0, 10));
+    await Promise.resolve(); await Promise.resolve();
+    assert.equal(reader.snapshot.text, '中文🙂');
+  } finally { reader.dispose(); }
+});
+
+test('读者注册等待有上限；历史、已结算、已确认身份与其他错误不自动重试', async () => {
+  const f = fixture(); f.rootCall.subCalls[0].kind = 'tool-call';
+  const reader = new Reader(f.model, f.target);
+  try {
+    for (let attempt = 0; attempt < 41; attempt++) {
+      const reading = reader.read(); f.requests.at(-1).reject(Error('remote_command_missing')); await reading;
+      assert.equal(reader.snapshot.phase, attempt < 40 ? 'waiting' : 'error');
+    }
+    assert.equal(reader.timer, null);
+  } finally { reader.dispose(); }
+  for (const variant of ['history', 'settled', 'identity', 'stale', 'denied']) {
+    const f = fixture(); f.rootCall.subCalls[0].kind = variant === 'settled' ? 'tool-result' : 'tool-call';
+    const reader = new Reader(f.model, f.target, 'stdout', variant === 'history' ? 'history' : 'live');
+    if (variant === 'identity') reader.outputId = randomUUID();
+    try {
+      const reading = reader.read();
+      f.requests[0].reject(Error(variant === 'stale' ? 'remote_command_stale' : variant === 'denied' ? 'permission_denied' : 'remote_command_missing'));
+      await reading; assert.equal(reader.snapshot.phase, 'error'); assert.equal(reader.timer, null);
+    } finally { reader.dispose(); }
+  }
+});

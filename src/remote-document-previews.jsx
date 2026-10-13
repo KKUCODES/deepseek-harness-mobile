@@ -18,6 +18,7 @@ import { apply as registerPdf, pdfBodyRegistration } from '@upstream/ui-sidebar-
 import { LazyPdfBody } from '@upstream/ui-sidebar-documentpreview/src/client/pdf/LazyPdfBody.tsx';
 import { OfficeBody } from '@dshm/document/office/OfficeBody.tsx';
 import { createOfficeStore } from '@upstream/ui-sidebar-documentpreview/src/client/office/store.ts';
+import { officeLoadFace } from '@dshm/office-face';
 import { zh as officeZh, en as officeEn } from '@upstream/ui-sidebar-documentpreview/src/client/office/locales.ts';
 import { retainDocumentTabs } from '@upstream/ui-sidebar-documentpreview/src/client/document/tab-lifetime.ts';
 import { RemoteHtmlPreview } from './ui/RemoteHtmlPreview.jsx';
@@ -35,7 +36,12 @@ export { TEXTPREVIEW_ID };
 /** 保留原注册表、文件标签、状态机与子插槽；只替换需要电脑 HTTP/大消息的读取边界。 */
 export function installRemoteDocumentPreviews(model) {
   if (!model.transport.capabilities?.endpoints?.calls?.includes('workspaceFiles/read')) return false;
-  const { ctx } = model;
+  // 原资源模块异步就绪后再注册整组父、子插槽，避免子插槽早于父声明。
+  model.ctx.inject(['resources'], ctx => { registerRemoteDocumentPreviews(model, ctx); });
+  return true;
+}
+
+function registerRemoteDocumentPreviews(model, ctx) {
   const previews = new DocumentPreviewRegistry();
   ctx.provide('documentPreviews', previews);
   model.documentPreviews = previews;
@@ -57,9 +63,15 @@ export function installRemoteDocumentPreviews(model) {
     readBytes: (address, signal) => bytes(resolveDocumentAddress(address), signal),
     readPage: (address, offset, signal) => page(resolveDocumentAddress(address), offset, signal) });
   ctx.provide('dshmDocuments', model.documentSources);
-  const face = textFace(page, bytes);
+  // 新版观察主文件与依赖；旧版face忽略第三个参数。
+  const face = textFace(page, bytes, ctx.resources);
   ctx.slots.register({ name: 'sidebar.right.pane.tab', key: TEXTPREVIEW_ID, locale: 'sidebarDocumentPreview', store,
-    children: { 'sidebar.right.tab.document': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: documentTabInfoFactory } } } },
+    children: {
+      'sidebar.right.tab.document': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: documentTabInfoFactory } } },
+      'sidebar.right.tab.document.actions': { kind: 'list', scope: 'session' },
+      'sidebar.right.tab.document.unpreviewable': { kind: 'list', scope: 'session' },
+      'sidebar.right.tab.document.action': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: documentTabInfoFactory } } },
+    },
     inject: (sessionId, actions) => ({ ...face(sessionId, actions), model, hooks: { documentPreviews: previews } }),
   }, MobileTextPreview);
   ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: TEXTPREVIEW_ID }, TextTitle);
@@ -77,16 +89,15 @@ export function installRemoteDocumentPreviews(model) {
     title: () => ctx.locale.bind('sidebarOffice')('title'), loading: 'renderer', wrap: false });
   const retainTab = retainDocumentTabs(ctx);
   const readOfficeDocument = createRemoteOfficeReader(model);
+  const officeFace = officeLoadFace(readOfficeDocument, officeError);
   ctx.slots.register({ name: 'sidebar.right.tab.document', key: officeId, locale: 'sidebarOffice', store: createOfficeStore(),
     children: { 'sidebar.right.tab.document.office.pdf': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: documentTabInfoFactory } } } },
-    inject: (_id, actions) => ({
-      read: readOfficeDocument,
-      describeFailure: officeError,
+    inject: (id, actions) => ({
+      ...officeFace(id, actions),
       retainTab: (tabId, signal) => retainTab(tabId, signal, actions.forget),
     }),
   }, MobileOfficeBody);
   ctx.slots.register({ name: 'sidebar.right.tab.document.office.pdf', key: officeId, locale: 'sidebarPdf', ...pdfBodyRegistration(ctx) }, LazyPdfBody);
-  return true;
 }
 
 function MobileOfficeBody(props) {

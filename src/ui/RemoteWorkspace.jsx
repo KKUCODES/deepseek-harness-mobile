@@ -34,7 +34,7 @@ import { RemoteLiveJobOutput } from './RemoteLiveJobOutput.jsx';
 import { RemoteSchedules } from './RemoteSchedules.jsx';
 import { RemotePlanMode } from './RemotePlanMode.jsx';
 import { planModeLabel } from '../remote-plan-mode.mjs';
-import { subagentAccess, SUBAGENT_MODEL_READ_ONLY } from '../remote-subagents.mjs';
+import { subagentAccess, subagentReadError, SUBAGENT_MODEL_READ_ONLY } from '../remote-subagents.mjs';
 import { RemoteSubagents } from './RemoteSubagents.jsx';
 import { RemoteWorkspaceManager } from './RemoteWorkspaces.jsx';
 import { RemoteSessionExport } from './RemoteSessionExport.jsx';
@@ -208,7 +208,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       error: /SESSION_QUERY_SEARCH_DISABLED|session search is disabled/.test(error.message) ? 'disabled' : 'failed' }); }); }, 180);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [phrase, model, selected, searchAttempt, state.ready, state.connectionState]);
-  useEffect(() => { historyRequest.current = null; bottom.current = true; scrollPosition.current = 0; setFile(null); setCommand(current => current?.sessionId === selected ? current : null); setJobOutput(current => current?.sessionId === selected ? current : null); setSheet(null); }, [selected]);
+  useEffect(() => { historyRequest.current = null; bottom.current = true; scrollPosition.current = 0; setFile(null); setCommand(current => current?.sessionId === selected ? current : null); setJobOutput(current => current?.sessionId === selected ? current : null); setSheet(null); }, [selected, state.selectionRevision]);
   useEffect(() => {
     if (embedded || !state.notificationNavigation) return;
     setSheet(null); setFile(null); setCommand(null); setJobOutput(null);
@@ -250,6 +250,9 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     {selected && <><RemoteHeaderAncestors model={model}/><RemoteHeaderExtensions/></>}
     {(notice || state.error) && <div className="remote-error" role="alert">{t(notice || state.error)}</div>}
     <RemoteOfflineStatus model={model}/>
+    {!!state.endpointRecoveries?.length && <p className="remote-offline-status" role="status">
+      {t('有服务地址保存结果尚未确认，请打开对应设置重新读取地址。')}
+    </p>}
     {!embedded && state.cordisApprovals?.length > 0 && <div className="remote-cordis-notice" role="status">
       <span>{t('有插件等待你确认运行')} · {state.cordisApprovals.length}</span>
       <Button disabled={!connected || busy || (!!selected && !state.session)} onClick={() => void act(async () => {
@@ -277,10 +280,12 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       if (top !== scrollPosition.current || atBottom) bottom.current = atBottom;
       scrollPosition.current = top;
     }}>
-      <RemoteBoundHero model={model} state={state} onPreset={() => setSheet('agentPresets')}/>
+      {!state.session?.openError && <RemoteBoundHero model={model} state={state} onPreset={() => setSheet('agentPresets')}/>}
       <div className="messages">
         {!state.session && <p role="status">{t("正在读取聊天记录…")}</p>}
-        {state.session?.openError && <p role="alert">{state.session.openError.message}</p>}
+        {state.session?.openError && <><p role="alert">{t(subagentReadError(state.session.openError))}</p>
+          <Button disabled={!connected || busy || state.subagentServiceAvailable === false && !!childAccess.address}
+            onClick={() => void act(() => model.select(state.selectedTarget, { trail: state.selectionTrail }))}>{t('重试读取')}</Button></>}
         {state.session?.hasMore && <Button data-history-loader disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadOlder()}>{t("加载更早的消息")}</Button>}
         {state.conversation?.order.map(key => <RemoteMessage key={key} node={state.conversation.nodes.get(key)} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment} openChanges={openChanges} openCommand={openCommand}
           onFork={forkTurn} forkDisabled={!connected || busy || turnForkAnchor(state.conversation, key) === null}/>)}
@@ -342,7 +347,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     {sheet && sheet !== 'pluginManager' && sheet !== 'settings' && <Surface title={t(sheet === 'pending' ? '待处理' : sheetTitle)} onClose={() => setSheet(null)}>
       <header><h2>{t(sheet === 'pending' ? '待处理' : sheet === 'settings' ? '电脑设置' : sheetTitle)}</h2><IconButton label={t("关闭窗口")} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
       {sheet === 'pending' && <>
-        {!model.transport.capabilities?.taskPendingNotifications ? <p role="status">{t("电脑尚不支持汇总待处理事项，请更新电脑端插件及兼容补丁。")}</p>
+        {!model.transport.capabilities?.taskPendingNotifications ? <p role="status">{t("当前电脑不支持汇总待处理事项，请在对应聊天中处理请求。")}</p>
           : state.taskNotifications?.status !== 'listening' ? <p role="status">{t(state.taskNotifications?.status === 'error' ? '待处理事项同步失败，请重试。' : connected ? '正在同步待处理事项…' : '电脑连接已断开，恢复连接后将重新同步。')}</p>
           : !(state.pendingNotices?.length) ? <p className="muted">{t("暂时没有需要处理的事项")}</p>
           : state.pendingNotices.map(item => <Button className="option" key={item.eventId} disabled={busy || !connected} onClick={() => void act(async () => { await model.select(item.sessionId); setSheet(null); })}><span>{state.list?.byId[item.sessionId]?.displayTitle ?? '聊天'}</span><span>{t(item.kind === 'approval' ? '需要批准' : '需要回答')}</span></Button>)}
@@ -383,7 +388,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         <Button className="option" onClick={() => { setSettingsTarget(before => ({ id: 'models', revision: before.revision + 1 })); setSheet('settings'); }}>{t("电脑设置")}</Button>
         {/* 选择先发布 sessionId，引用 ready 后才挂载面板；不能只凭 ID 调用原控制器。 */}
         {selected && <Button className="option" disabled={!state.session} onClick={() => { setSheet(null); model.pluginPanels.openTab('guide'); }}>{t('插件面板')}</Button>}
-        <Button className="option" onClick={() => setSheet('pending')}>{t('待处理')}{state.taskNotifications?.status === 'listening' && state.pendingNotices?.length > 0 ? `（${state.pendingNotices.length}）` : ''}</Button>
+        {model.transport.capabilities?.taskPendingNotifications === true && <Button className="option" onClick={() => setSheet('pending')}>{t('待处理')}{state.taskNotifications?.status === 'listening' && state.pendingNotices?.length > 0 ? `（${state.pendingNotices.length}）` : ''}</Button>}
         <Button className="option" disabled={busy} onClick={() => void act(() => model.client.call('notifications.settings'))}>{t("Remote 提醒")}</Button>
         <Button className="option" disabled={busy} onClick={() => void act(async () => { await model.client.call('appearance.settings'); setSheet(null); })}>{t('外观与语言')}</Button>
         {selected && modelReadOnly && <Button className="option" onClick={() => { setSheet('models'); void model.modelCatalog.load().catch(() => {}); }}>{t("当前模型")}</Button>}
@@ -395,7 +400,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         {selected && <Button className="option" onClick={() => setSheet('subagents')}>{t("子会话")}</Button>}
         {selected && <Button className="option" onClick={() => setSheet('schedules')}>{t("定时任务")}</Button>}
         {selected && <Button className="option" onClick={() => setSheet('export')}>{t("导出会话日志")}</Button>}
-        {selected && <Button className="option" onClick={() => setSheet('desktopApps')}>{t('在电脑应用中打开')}</Button>}
+        {selected && model.transport.capabilities?.desktopApps === true && <Button className="option" onClick={() => setSheet('desktopApps')}>{t('在电脑应用中打开')}</Button>}
         {selected && model.commandActions?.available('feedback') && <Button className="option" disabled={busy} onClick={() => void act(async () => { await model.commandActions.open('feedback'); setSheet(null); })}>{t("会话反馈")}</Button>}
         {selected ? <><Button className="option" onClick={() => { setTitle(chat?.displayTitle ?? ''); setSheet('rename'); }}>{t("重命名聊天")}</Button>
           <Button className="option" disabled={busy || state.session?.running} onClick={() => void act(async () => { await model.fork(); setSheet(null); })}>{t("在新聊天中分支")}</Button>

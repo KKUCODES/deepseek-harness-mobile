@@ -39,7 +39,11 @@ export function RemoteComputerPlugins({ model, onClose }) {
 export function RemotePluginSettings({ model }) {
   const t = useTranslate();
   const state = useSyncExternalStore(model.subscribeView, model.getSnapshot);
-  if (state.connectionState !== 'connected') return <RemoteConnectionNotice state={state}/>;
+  const endpointNotice = useSyncExternalStore(model.searchEndpoint.subscribeNotice, model.searchEndpoint.getNotice);
+  if (state.connectionState !== 'connected') return <>
+    <RemoteConnectionNotice state={state}/>
+    {endpointNotice && <p role="status">{t(endpointNotice)}</p>}
+  </>;
   if (!model.transport.capabilities?.management) return <p role="status">{t('请在电脑 DSH Mobile 插件中，为此设备授予管理权限。')}</p>;
   return <RemotePluginSettingsExtension/>;
 }

@@ -24,6 +24,14 @@ test('任务归属、重用编号和不完整调用头不得误关联旧记录',
   assert.equal(jobOutputRecords({ ...value, list: null }, 'one', target), null);
 });
 
+test('新版独立任务目录也绑定当前身份，消费记录从原聊天读取', () => {
+  const value = state([result('latest', 'model consumed'), result('other', 'wrong', 120, { call: call('other', 120, 'different') })]);
+  value.jobs = { rows: { one: [target] }, observed: {} }; delete value.list.jobsBySession;
+  assert.deepEqual(jobOutputRecords(value, 'one', target).map(row => row.text), ['model consumed']);
+  value.jobs = { rows: {}, observed: {} };
+  assert.equal(jobOutputRecords(value, 'one', target), null);
+});
+
 test('嵌套调用、分段与重复终态保留独立记录，按实际调用时间排序', () => {
   const value = state([result('last', 'same final', 140), { ...call('parent'), name: 'exec', subCalls: [result('nested', '\u001b[31msegment\u001b[0m\n[output truncated]', 120)] },
     result('first', 'same final', 130)]);

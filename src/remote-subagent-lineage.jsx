@@ -3,6 +3,7 @@ import { SubagentHeaderLineage } from '@upstream/ui-subagent/src/client/Subagent
 import { subagentChatAddress } from '@upstream/ui-subagent/src/client/sidebar-chat/index.tsx';
 import { NS } from '@upstream/ui-subagent/src/client/locales.ts';
 import { useRemoteConversationModel } from './remote-plugin-slots.jsx';
+import { assertLocalSubagent } from './remote-subagents.mjs';
 
 /** 原目录界面保持不变，仅将导航绑定到呈现它的手机视图。 */
 export function installRemoteSubagentLineage(model) {
@@ -23,6 +24,7 @@ function MobileSubagentLineage(props) {
     const validate = address => {
       const entry = view.getSnapshot().list?.subagentsByParent[address.parentSessionId]?.entries.find(item => item.kind === 'child' && item.id === address.childSessionId);
       if (!entry || entry.mode !== address.mode) throw new Error('子会话已变化，请刷新后重试。');
+      assertLocalSubagent(entry);
     };
     return {
       openChild: address => run(() => { validate(address); return view.select(address); }),
@@ -31,6 +33,7 @@ function MobileSubagentLineage(props) {
         view.ctx.sidebarRight.openResource(subagentChatAddress(address), { kind: 'subagentchat', preferNewPane: true });
       }),
       refresh: id => run(() => view.sessions.refreshSubagents(id)),
+      refreshProjection: id => run(() => view.sessions.refreshSubagents(id)),
       setCatalogOpen(id, open) {
         if (open) {
           if (view.lifetime.signal.aborted || view.reference !== reference || held.has(id)) return;

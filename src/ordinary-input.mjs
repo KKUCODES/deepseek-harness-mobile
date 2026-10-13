@@ -16,11 +16,12 @@ export class OrdinaryInput {
     const prompts = () => this.promptSettings.getSnapshot().value.prompts;
     root.effect(() => this.promptSettings.subscribe(() => { for (const listener of this.subscriptions) listener(); }));
     this.ctx = root.isolate('sessions').isolate('inputTriggers');
-    this.ctx.provide('sessions', {
+    // 服务由隔离域内自己的插件持有；父插件启停通知不跨到根域的 sessions。
+    this.provider = this.ctx.plugin({ apply: scope => scope.provide('sessions', {
       sessionOf: actx => [...this.bindings.values()].find(item => item.ctx === actx)?.session,
       binding: id => this.bindings.get(id),
       scope: id => this.bindings.get(id)?.ctx,
-    });
+    }) });
     this.adapter = {
       current: absent,
       bindingSource: target => {
@@ -44,6 +45,7 @@ export class OrdinaryInput {
   async enable(enabled) {
     if (this.state.getSnapshot().enabled === enabled) return;
     if (enabled) {
+      await this.provider.await();
       this.plugin = this.ctx.plugin(InputPlugin);
       await this.plugin.await();
       // 等原始入口创建的服务就绪，再注册真实本地提示词来源。

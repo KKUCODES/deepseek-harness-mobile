@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslate } from './locale.jsx';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { RemoteComputerKey } from './RemoteComputerKey.jsx';
-import { RemoteComputerEndpoint } from './RemoteComputerEndpoint.jsx';
+import { RemoteComputerEndpoint, RemoteEndpointNotice } from './RemoteComputerEndpoint.jsx';
 import { RemoteConnectionNotice } from './RemoteConnectionNotice.jsx';
 import { RemoteProviderSettings } from './RemoteProviderSettings.jsx';
 import { RemoteProviderModelEditor } from './RemoteProviderModelEditor.jsx';
@@ -73,6 +73,8 @@ export function RemoteComputerSettings({ model, showConnectionNotice = true }) {
   if (connected && !settings.supported) return <p role="status">{t("请更新电脑远程插件和网关后使用电脑设置。")}</p>;
   return <section className="remote-computer-settings">
     {showConnectionNotice && <RemoteConnectionNotice state={state}/>}
+    {!connected && [...(model.providerSettings?.providers.values() ?? [])].map(settings =>
+      <RemoteEndpointNotice key={settings.provider} service={settings.endpoint} provider={settings.provider}/>)}
     <p>{t("修改当前电脑的 DeepSeek 选项，会影响电脑上的聊天。手机普通聊天的设置保持独立。")}</p>
     <RemoteComputerKey model={model}/>
     <RemoteComputerEndpoint model={model}/>

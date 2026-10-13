@@ -36,7 +36,8 @@ export function RemoteProviderModelEditor({ service, probe }) {
     if (writing && stale) return;
     if (automatic && dirtyRef.current) { setStale(true); return; }
     const started = revision.current;
-    active.current = controller; setBusy(true); setNotice('');
+    // 保存会触发电脑推送及自动重读；保留本次操作回执，主动读取时才清除。
+    active.current = controller; setBusy(true); if (!automatic) setNotice('');
     try {
       const next = writing ? await service.save(view, reset ? { op: 'unset' } : { op: 'set', rows: rows.map(payload) }, controller.signal)
         : await service.read(controller.signal);

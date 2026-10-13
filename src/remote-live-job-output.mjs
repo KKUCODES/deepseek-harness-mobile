@@ -1,4 +1,5 @@
 import { RemoteOutputAnsi } from './remote-output-ansi.mjs';
+import { remoteJobs } from './remote-jobs.mjs';
 
 const live = status => status === 'running' || status === 'stopping';
 const LIMIT = 65536;
@@ -30,19 +31,21 @@ export class RemoteLiveJobOutput {
   }
   subscribe = listener => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   currentGeneration() { return this.model.transport.capabilities?.jobControlGeneration; }
+  coordinates() { return this.model.transport.capabilities?.jobOutputCoordinates === 'ring' ? 'ring' : 'channel'; }
   operation() {
     return { method: 'remote.jobOutput', sessionId: this.target.sessionId, jobId: this.target.id,
       startedAt: this.target.startedAt, generation: this.generation, stream: this.stream,
       fromByte: this.snapshot.offset, maxBytes: LIMIT };
   }
   acceptIdentity(_result) {}
+  deferReadError(_error) { return false; }
   get unsupportedText() { return '这个任务未提供独立输出，可以查看聊天中的输出记录。'; }
   getSnapshot = () => this.snapshot;
   publish(patch) { if (!this.disposed) { this.snapshot = { ...this.snapshot, ...patch }; for (const listener of this.listeners) listener(); } }
   valid(resume = false) {
     const model = this.model, state = model.getSnapshot();
     if (state.connectionState !== 'connected') return '连接已断开，恢复连接后可继续读取。';
-    const current = state.list?.jobsBySession[this.target.sessionId]?.find(job => job.id === this.target.id);
+    const current = remoteJobs(state, this.target.sessionId).find(job => job.id === this.target.id);
     if (state.selected !== this.target.sessionId || state.session?.openState !== 'open' || !current || current.startedAt !== this.target.startedAt
       || this.generation !== model.transport.capabilities?.jobControlGeneration) return '任务已变化，请返回任务列表重新查看。';
     if (model.transport.capabilities?.jobOutput !== true) return '电脑暂不支持独立读取输出。';
@@ -95,8 +98,13 @@ export class RemoteLiveJobOutput {
           || result.startOffset < this.snapshot.offset || result.nextOffset < result.startOffset || result.nextOffset > result.totalBytes
           || typeof result.lossy !== 'boolean' || result.lossy !== (result.startOffset > this.snapshot.offset)) throw Error('invalid_output');
         const raw = atob(result.data), bytes = Uint8Array.from(raw, char => char.charCodeAt(0));
-        if (bytes.length > LIMIT || bytes.length !== result.nextOffset - result.startOffset) throw Error('invalid_output');
-        const gap = result.lossy;
+        const ring = this.coordinates() === 'ring';
+        if (bytes.length > LIMIT || result.nextOffset - result.startOffset > LIMIT && ring) throw Error('invalid_output');
+        if (ring) {
+          if (result.coordinate !== 'ring' || !Number.isSafeInteger(result.skippedBytes) || result.skippedBytes < 0
+            || typeof result.producerGap !== 'boolean' || bytes.length + result.skippedBytes !== result.nextOffset - result.startOffset) throw Error('invalid_output');
+        } else if (result.coordinate === 'ring' || bytes.length !== result.nextOffset - result.startOffset) throw Error('invalid_output');
+        const gap = result.lossy || ring && result.producerGap;
         if (gap) this.decoder = new TextDecoder();
         const atEnd = !live(result.status) && result.nextOffset === result.totalBytes;
         const text = this.decoder.decode(bytes, { stream: !atEnd });
@@ -112,6 +120,7 @@ export class RemoteLiveJobOutput {
       if (this.mode === 'live') this.timer = setTimeout(() => void this.read(), this.snapshot.offset < this.snapshot.total ? 40 : 750);
       if (this.snapshot.phase === 'ended') { clearTimeout(this.timer); this.timer = null; }
     } catch (error) {
+      if (!this.disposed && this.task === task && !this.valid() && this.deferReadError(error)) return;
       if (!this.disposed && this.task === task) this.publish({ phase: 'error', error: error.message?.startsWith('remote_command_')
         ? '电脑已不再提供这条命令的实时输出，可查看执行结果。' : error.message?.startsWith('remote_job_')
           ? '电脑上的任务或输出已变化，请返回任务列表重新查看。' : '读取输出失败，请检查连接后重试。' });

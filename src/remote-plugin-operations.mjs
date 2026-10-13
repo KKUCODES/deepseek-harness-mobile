@@ -6,6 +6,7 @@ const retentionMs = 60 * 60 * 1000;
 export class RemotePluginOperations {
   controller = new AbortController();
   running = new Set();
+  settlements = new Set();
   constructor(client, capabilities, { interval = 1000 } = {}) {
     this.client = client; this.capabilities = capabilities; this.interval = interval;
     this.journal = client.pluginOperationJournal ??= new Map();
@@ -17,14 +18,19 @@ export class RemotePluginOperations {
   }
   subscribe = listener => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   changed() { for (const listener of this.listeners) listener(); }
-  /** 仅交接同一绑定进程内的操作摘要；不保存参数，也不形成可重放的写入队列。 */
-  setScope(key) {
+  /** 核心重建交接内存摘要；冷启动只读取同一绑定的摘要，不重放写入。 */
+  setScope(key, store) {
     if (this.client.pluginOperationJournalKey !== key) {
       this.client.pluginOperationJournal = new Map();
       this.client.pluginOperationJournalKey = key;
+      try {
+        for (const item of store?.readPluginOperations?.() ?? []) this.client.pluginOperationJournal.set(item.id, item);
+      } catch { /* 保留正常聊天；首次管理写入仍须成功提交本机摘要。 */ }
     }
     this.journal = this.client.pluginOperationJournal;
+    this.store = store;
   }
+  persist(journal = this.journal, store = this.store) { return store?.writePluginOperations?.([...journal.values()]); }
   prune() {
     for (const [id, item] of this.journal) {
       if (item.state !== 'pending' && Date.now() - (item.finishedAt ?? item.startedAt) >= retentionMs) this.journal.delete(id);
@@ -62,10 +68,20 @@ export class RemotePluginOperations {
     const target = args?.spec ?? args?.name ?? args?.id;
     const item = { id: operationId, generation, endpoint, target: typeof target === 'string' ? target.slice(0, 4096) : endpoint,
       requestId: args?.options?.requestId, startedAt: Date.now(), state: 'pending' };
-    this.journal.set(operationId, item); this.prune();
+    const journal = this.journal, store = this.store;
+    let settled;
+    const settlement = new Promise(resolve => { settled = resolve; });
+    this.settlements.add(settlement);
+    journal.set(operationId, item); this.prune();
     this.running.add(operationId);
     this.changed();
+    let submitted = false;
     try {
+      // 在电脑可能接收写入前严格提交摘要；存储失败不能先发出安装。
+      await this.persist(journal, store);
+      signal.throwIfAborted();
+      if (journal !== this.journal) throw new Error('remote_generation_changed');
+      submitted = true;
       try { await this.request({ method: 'remote.pluginOperationStart', generation, operationId, endpoint, payload }, signal); }
       catch (error) { if (!recoverable(error)) throw error; }
       for (;;) {
@@ -84,9 +100,15 @@ export class RemotePluginOperations {
         await this.wait(signal);
       }
     } catch (error) {
-      Object.assign(item, { state: 'unknown', finishedAt: Date.now() });
+      if (submitted) Object.assign(item, { state: 'unknown', finishedAt: Date.now() });
+      else journal.delete(operationId);
       throw error;
-    } finally { this.running.delete(operationId); this.prune(); this.changed(); }
+    } finally {
+      this.running.delete(operationId); this.prune(); this.changed();
+      // 保存失败不能改写已收到的原电脑结果；上次未确认摘要仍可在下次授权查询时核对。
+      try { await this.persist(journal, store); } catch {}
+      this.settlements.delete(settlement); settled();
+    }
   }
   async list(signal) {
     // 必须先取得电脑授权响应；本地摘要不能绕过撤权，也不能假装是电脑回执。
@@ -111,8 +133,11 @@ export class RemotePluginOperations {
       }
     }
     this.prune();
+    try { await this.persist(); } catch {}
+    if (journal !== this.journal || journal !== this.client.pluginOperationJournal) throw new Error('remote_generation_changed');
     return { ...result, items: [...this.journal.values()].sort((a, b) => a.startedAt - b.startedAt) };
   }
   read(generation, operationId, signal) { return this.request({ method: 'remote.pluginOperationRead', generation, operationId }, signal); }
   dispose() { this.off(); this.controller.abort(new Error('plugin_operation_outcome_unknown')); }
+  settled() { return Promise.allSettled([...this.settlements]); }
 }

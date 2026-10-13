@@ -1,4 +1,4 @@
-const emptySelection = () => ({ selected: null, selectedTarget: null, selectionTrail: [],
+const emptySelection = () => ({ selected: null, selectedTarget: null, selectionTrail: [], selectionRevision: 0,
   session: null, conversation: null, model: null, permission: null, agentPreset: null,
   schedules: null, plan: null, inbox: null, error: null });
 
@@ -91,8 +91,10 @@ export class RemoteSessionView {
     this.reference = reference ?? null;
     const generation = this.selection;
     const restored = this.callbacks.onSelection?.(id) ?? {};
-    this.publish({ ...emptySelection(), selected: id, selectedTarget: target, selectionTrail: trail, ...restored });
+    // 即使复用同一空会话，也是一轮已接受的导航；页面据此关闭先前的设置和管理界面。
+    this.publish({ ...emptySelection(), selected: id, selectedTarget: target, selectionTrail: trail, selectionRevision: generation, ...restored });
     if (!id || generation !== this.selection || this.lifetime.signal.aborted) return;
+    if (model.jobs) this.releases.push(model.jobs.watchRows(id));
     if (model.subagentsAvailable) {
       for (const parentId of new Set([id, ...(typeof target === 'object' ? [target.parentSessionId] : [])])) {
         this.releases.push(sessions.retainSubagentCatalog(parentId));
@@ -102,6 +104,16 @@ export class RemoteSessionView {
     try { binding = await reference.ready; }
     catch (error) { if (generation === this.selection && !this.lifetime.signal.aborted) throw error; return; }
     if (generation !== this.selection || this.lifetime.signal.aborted) return;
+    await model.reconcileSubmission?.(id, binding);
+    if (generation !== this.selection || this.lifetime.signal.aborted) return;
+    const reconcile = () => {
+      // 正在提交的原输入 shell 自己处理确认；重连及历史分页则依据原请求编号核对。
+      if (generation === this.selection && !model.sending.has(id) && !model.inputBindings?.mounted(id)?.pending) {
+        void model.reconcileSubmission?.(id, binding);
+      }
+    };
+    this.releases.push(binding.eventSource.subscribe(reconcile), binding.session.projections.faceOf('inbox').subscribe(reconcile));
+    reconcile();
     const conversation = model.conversations.binding(binding).target('chat');
     const sources = { session: binding.session, conversation };
     for (const [key, face] of Object.entries({ model: 'modelSelection', inbox: 'inbox', permission: 'permissions',

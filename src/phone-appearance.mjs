@@ -33,7 +33,11 @@ export function watchPhoneAppearance(client, presenter, { events = window, media
     onLanguage(current.language);
     if (!current.enabled) { presenter.dispose(); return; }
     const scheme = current.preference === 'system' ? media.matches ? 'dark' : 'light' : current.preference;
-    presenter.apply({ preference: current.preference, fontSize: current.fontSize, active: { id: scheme, colorScheme: scheme, tokens: {} } });
+    // 手机仍只提供正文字号；新版 presenter 另需明确的代码/终端默认值与字体列表。
+    presenter.apply({ preference: current.preference, fontSize: current.fontSize,
+      fontSizes: { text: current.fontSize, code: 11, terminal: 13 },
+      fontFamilies: { text: '', code: '', terminal: '' },
+      active: { id: scheme, colorScheme: scheme, tokens: {} } });
   };
   const read = async () => {
     const owner = ++revision;

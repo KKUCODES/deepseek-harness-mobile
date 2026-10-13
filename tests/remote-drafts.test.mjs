@@ -4,6 +4,45 @@ import { RemoteDraftStore } from '../src/remote-drafts.mjs';
 import { draftStorage, draftBinding } from './fixtures/remote-draft-storage.mjs';
 import { IDBFactory, IDBDatabase } from 'fake-indexeddb';
 
+test('发送核对编号严格落盘，确认原编号原子清除对应草稿和附件，保留新增附件', async () => {
+  const database = new IDBFactory(), open = () => RemoteDraftStore.open(draftBinding, database, null);
+  const one = await open(), editor = { root: { type: 'root', children: [] } };
+  await one.write('chat', '@file', editor);
+  await one.writeAttachments('chat', ['sent', 'new'].map(id => ({ id, name: id, source: new Blob([id]), state: 'ready' })), ['sent']);
+  await one.prepareSubmission('chat', 'original-request', { text: '@file', editor }, ['sent']); one.close();
+  const next = await open();
+  assert.equal(next.readSubmission('chat').requestId, 'original-request');
+  assert.equal(await next.settleSubmission('chat', 'different-request'), null);
+  assert.equal(next.read('chat'), '@file');
+  assert.deepEqual(await next.settleSubmission('chat', 'original-request'), { clearedDraft: true, attachmentIds: ['sent'] });
+  next.close(); const last = await open();
+  assert.equal(last.read('chat'), ''); assert.equal(last.readSubmission('chat'), null);
+  assert.deepEqual(last.readAttachments('chat').map(item => item.id), ['new']); last.close();
+});
+
+test('清理事务中止保留核对编号、结构化草稿和附件；新引用或新文字撤销旧清理资格', async () => {
+  const database = new IDBFactory(), store = await RemoteDraftStore.open(draftBinding, database, null);
+  const original = { root: { type: 'root', children: [{ type: 'reference-chip', ref: 'one' }] } };
+  await store.write('chat', '@file', original);
+  await store.writeAttachments('chat', [{ id: 'one', name: 'a', source: new Blob(['a']), state: 'ready' }]);
+  await store.prepareSubmission('chat', 'request', { text: '@file', editor: original }, ['one']);
+  const transaction = IDBDatabase.prototype.transaction;
+  try {
+    IDBDatabase.prototype.transaction = function (...args) {
+      const tx = transaction.apply(this, args); if (args[1] === 'readwrite') queueMicrotask(() => tx.abort()); return tx;
+    };
+    await assert.rejects(store.settleSubmission('chat', 'request'));
+    assert.equal(store.readSubmission('chat').requestId, 'request');
+    assert.deepEqual(store.readEntry('chat'), { text: '@file', editor: original });
+    assert.equal(store.readAttachments('chat').length, 1);
+  } finally { IDBDatabase.prototype.transaction = transaction; }
+  await store.write('chat', '@file', { root: { type: 'root', children: [{ type: 'reference-chip', ref: 'two' }] } });
+  assert.equal(store.readSubmission('chat'), null);
+  await store.prepareSubmission('chat', 'second', store.readEntry('chat'), []);
+  await store.write('chat', '新文字'); assert.equal(store.readSubmission('chat'), null);
+  assert.equal(await store.settleSubmission('chat', 'second'), null); assert.equal(store.read('chat'), '新文字'); store.close();
+});
+
 test('结构化草稿与文字同一事务保存，重开保留身份，纯文字覆盖清除旧结构', async () => {
   const database = new IDBFactory(), open = binding => RemoteDraftStore.open(binding, database, null);
   const editor = { root: { type: 'root', children: [{ type: 'reference-chip', source: 'file', ref: '/workspace/file', clipboardText: '@file' }] } };
@@ -67,7 +106,7 @@ test('存储不可访问或写满不能静默成功，未配对身份不能生�
   assert.throws(() => new RemoteDraftStore({ paired: false }), /binding_required/);
   const unavailable = new RemoteDraftStore(draftBinding, () => { throw new Error('SecurityError'); });
   assert.throws(() => unavailable.read('one'), /SecurityError/); assert.throws(() => unavailable.write('one', 'draft'), /SecurityError/);
-  const full = new RemoteDraftStore(draftBinding, () => ({ setItem() { throw new Error('QuotaExceeded'); } }));
+  const full = new RemoteDraftStore(draftBinding, () => ({ getItem() { return null; }, setItem() { throw new Error('QuotaExceeded'); } }));
   assert.throws(() => full.write('one', 'draft'), /QuotaExceeded/);
 });
 

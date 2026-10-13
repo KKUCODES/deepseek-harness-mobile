@@ -1,5 +1,7 @@
 # Remote 自动审核实际执行
 
+固定新版发布及实际源码入口的[审核取消、历史、续聊和权限恢复](./latest-auto-review.md)已通过，原明确取消误记失败的问题已作窄范围修复；新版拒绝/放行、新源码组合最终恢复及完整范围仍待验。下列旧版记录不替代新版证据。
+
 - 状态：实际低风险放行、审核中取消、受控待审请求的真实模型拒绝及手机拒绝提示/续聊已验证。具体证据与限制如下。
 - 维护角色：项目协作 Agent；核验日期：2026-09-28（香港时间）。
 - 来源：原[自动审核说明](../../../deepseek-harness/packages/experimental/auto-review/README.zh.md)、原[审核实现](../../../deepseek-harness/packages/experimental/auto-review/src/index.ts)、手机[选择器](../../src/ui/RemotePermissions.jsx)及[原目录适配](../../src/remote-permissions.mjs)。

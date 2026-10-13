@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { isProfileDshVersion } from './remote-dsh-version.mjs';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { SlotRegistry } from '../../deepseek-harness/packages/client/ui-renderer/src/client/registry.ts';
 import { createSlotRenderer } from '../../deepseek-harness/packages/client/ui-renderer/src/client/scoped-slots.tsx';
 import { apply as installSessionScope } from '../../deepseek-harness/packages/client/ui-session/src/client/index.ts';
@@ -39,6 +40,11 @@ import { originalComponent, rememberComponentAdapter } from './remote-component-
 import { installRemoteGlobalPanels, RemoteGlobalPanels } from './remote-global-panels.jsx';
 import { RemoteToolCancellationTree } from './remote-tool-cancellation.jsx';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
+import { chatPresentation, chatNodeHooks, chatNodeBottom, chatSeatProps } from '@dshm/chat-presentation';
+import { RemotePresetDefaults } from './remote-preset-defaults.mjs';
+import { installRemoteConfigForms } from '@dshm/config-forms';
+import { agentPresetText } from './remote-agent-presets.mjs';
+import { useLocale } from './ui/locale.jsx';
 
 const PluginSlots = createContext(null);
 const ConversationSlots = createContext(null);
@@ -101,6 +107,11 @@ class MobileSlotRegistry extends SlotRegistry {
     const sidebar = options.name === 'sidebar.right.pane.tab' && remoteSidebarHost(component, this.model);
     if (sidebar) return register(options, sidebar);
     const id = pluginIdentity(this.ctx), layout = this.layout;
+    if (id === '@deepseek-ai/dsh-client-ui-settings-general' && options.name === 'settings.general.item'
+      && options.id === 'developer-tools' && this.model.codingTools) {
+      const scope = this.model.codingTools, Original = component;
+      component = props => <RemoteCodingToolsRow {...props} scope={scope} Component={Original}/>;
+    }
     // 原主题行写Remote内存设置；改用手机同一权威入口，不能产生第二套外观偏好。
     if (id === '@deepseek-ai/dsh-client-ui-theme' && options.name === 'settings.general.item') {
       if (options.id === 'font-size') return () => {};
@@ -116,6 +127,18 @@ class MobileSlotRegistry extends SlotRegistry {
     // 手机已有可操作的模式标签；仅保留这一原条目的手机实现，其他同槽扩展照常注册。
     if (id === '@deepseek-ai/dsh-client-ui-agent-preset'
       && options.name === 'conversation.session.header.actions' && options.id === 'agent-preset') return () => {};
+    if (id === '@deepseek-ai/dsh-client-ui-agent-preset' && options.name === 'settings.section'
+      && options.id === 'agent-presets' && isProfileDshVersion(this.model.transport.capabilities?.dshVersion)) {
+      const defaults = new RemotePresetDefaults(this.model), inject = options.inject, Original = component;
+      let face;
+      options = { ...options, inject: (...args) => {
+        const current = inject(...args);
+        face ??= defaults.bind(current);
+        return { ...current, ...face, startCreatorDraft: current.startCreatorDraft };
+      } };
+      component = props => <LatestPresetSection {...props} Component={Original} defaults={defaults}/>;
+      this.ctx.effect(() => () => defaults.dispose(), 'DSHM: preset default settings scope');
+    }
     // 日志使用手机已接通的原生保存入口；原按钮直接访问桌面 HTTP 下载地址。
     if (id === '@deepseek-ai/dsh-session-log-export'
       && options.name === 'conversation.session.header.utilities' && options.id === 'session-log-download') return () => {};
@@ -144,6 +167,96 @@ class MobileSlotRegistry extends SlotRegistry {
 function PhoneAppearanceSettings({ model }) {
   const t = useTranslate();
   return <Button variant="outline" onClick={() => void model.client.call('appearance.settings').catch(error => model.fail(error))}>{t('外观与语言')}</Button>;
+}
+
+function RemoteCodingToolsRow({ scope, Component, ...props }) {
+  const t = useTranslate(), state = useSyncExternalStore(scope.subscribe, scope.getSnapshot);
+  return <>
+    <fieldset disabled={!state.writable || state.busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}><Component {...props}/></fieldset>
+    {state.error && <p role="alert">{t(state.error)}</p>}
+    <Button variant="outline" disabled={state.busy} onClick={() => void scope.refresh()}>{t('重新读取设置')}</Button>
+    <Button variant="outline" disabled={!state.writable || state.busy} onClick={() => void scope.unset('enabled')}>{t('恢复默认')}</Button>
+  </>;
+}
+
+function LatestPresetSection({ Component, defaults, ...props }) {
+  const t = useTranslate();
+  const state = useSyncExternalStore(defaults.scope.subscribe, defaults.scope.getSnapshot);
+  return <>
+    {state.error && <p role="alert">{state.error}
+      <Button variant="outline" disabled={state.busy} onClick={() => void props.load()}>{t('重新读取设置')}</Button>
+    </p>}
+    {!state.error && !state.busy && state.status === 'ready' && !state.writable && <p role="status">{t('电脑设置目前只读。')}</p>}
+    <Component {...props}/>
+    <LatestPresetDirectory controller={defaults.directory} useAgentPresetSection={props.useAgentPresetSection}/>
+    <LatestPresetManagement controller={defaults.management} useAgentPresetSection={props.useAgentPresetSection} load={props.load}/>
+  </>;
+}
+
+function LatestPresetDirectory({ controller, useAgentPresetSection }) {
+  const t = useTranslate(), locale = useLocale();
+  const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const rows = useAgentPresetSection(value => value.rows);
+  const [selected, setSelected] = useState('');
+  useEffect(() => () => controller.clear(), [controller]);
+  useEffect(() => {
+    if (selected && !rows.some(row => row.id === selected)) { setSelected(''); controller.clear(); }
+  }, [rows, selected, controller]);
+  if (!controller.supported || !rows.length) return null;
+  return <section className="remote-preset-directory" aria-label={t('预设配置位置')}>
+    <label>{t('选择预设')}
+      <select aria-label={t('选择预设')} value={selected} onChange={event => { controller.clear(); setSelected(event.target.value); }}>
+        <option value="">{t('选择预设')}</option>
+        {rows.map(row => <option key={row.id} value={row.id}>{agentPresetText(row, locale).name}</option>)}
+      </select>
+    </label>
+    <Button variant="outline" disabled={!selected || !controller.permitted || state.busy} onClick={() => void controller.read(selected)}>{t('查看配置位置')}</Button>
+    {state.value && <div role="status">
+      <p>{t('该模式的修改会保存到电脑的此配置文件。')}</p>
+      <code>{state.value.documentPath}</code>
+    </div>}
+    {state.error && <p role="alert">{t(state.error)}</p>}
+  </section>;
+}
+
+function LatestPresetManagement({ controller, useAgentPresetSection, load }) {
+  const t = useTranslate(), locale = useLocale();
+  const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const rows = useAgentPresetSection(value => value.rows);
+  const [selected, setSelected] = useState(''), [id, setId] = useState(''), [name, setName] = useState(''), [confirming, setConfirming] = useState(false);
+  useEffect(() => () => controller.clear(), [controller]);
+  useEffect(() => { if (selected && !rows.some(row => row.id === selected)) { setSelected(''); if (!state.result) controller.clear(); } }, [rows, selected, controller, state.result]);
+  useEffect(() => { if (!state.view) setConfirming(false); }, [state.view]);
+  const save = async operation => { if (await operation()) { setConfirming(false); await load(); } };
+  if (!controller.supported || !rows.length) return null;
+  const valid = /^[a-z0-9][a-z0-9-]{0,127}$/.test(id) && name.trim().length > 0 && name.trim().length <= 256 && !/[\x00-\x1f\x7f]/.test(name);
+  return <section className="remote-preset-directory remote-preset-management" aria-label={t('复制与删除模式')}>
+    <label>{t('管理模式')}
+      <select aria-label={t('管理模式')} value={selected} disabled={state.busy} onChange={event => { controller.clear(); setConfirming(false); setSelected(event.target.value); }}>
+        <option value="">{t('选择预设')}</option>
+        {rows.map(row => <option key={row.id} value={row.id}>{agentPresetText(row, locale).name}</option>)}
+      </select>
+    </label>
+    <Button variant="outline" disabled={!selected || !controller.permitted || state.busy} onClick={() => { setConfirming(false); void controller.read(selected); }}>{t('读取模式信息')}</Button>
+    {state.view && <fieldset disabled={state.busy || !controller.permitted}>
+      <legend>{t('复制为新模式')}</legend>
+      <label>{t('新模式标识')}<input aria-label={t('新模式标识')} value={id} maxLength={128} onChange={event => setId(event.target.value)} autoCapitalize="none" spellCheck={false}/></label>
+      <p>{t('使用小写字母、数字和连字符。')}</p>
+      <label>{t('新模式名称')}<input aria-label={t('新模式名称')} value={name} maxLength={256} onChange={event => setName(event.target.value)}/></label>
+      <Button variant="outline" disabled={!state.view.canCopy || !valid} onClick={() => void save(() => controller.copy(id, name))}>{t('复制模式')}</Button>
+      {state.view.canDelete ? <>
+        <Button variant="outline" onClick={() => setConfirming(true)}>{t('删除模式')}</Button>
+        {confirming && <div role="group" aria-label={t('确认删除模式')}>
+          <p>{t('删除后不能用于新聊天，已有聊天保留原模式。')}</p>
+          {state.view.defaultAfterDelete && <p>{t('新聊天将恢复电脑默认模式。')} <code>{state.view.defaultAfterDelete}</code></p>}
+          <Button variant="outline" onClick={() => setConfirming(false)}>{t('取消')}</Button>
+          <Button onClick={() => void save(() => controller.remove(true))}>{t('确认删除模式')}</Button>
+        </div>}
+      </> : <p>{t('此模式来自电脑基础配置，不能在这里删除。')}</p>}
+    </fieldset>}
+    {state.error && <p role="alert">{t(state.error)}</p>}
+    {state.result && <p role="status">{t(state.result.copied ? '模式已复制到电脑。' : '模式已删除，已有聊天保留。')}</p>}
+  </section>;
 }
 
 function GuardedPresetSeat({ Component, model, ...props }) {
@@ -217,7 +330,7 @@ export function installRemotePluginSlots(model) {
     }
     return cache.load;
   };
-  ctx.uiSession.provide({ hooks: ['chat'], keyedHooks: ['chatNode', 'chatNodeProcess'], resolve(binding) {
+  ctx.uiSession.provide({ hooks: ['chat'], keyedHooks: ['chatNode', 'chatNodeProcess', ...(chatNodeBottom ? ['chatNodeBottom'] : [])], resolve(binding) {
     let source = chats.get(binding);
     if (!source) {
       const target = model.conversations.binding(binding).target('chat');
@@ -227,6 +340,7 @@ export function installRemotePluginSlots(model) {
     return { hooks: { chat: source }, keyedHooks: {
       chatNode: key => source.getSnapshot().nodes.source(key),
       chatNodeProcess: key => source.getSnapshot().nodes.processSource(key),
+      ...(chatNodeBottom ? { chatNodeBottom: key => source.getSnapshot().nodes.bottomSource(key) } : {}),
     } };
   } });
   slots.register({ name: 'root', children: {
@@ -252,7 +366,7 @@ export function installRemotePluginSlots(model) {
     'conversation.session.header.lineage': { kind: 'single', scope: 'session' },
     'conversation.message.images': { kind: 'single', scope: 'session' },
     'conversation.chat.node': { kind: 'keyed', scope: 'session', inject: {
-      hooks: { turnData: (_standard, data) => key => useTurnDataValue(data, key) },
+      hooks: chatNodeHooks ?? { turnData: (_standard, data) => key => useTurnDataValue(data, key) },
     } },
   } }, MobileSlotRoot);
   installRemoteGlobalPanels(model);
@@ -263,8 +377,11 @@ export function installRemotePluginSlots(model) {
   installRemotePluginPanels(model);
   installRemoteCordisApprovals(model);
   installRemoteSidebarChat(model);
-  slots.register({ name: 'dshm.chat.node', store: createChatStore(), locale: chatNS }, MobileChatNodeSeat);
-  const ready = installRemoteInteractionPlugins(model);
+  const configForms = installRemoteConfigForms?.(model);
+  slots.register({ name: 'dshm.chat.node', store: createChatStore(), locale: chatNS,
+    ...(chatPresentation ? { inject: () => ({ hooks: { presentation: chatPresentation } }) } : {}),
+  }, MobileChatNodeSeat);
+  const ready = Promise.all([installRemoteInteractionPlugins(model), ...(configForms ? [configForms.await()] : [])]);
   return { layout, locale, imageLoader, ready, render: props => slots.renderSlot('root', { model, ...props, rootModel: model }) };
 }
 
@@ -426,7 +543,7 @@ function MobileChatNodeSeat({ node, dispatchNode, children, useSession, ...props
     {owner.node.kind === 'tool-call' && <button type="button" className="remote-file-link" data-tool-details
       onClick={() => owner.inspectCall(owner.node.data.root.callId)}>{t('工具详情')}</button>}
   </>, [dispatchNode, children, props.t, t]);
-  return <ChatNodeSeat {...props} nodeKey={node.key} historyIncomplete={historyIncomplete} compactTranscript renderSlot={renderNode}/>;
+  return <ChatNodeSeat {...props} {...chatSeatProps} nodeKey={node.key} historyIncomplete={historyIncomplete} compactTranscript renderSlot={renderNode}/>;
 }
 
 function MessageImagesFallback({ images, openAttachment }) {

@@ -14,7 +14,8 @@ import { useTranslate } from './locale.jsx';
 
 export function RemoteCommand({ model, target, tool, sessionCwd, onClose }) {
   const t = useTranslate();
-  const labels = { signal: signal => t('终止信号 {signal}', { signal }), exitCode: code => t('退出码 {code}', { code }), noExitCode: t('未提供退出码'),
+  const labels = { commandLine: line => t('命令第 {line} 行', { line }),
+    signal: signal => t('终止信号 {signal}', { signal }), exitCode: code => t('退出码 {code}', { code }), noExitCode: t('未提供退出码'),
     running: t('执行中'), failed: t('执行失败'), done: t('调用已结束'), copy: t('复制输出'), copied: t('已复制'), noOutput: t('没有输出'),
     collapseAria: t('收起输出'), collapse: t('收起'), expandAria: count => t('展开 {count} 行输出', { count }), expand: count => t('展开 {count} 行', { count }) };
   const [resume] = useState(() => model?.commandResume?.target === target ? model.commandResume : undefined);

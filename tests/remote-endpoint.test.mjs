@@ -61,3 +61,59 @@ test('保存已发出后权限变化或取消，迟到响应不能重建可编�
   f.model.transport.capabilities.management = true;
   await assert.rejects(f.endpoint.save(view, { op: 'unset' }), /尚未确认/);
 });
+
+test('设置卡卸载后仍能观察未知保存；旧连接读取不清除提示，新连接核对后清除', async () => {
+  const f = fixture(), view = await f.endpoint.read(), states = [];
+  const original = f.model.client.request;
+  f.model.client.request = () => ({ promise: Promise.reject(new Error('disconnected')), cancel() {} });
+  await assert.rejects(f.endpoint.save(view, { op: 'unset' }), /尚未确认/);
+  // 新订阅者对应重新挂载的设置页，只读取服务已有状态，不读取旧组件。
+  const off = f.endpoint.subscribeNotice(() => states.push(f.endpoint.getNotice()));
+  assert.match(f.endpoint.getNotice(), /尚未确认/);
+  f.model.client.request = original;
+  await f.endpoint.read(); assert.match(f.endpoint.getNotice(), /尚未确认/);
+  f.state.generation++; await f.endpoint.read();
+  assert.equal(f.endpoint.getNotice(), ''); assert.deepEqual(states, ['']); off();
+});
+
+function providerFixture() {
+  const f = fixture();
+  Object.assign(f.model.transport.capabilities, { providerEndpoint: true, providerEndpointResetPolicy: true });
+  f.state.reply = { ...f.state.reply, target: { provider: 'manual' }, protocol: 'provider', resettable: false, inheritedOrigin: null };
+  f.endpoint = new RemoteComputerEndpoint(f.model, { provider: 'manual' });
+  return f;
+}
+
+test('协商恢复能力后读取明确策略；无默认地址不发送恢复请求，仍能显式更换地址', async () => {
+  const f = providerFixture(), view = await f.endpoint.read();
+  assert.deepEqual(f.calls[0], { method: 'remote.endpointRead', target: { provider: 'manual' }, resetPolicy: true });
+  await assert.rejects(f.endpoint.save(view, { op: 'unset' }), /没有可恢复的默认地址/);
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.endpoint.uncertainGeneration, null);
+  await f.endpoint.save(view, { op: 'set', value: 'https://new.invalid/v1' });
+  assert.equal(f.calls[1].resetPolicy, true);
+});
+
+test('插件明确拒绝恢复时不锁为未知写入；重新读取后可更换地址', async () => {
+  const f = providerFixture(); f.state.reply.resettable = true;
+  const view = await f.endpoint.read(), request = f.model.client.request;
+  f.model.client.request = operation => {
+    f.calls.push(operation);
+    return { promise: Promise.reject(new Error('remote_endpoint_reset_unavailable')), cancel() {} };
+  };
+  await assert.rejects(f.endpoint.save(view, { op: 'unset' }), /没有可恢复的默认地址/);
+  assert.equal(f.endpoint.uncertainGeneration, null);
+  f.model.client.request = request;
+  const fresh = await f.endpoint.read();
+  await f.endpoint.save(fresh, { op: 'set', value: 'https://new.invalid/v1' });
+});
+
+test('新版策略缺失时拒绝视图；旧电脑不要求扩展字段', async () => {
+  const f = providerFixture(); delete f.state.reply.resettable;
+  await assert.rejects(f.endpoint.read());
+  assert.equal(f.endpoint.view, null);
+  f.model.transport.capabilities.providerEndpointResetPolicy = false;
+  const view = await f.endpoint.read();
+  assert.equal(Object.hasOwn(f.calls[1], 'resetPolicy'), false);
+  assert.equal(Object.hasOwn(view, 'resettable'), false);
+});

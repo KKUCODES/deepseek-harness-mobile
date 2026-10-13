@@ -24,3 +24,7 @@ keystore.properties
 .externalNativeBuild/
 .DS_Store
 Thumbs.db
+
+# 内部迭代记录和 Agent 规则由项目集合维护，不纳入开源仓库。
+/CHANGELOG.md
+/AGENTS.md

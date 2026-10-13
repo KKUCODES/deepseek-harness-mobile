@@ -38,8 +38,11 @@ test('Remote按手机偏好响应系统主题，拒绝迟到读取，卸载后�
   const waiting = [], snapshots = [], languages = []; let disposed = 0;
   const cleanup = watchPhoneAppearance({ call: op => { assert.equal(op, 'appearance.read'); return new Promise(resolve => waiting.push(resolve)); } },
     { apply: snapshot => snapshots.push(snapshot), dispose: () => disposed++ }, { events, media, onLanguage: locale => languages.push(locale) });
+  assert.deepEqual(snapshots[0].fontSizes, { text: 14, code: 11, terminal: 13 });
+  assert.deepEqual(snapshots[0].fontFamilies, { text: '', code: '', terminal: '' });
   events.dispatchEvent(new Event('dshm-appearance-change'));
   waiting[1](value); await tick(); assert.equal(snapshots.at(-1).active.colorScheme, 'dark');
+  assert.deepEqual(snapshots.at(-1).fontSizes, { text: 17, code: 11, terminal: 13 });
   waiting[0]({ ...value, preference: 'light' }); await tick(); assert.equal(snapshots.at(-1).active.colorScheme, 'dark');
   events.dispatchEvent(new Event('dshm-appearance-change'));
   waiting[2]({ ...value, preference: 'system' }); await tick(); assert.equal(snapshots.at(-1).active.colorScheme, 'light');
