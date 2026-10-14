@@ -68,6 +68,8 @@ flowchart LR
 
 开发预览，尚未进入应用商店。核心 Remote 已在 **官方 DSH `0.2.1-alpha.2`＋插件 `0.1.80-latest.0`＋配套 Android** 上完成 Web + MuMu 本地验收；扩展范围见[兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
 
+本地 `0.1.0-preview.2` 候选已增加官方 `0.2.0-rc.2`，保留 alpha.2，并在同一 MuMu APK 上验证两版核心聊天。[双版本范围](./docs/integration/market-baseline.md)。公开下载仍为 preview.1，只连接 alpha.2；新版尚未发布。
+
 - 首版仅 Android。真机、完整公网链路及其他版本、插件、模型仍需验证。
 - 电脑和 DSH 保持运行，只安装独立插件，不修改 DSH 本体。
 - 手机不创建电脑工作区、不输入命令、不转发电脑 localhost 网站。

@@ -1,11 +1,11 @@
-import { isProfileDshVersion } from './remote-dsh-version.mjs';
+import { acceptsRemoteDshVersion, isProfileDshVersion } from './remote-dsh-version.mjs';
 import { uploadRemote, promptRemote } from './remote-upload.mjs';
 import { RemotePluginOperations, longPluginCalls } from './remote-plugin-operations.mjs';
 
 export const isRemoteHostDisconnect = error => error instanceof Error &&
   ['host_offline', 'host_disconnected_outcome_unknown', 'connection_closed_outcome_unknown', 'remote_not_connected'].includes(error.message);
 
-// SDK 与电脑版本必须成套；仅隔离候选构建会设置新版常量。
+// 使用固定 SDK 与显式核验的宿主组合；不自动接受其他预发布版本。
 const mobileSdkVersion = typeof DSHM_MOBILE_SDK_VERSION === 'string' ? DSHM_MOBILE_SDK_VERSION : '0.1.6-alpha.2';
 
 /** DSH 原始 ClientTransportHooks；身份、凭据和 socket 仍由独立 Remote 原生桥持有。 */
@@ -65,7 +65,7 @@ export class RemoteTransport {
     finally { signal?.removeEventListener('abort', cancel); }
     if (generation !== this.generation || this.lifetime.signal.aborted) throw new Error('remote_generation_changed');
     if (result?.transport !== 2) throw new Error('unsupported_remote_version');
-    if (result.dshVersion !== mobileSdkVersion) throw new Error('unsupported_dsh_version');
+    if (!acceptsRemoteDshVersion(mobileSdkVersion, result.dshVersion)) throw new Error('unsupported_dsh_version');
     this.capabilities = result;
     this.hostOffline = false;
     return result;

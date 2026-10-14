@@ -198,7 +198,7 @@ jobs:
 
           - Download the .apk asset to install; Android 9 or newer.
           - 下载 APK 即可安装，最低 Android 9；普通聊天使用你自己的 DeepSeek Key。
-          - Remote uses official DSH 0.2.1-alpha.2 with the DSHM plugin and a relay. Keep the computer running.
+          - Remote supports official DSH 0.2.0-rc.2 and 0.2.1-alpha.2 with the DSHM plugin and a relay. Keep the computer running.
           - Uses the existing preview app identity and certificate for compatible updates; no DSH core patches.
           - SHA-256, certificate report and compatibility metadata are included. This is not an app-store release or full physical-device/public-network certification.
           NOTES

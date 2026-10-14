@@ -178,7 +178,11 @@ internal class RemoteNoticeConnection(context: Context, private val notices: Rem
         if (stage == "negotiating") {
             require(type == "result")
             val value = frame.getJSONObject("value")
-            if (value.optInt("transport") != 2 || value.optString("dshVersion") != BuildConfig.DSH_SDK_VERSION || value.opt("taskNotifications") != true) {
+            val hostVersion = value.optString("dshVersion")
+            // 与聊天传输使用同一离散兼容组合，避免 rc.2 聊天在线但通知拒绝连接。
+            val compatibleHost = hostVersion == BuildConfig.DSH_SDK_VERSION ||
+                (BuildConfig.DSH_SDK_VERSION == "0.2.1-alpha.2" && hostVersion == "0.2.0-rc.2")
+            if (value.optInt("transport") != 2 || !compatibleHost || value.opt("taskNotifications") != true) {
                 failed("unsupported"); return
             }
             stage = "subscribing"; followId = UUID.randomUUID().toString(); deadline(owner)

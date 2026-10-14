@@ -129,7 +129,7 @@ test('原 DSH RPC 保留参数和结果，不伪装电脑本地连接', async ()
   await assert.rejects(f.transport.hooks.rpc.call('/local-admin', 'read', {}), /unsupported_remote_channel/);
 });
 
-for (const version of ['0.2.1-alpha.1', '0.2.1-alpha.2']) test(`${version}文件Client恢复原生字节，自有range下载与旧版保持base64，损坏附件拒绝`, async () => {
+for (const version of ['0.2.0-rc.2', '0.2.1-alpha.1', '0.2.1-alpha.2']) test(`${version}文件Client恢复原生字节，自有range下载与旧版保持base64，损坏附件拒绝`, async () => {
   const f = await negotiated();
   try {
     f.transport.capabilities.dshVersion = version;

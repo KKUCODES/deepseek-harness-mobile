@@ -12,6 +12,8 @@
 
 ## 自动构建与发布
 
+本地待发布配置已准备为 `0.1.0-preview.2`（versionCode 4），在原 alpha.2 SDK 中增加经过核验的 rc.2 宿主兼容。公开 preview.1 的下载和历史验收保持原范围，不能因代码已更新而描述为旧 APK 自动兼容 rc.2。[双版本验证](./integration/market-baseline.md)
+
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。
 - 手动选择 `main` → Run workflow 可生成签名包；勾选 `publish_release` 发布公开开发预览。

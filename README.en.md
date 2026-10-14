@@ -75,6 +75,8 @@ Development preview; not an app-store release. Core Remote features passed local
 
 ## FAQ
 
+The local `0.1.0-preview.2` candidate adds official DSH `0.2.0-rc.2` while retaining alpha.2. Both core chat paths passed on the same MuMu APK. The public preview.1 download still targets alpha.2 only; the new APK has not been published. [Version details (Chinese)](./docs/integration/market-baseline.md)
+
 ### How is Remote different from opening DSH in a phone browser?
 
 Remote uses the DSHM chat interface bundled with the app and synchronizes computer conversations and actions through the relay. You view execution progress, file changes, and approvals in the phone's own pages. Computer DSH executes the tasks; the phone and computer participate in the same conversation.
