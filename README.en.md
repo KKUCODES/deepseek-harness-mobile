@@ -6,7 +6,7 @@
 
 **DSHM** is a community-developed Android client for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Chat directly with DeepSeek or synchronize DSH conversations from your computer. Away from your desk, you can keep sending messages, viewing execution results, switching models, and handling approvals; the computer runs the tasks.
 
-[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
+[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.2/DSHM-0.1.0-preview.2.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
@@ -68,14 +68,14 @@ The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTT
 
 Development preview; not an app-store release. Core Remote features passed local Web + MuMu validation with **official DSH `0.2.1-alpha.2` + plugin `0.1.80-latest.0` + the matching Android app**. See the [compatibility report (Chinese)](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md) for the supported scope.
 
+[0.1.0-preview.2](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.2) is now public. It adds official DSH `0.2.0-rc.2` while retaining alpha.2; both core chat paths passed on the same MuMu APK. Use desktop plugin `0.1.84-latest.0`. The signing certificate is unchanged, so install it over preview.1 to retain local data. [Version details (Chinese)](./docs/integration/market-baseline.md)
+
 - Android only for the first version. Physical devices, the complete public-network path, and other versions, plugins, and models still need validation.
 - Keep the computer and DSH running. Install the standalone plugin; no DSH core modifications are needed.
 - The phone does not create computer workspaces, accept manually entered commands, or forward computer localhost websites.
 - Notifications stop when the app process ends. Reopening the app attempts to reconnect.
 
 ## FAQ
-
-The local `0.1.0-preview.2` candidate adds official DSH `0.2.0-rc.2` while retaining alpha.2. Both core chat paths passed on the same MuMu APK. The public preview.1 download still targets alpha.2 only; the new APK has not been published. [Version details (Chinese)](./docs/integration/market-baseline.md)
 
 ### How is Remote different from opening DSH in a phone browser?
 

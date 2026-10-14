@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.1/DSHM-0.1.0-preview.1.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.2/DSHM-0.1.0-preview.2.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -68,7 +68,7 @@ flowchart LR
 
 开发预览，尚未进入应用商店。核心 Remote 已在 **官方 DSH `0.2.1-alpha.2`＋插件 `0.1.80-latest.0`＋配套 Android** 上完成 Web + MuMu 本地验收；扩展范围见[兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
 
-本地 `0.1.0-preview.2` 候选已增加官方 `0.2.0-rc.2`，保留 alpha.2，并在同一 MuMu APK 上验证两版核心聊天。[双版本范围](./docs/integration/market-baseline.md)。公开下载仍为 preview.1，只连接 alpha.2；新版尚未发布。
+已公开发布 [0.1.0-preview.2](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.2)，增加官方 `0.2.0-rc.2`，保留 alpha.2，并在同一 MuMu APK 上验证两版核心聊天。请配套安装电脑插件 `0.1.84-latest.0`。[双版本范围](./docs/integration/market-baseline.md)。新版使用原签名，可直接覆盖更新 preview.1。
 
 - 首版仅 Android。真机、完整公网链路及其他版本、插件、模型仍需验证。
 - 电脑和 DSH 保持运行，只安装独立插件，不修改 DSH 本体。

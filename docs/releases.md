@@ -4,15 +4,15 @@
 
 ## 下载并安装
 
-从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载 `DSHM-<version>.apk`，Android 9 及以上可安装。公开发行附件无需登录，另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`。
+直接下载 [DSHM 0.1.0-preview.2 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.2/DSHM-0.1.0-preview.2.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.2)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，支持同身份、同签名的正常覆盖更新。不要卸载旧版来更新，以免删除本地数据。普通聊天使用你自己的 DeepSeek Key；Remote 适配官方 DSH `0.2.1-alpha.2`。
+当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，支持同身份、同签名的正常覆盖更新。不要卸载旧版来更新，以免删除本地数据。普通聊天使用你自己的 DeepSeek Key；Remote 适配官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`，配套使用电脑插件 `0.1.84-latest.0`。
 
 ## 自动构建与发布
 
-本地待发布配置已准备为 `0.1.0-preview.2`（versionCode 4），在原 alpha.2 SDK 中增加经过核验的 rc.2 宿主兼容。公开 preview.1 的下载和历史验收保持原范围，不能因代码已更新而描述为旧 APK 自动兼容 rc.2。[双版本验证](./integration/market-baseline.md)
+`0.1.0-preview.2`（versionCode 4）已公开发布，在原 alpha.2 SDK 中增加经过核验的 rc.2 宿主兼容。preview.1 的下载和历史验收保持原范围，连接 rc.2 需安装新版 APK。[双版本验证](./integration/market-baseline.md)
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。
@@ -44,6 +44,8 @@ Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地�
 维护来源：[工作流](../.github/workflows/android-build.yml)、[版本与证书](../ci/release.json)、[SDK 准备](../scripts/prepare-ci.mjs)、[无签名产物整理](../scripts/ci-package.mjs)、[Android 构建规则](../android/app/build.gradle.kts)。
 
 ## 已核验范围
+
+2026-10-14 的[版本发布 Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38529805782)已通过构建、lint、签名、证书/身份/版本检查及公开发布。APK 和三个校验附件均已匿名下载，SHA-256 与公开发行元数据及校验文件一致；本机 `apksigner` 和 `aapt` 复核原证书、versionCode 4 与最低 Android 9。发布下载专项不扩大[两版核心聊天验证](./integration/market-baseline.md)的设备与功能范围。
 
 2026-10-13 的[实际签名与发布构建](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38375720876)已通过 Web、Android 构建、lint、签名及证书/版本核对，并发布 [0.1.0-preview.1](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.1)。APK 与三个校验附件均已实际匿名下载并核对摘要。
 

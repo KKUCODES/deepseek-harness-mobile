@@ -1,6 +1,6 @@
 # rc.2 与 alpha.2 的手机兼容
 
-- 状态：核心路径已在同一独立 MuMu APK 上通过；新版公开 APK 尚未发布。
+- 状态：核心路径已在同一独立 MuMu APK 上通过；[新版公开 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.2)已发布，构建、签名和匿名下载校验通过。
 - 维护角色：DSHM 手机端维护者；核验日期：2026-10-14。
 - 来源：[JS 版本规则](../../src/remote-dsh-version.mjs)、[实际聊天协商](../../src/remote-transport.mjs)、[原生通知连接](../../android/app/src/main/java/dev/dshmobile/validation/RemoteNoticeConnection.kt)、[Android 实测驱动](../../tests/support/market-baseline-android.mjs)。
 
@@ -8,7 +8,7 @@
 
 已核对 rc.2 的五参数流、文件 options/字节响应和 profile 服务契约。`isProfileDshVersion` 增加 rc.2，使文件、预览、插件设置和预设的既有分支选择正确。定时目录继续按官方 alpha.2 版本和宣告能力显示。
 
-本地候选 `0.1.0-preview.2`、versionCode 4 保留原公开应用身份与签名配置；公开 `0.1.0-preview.1` 下载仍只连接 alpha.2，不能仅更新电脑插件就获得 rc.2 支持。
+已公开发布的 `0.1.0-preview.2`、versionCode 4 保留原应用身份与签名配置；`0.1.0-preview.1` 仍只连接 alpha.2，不能仅更新电脑插件就获得 rc.2 支持。
 
 ## 实测
 
