@@ -9,6 +9,8 @@
 
 | 任务 | 阅读入口 |
 | --- | --- |
+| 启动 Logo 与两种模式交接 | [普通聊天/Remote共用封面、原生绘制屏障、配对/连接页及失败重试](../../../../integration/startup-transition-current.md) |
+| Remote 资源与数据缓存 | [持久资源、权威确认、只读基线差量及真实 Android 字节统计](../../../../integration/remote-cache-current.md) |
 | Remote回复分支图标 | [原图标、反馈同行、兼容入口与真实显示检查](../../../../integration/remote-reply-actions-current.md) |
 | Remote等待首段输出 | [独立状态组件、原开轮时间及真实同一轮验证](../../../../integration/remote-running-status-current.md)；传输已有running，补齐原消息节点之外的活动提示 |
 | Remote 内置面板全面检查 | [统一尺寸、最小字号、表单高度与真实入口验收矩阵](../../../../integration/builtin-panel-layout-current.md) |

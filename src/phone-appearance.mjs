@@ -27,7 +27,7 @@ export function mirrorPhoneAppearance(settings, plugins, native) {
     retry: sync, dispose: () => { stopped = true; offTheme(); offLocale(); offPlugins(); listeners.clear(); } };
 }
 
-export function watchPhoneAppearance(client, presenter, { events = window, media = matchMedia('(prefers-color-scheme: dark)'), onLanguage = () => {} } = {}) {
+export function watchPhoneAppearance(client, presenter, { events = window, media = matchMedia('(prefers-color-scheme: dark)'), onLanguage = () => {}, onReady = () => {} } = {}) {
   let active = true, revision = 0, current = { preference: 'system', fontSize: 14, enabled: true, language: 'zh' };
   const apply = () => {
     onLanguage(current.language);
@@ -45,6 +45,7 @@ export function watchPhoneAppearance(client, presenter, { events = window, media
       const next = appearanceValue(await client.call('appearance.read'));
       if (active && owner === revision) { current = next; apply(); }
     } catch { /* 旧APK或短暂桥错误保留最后有效外观；恢复页面时重新读取。 */ }
+    finally { if (active) onReady(); }
   };
   const system = () => { if (active && current.preference === 'system') apply(); };
   events.addEventListener('dshm-appearance-change', read);

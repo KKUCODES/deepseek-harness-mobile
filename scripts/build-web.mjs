@@ -118,6 +118,14 @@ if (latest) {
   await writeFile(resolve(dist, 'sdk-versions.json'), JSON.stringify(latest.versions, null, 2));
 }
 await copyFile(resolve(root, 'src/index.html'), resolve(dist, 'index.html'));
-await copyFile(resolve(root, 'src/remote.html'), resolve(dist, 'remote.html'));
-await copyFile(resolve(root, 'src/mobile.html'), resolve(dist, 'mobile.html'));
+// 两个原生入口使用同一份首帧封面；无需在脚本加载后再拼DOM，避免裸文字和白屏。
+const startup = await readFile(resolve(root, 'src/startup.html'), 'utf8');
+for (const entry of ['mobile.html', 'remote.html']) {
+  const template = await readFile(resolve(root, 'src', entry), 'utf8');
+  if (!template.includes('<!-- dshm-startup -->')) throw new Error(`Missing startup cover: ${entry}`);
+  await writeFile(resolve(dist, entry), template.replace('<!-- dshm-startup -->', startup));
+}
+await copyFile(resolve(root, 'src/startup.js'), resolve(dist, 'startup.js'));
+await copyFile(resolve(root, 'src/startup.css'), resolve(dist, 'startup.css'));
+await copyFile(resolve(root, 'android/app/src/main/res/drawable-nodpi/ic_launcher_foreground.png'), resolve(dist, 'startup-logo.png'));
 console.log(`Built Web validation with ${records.length} recorded original plugin artifacts.`);

@@ -66,10 +66,15 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
     fun allowsHtmlNavigation(request: WebResourceRequest) = !request.isForMainFrame && html.owns(request.url)
     fun hasHtmlPreview() = html.isActive
     fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) = scanner.onResult(requestCode, resultCode, data) || downloads.onResult(requestCode, resultCode, data)
-    private val resources = RemoteResources { frame ->
+    private val resources = RemoteResources(java.io.File(activity.cacheDir, "remote-resources"), {
+        if (ready && !closed && identity.paired()) identity.info().toString() else null
+    }) { frame ->
         ready && !closed && (socket?.queueSize() ?: 0L) <= 4 * 1024 * 1024 && socket?.send(frame.toString()) == true
     }
     fun resource(request: WebResourceRequest) = resources.intercept(request)
+    private val stopCacheClear = (activity.application as DshmApplication).observeCacheClear {
+        if (!closed) webView.evaluateJavascript("window.dispatchEvent(new Event('dshm-cache-clear'))", null)
+    }
     private class Failure(val code: String) : Exception()
 
     fun install() {
@@ -119,7 +124,7 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
                     }
                     "html.begin", "html.chunk", "html.finish", "html.close" -> html.dispatch(request.getString("op"), data) { value, failure -> respond(reply, id, value, failure) }
                     "file.begin", "file.chunk", "file.finish", "file.save", "file.share", "file.abort" -> downloads.dispatch(request.getString("op"), data) { value, failure -> respond(reply, id, value, failure) }
-                    "binding.info" -> respond(reply, id, identity.info())
+                    "binding.info" -> respond(reply, id, identity.info().put("cacheEpoch", (activity.application as DshmApplication).cacheEpoch()))
                     "binding.scan" -> {
                         if (data.keys().asSequence().toSet() != setOf("source")) throw Failure("invalid_request")
                         scanner.open(data.getString("source")) { value, failure -> respond(reply, id, value, failure) }
@@ -176,7 +181,9 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
                     }
                     "socket.disconnect" -> { noticeConnection.pause(); disconnect(); respond(reply, id, JSONObject()) }
                     "socket.release" -> { disconnect(); respond(reply, id, JSONObject()) }
-                    "binding.forget" -> { noticeConnection.pause(forget = true); notifications.invalidate(); disconnect(); execute(reply, id) { identity.clear(); JSONObject() } }
+                    "binding.forget" -> { noticeConnection.pause(forget = true); notifications.invalidate(); disconnect();
+                        (activity.application as DshmApplication).clearRemoteCaches()
+                        execute(reply, id) { identity.clear(); JSONObject() } }
                     "ordinary.open", "appearance.settings" -> {
                         if (data.length() != 0 || html.isActive || webView.url != ORIGIN + "/assets/web/remote.html") throw Failure("unsupported_operation")
                         respond(reply, id, JSONObject())
@@ -264,6 +271,7 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
         activity.runOnUiThread { if (owner == generation) {
             notifications.invalidate()
             if (reason in setOf("device_revoked", "permissions_changed", "credential_expired")) noticeConnection.authorizationLost()
+            if (reason in setOf("device_revoked", "permissions_changed", "credential_expired")) (activity.application as DshmApplication).clearRemoteCaches()
             modelProbe.cancel(); computerKey.cancel(); ready = false; resources.disconnect(); downloads.cancel(); html.cancel()
         } }
         val event = JSONObject().put("type", "closed")
@@ -272,7 +280,7 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
         emit(reply, event, owner)
     }
     fun disconnect() { notifications.invalidate(); modelProbe.cancel(); computerKey.cancel(); scanner.cancel(); generation++; ready = false; resources.disconnect(); downloads.cancel(); html.cancel(); socket?.cancel(); socket = null }
-    fun close() { closed = true; stopNoticeStatus(); stopAppearance(); pairLink = null; disconnect(); scanner.close(); downloads.close(); html.close(); http.dispatcher.cancelAll(); worker.shutdownNow() }
+    fun close() { closed = true; stopNoticeStatus(); stopAppearance(); stopCacheClear(); pairLink = null; disconnect(); scanner.close(); downloads.close(); html.close(); http.dispatcher.cancelAll(); worker.shutdownNow() }
     companion object {
         const val ORIGIN = "https://remote.dshm.invalid"
         private val METHODS = setOf("session.list", "session.follow", "session.page", "session.control", "session.prompt", "session.cancel",

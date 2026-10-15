@@ -15,24 +15,26 @@ import { documentLayoutMetrics } from './check-remote-file-layout.mjs';
 import { fileListMetrics } from './check-remote-file-list-layout.mjs';
 import { checkBuiltinPanelsAndroid } from './check-builtin-panel-android.mjs';
 import { attachmentImageFixture } from './attachment-image-fixture.mjs';
+import { checkRemoteCacheAndroid, observeCacheWire } from './check-remote-cache-android.mjs';
 
 // 本轮只在独立测试 UID/独立官方配置中导航，不读取 Key、不发送模型消息。
 const root = resolve(import.meta.dirname, '..');
 const adbPath = process.env.DSHM_ADB_PATH; assert.ok(adbPath);
 const serial = process.env.DSHM_ANDROID_SERIAL; assert.equal(serial, '127.0.0.1:16384');
 const toolLayout = process.argv.includes('--tool-layout');
+const cacheSync = process.argv.includes('--cache-sync');
 const builtinPanels = process.argv.includes('--builtin-panels');
 const fileListLayout = process.argv.includes('--file-list-layout');
 const fileLayout = process.argv.includes('--file-layout') || fileListLayout;
-const isolatedStyle = toolLayout || fileLayout || builtinPanels;
+const isolatedStyle = toolLayout || fileLayout || builtinPanels || cacheSync;
 const packageName = isolatedStyle ? 'dev.dshmobile.validation.toolstyletest' : 'dev.dshmobile.validation.officialtest';
-const output = resolve(root, builtinPanels ? 'artifacts/builtin-panel-layout-android' : fileListLayout ? 'artifacts/remote-file-list-layout-android' : fileLayout ? 'artifacts/remote-file-layout-android' : toolLayout ? 'artifacts/remote-tool-layout-android' : 'artifacts/remote-motion-android', randomUUID()); await mkdir(output, { recursive: true });
+const output = resolve(root, cacheSync ? 'artifacts/remote-sync-cache-android' : builtinPanels ? 'artifacts/builtin-panel-layout-android' : fileListLayout ? 'artifacts/remote-file-list-layout-android' : fileLayout ? 'artifacts/remote-file-layout-android' : toolLayout ? 'artifacts/remote-tool-layout-android' : 'artifacts/remote-motion-android', randomUUID()); await mkdir(output, { recursive: true });
 const home = join(output, 'home'), project = join(output, 'project'); await mkdir(project);
 const version = '0.2.1-alpha.2';
 const installation = resolve(root, '../plugin/artifacts/official-dsh-alpha2');
 const cli = join(installation, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
 assert.equal(JSON.parse(await readFile(join(installation, 'node_modules/@deepseek-ai/dsh/package.json'))).version, version);
-const archive = resolve(root, '../plugin/artifacts/public-release/0.1.84-latest.0/public/dshm-plugin-0.1.84-latest.0-dsh-0.2.1-alpha.2.tgz');
+const archive = resolve(root, cacheSync ? '../plugin/artifacts/official-alpha2-sdk/candidate' : '../plugin/artifacts/public-release/0.1.84-latest.0/public/dshm-plugin-0.1.84-latest.0-dsh-0.2.1-alpha.2.tgz');
 const apk = resolve(root, isolatedStyle ? 'artifacts/remote-tool-layout-android-build/outputs/apk/debug/app-debug.apk' : 'artifacts/official-alpha2-android-build/outputs/apk/debug/app-debug.apk');
 const env = { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1', npm_config_cache: join(output, 'npm-cache') };
 for (const key of Object.keys(env)) if (/^(?:DSH_MOBILE_|DEEPSEEK_API_KEY|OPENAI_API_KEY|DSH_TELEMETRY_OTLP_URL|NODE_OPTIONS)/.test(key)) delete env[key];
@@ -49,6 +51,7 @@ const report = { version, packageName, startedAt: new Date().toISOString(), apkS
   passed: false, stages: [], errors: [], modelMessagesSent: 0 };
 let host, hostDone, gateway, db, device, page, cookie, hostOrigin, deviceId, fingerprint, relayPort, reverseInstalled = false;
 let originalHistory, historySessionId;
+const cacheWire = cacheSync ? observeCacheWire() : null;
 const forgetBinding = async expected => {
   await page.getByTestId('remote-page').waitFor();
   assert.equal(await page.getByTestId('remote-fingerprint').innerText(), expected);
@@ -155,7 +158,7 @@ async function checkFileLayout(main, idle, createChat) {
     await mark('android-real-file-preview-readable-and-scrollable');
 }
 try {
-  if (toolLayout) {
+  if (toolLayout || cacheSync) {
     // 只复制已验收的自有测试会话；不复制 profile、Key 或其他聊天，也不伪造工具事件。
     const previous = JSON.parse(await readFile(resolve(root, '../backend/artifacts/official-plugin-only/official-android-7e20012a-4519-464c-bb8b-ec9f6a9ba395.json')));
     assert.equal(previous.passed, true); assert.equal(previous.version, version);
@@ -193,6 +196,7 @@ try {
   await store.migrate(); relayPort = await port(); const origin = `http://127.0.0.1:${relayPort}`;
   report.ownedRelayPort = relayPort;
   gateway = await buildGateway({ store, publicOrigin: origin, registrationMode: 'open' }); await gateway.listen({ host: '127.0.0.1', port: relayPort });
+  if (cacheWire) gateway.websocketServer.on('connection', (socket, request) => cacheWire.attach(socket, request));
   await manage({ action: 'setup', origin, name: 'DSHM 动效验收电脑' }); await manage({ action: 'enable' });
   await until(manage, value => value.connection === 'online', 'Relay connection');
   await writeFile(join(project, 'notes.md'), '# 随身推进项目\n\n这里是电脑上的真实文件，用于检查手机预览的进出过渡。\n\n- 保持阅读位置\n- 审阅执行结果\n- 回到同一个聊天\n');
@@ -272,7 +276,45 @@ try {
     await page.getByRole('dialog', { name: '选择工作区', exact: true }).locator('button.option').first().click();
     await main.getByRole('textbox', { name: '消息', exact: true }).waitFor(); await idle();
   };
-  if (builtinPanels) {
+  if (cacheSync) {
+    const reconnect = async () => {
+        await adb('shell', 'am', 'force-stop', packageName);
+        await adb('shell', 'am', 'start', '-W', '-n', `${packageName}/dev.dshmobile.validation.ValidationActivity`);
+        const first = await (await androidAppWebView(device, packageName)).page(), context = first.context();
+        const ordinary = context.pages().find(item => item.url().startsWith('https://appassets.androidplatform.net/'));
+        await ordinary.getByRole('button', { name: '打开侧边抽屉', exact: true }).click();
+        const opening = context.waitForEvent('page', { predicate: item => item.url().startsWith('https://remote.dshm.invalid/') });
+        await ordinary.getByRole('button', { name: 'Remote', exact: true }).click();
+        page = await opening; page.setDefaultTimeout(30000); page.on('pageerror', error => report.errors.push(error.message));
+        return page;
+      };
+    report.cacheSync = await checkRemoteCacheAndroid({ page, device, packageName, historySessionId, workspaceId, desktop,
+      wire: cacheWire, output, adb, reconnect });
+    if (process.argv.includes('--startup-check')) {
+      // 只停本轮独立电脑插件的连接；网关和撤销入口保留，最后恢复原连接意图。
+      await manage({ action: 'disable' });
+      page = await reconnect();
+      await page.getByTestId('remote-fingerprint').waitFor();
+      await page.locator('#dshm-startup').waitFor({ state: 'detached' });
+      await page.getByText('电脑暂时离线，请检查 DSH 是否正在运行。', { exact: true }).waitFor();
+      await adb('shell', 'uiautomator', 'dump', '/sdcard/dshm-offline-startup.xml');
+      assert.doesNotMatch(await adb('shell', 'cat', '/sdcard/dshm-offline-startup.xml'), /content-desc="DSHM"/);
+      await writeFile(join(output, 'startup-paired-offline.png'), await device.screenshot());
+      assert.equal(await page.getByTestId('remote-fingerprint').innerText(), fingerprint);
+      await manage({ action: 'enable' });
+      await until(manage, value => value.connection === 'online', 'Owned test host reconnect');
+      if (!await page.getByTestId('remote-workspace').isVisible()) {
+        const button = page.getByRole('button', { name: '重新连接', exact: true });
+        if (await button.isEnabled()) await button.click();
+      }
+      await page.getByTestId('remote-workspace').waitFor({ timeout: 60000 });
+      await page.locator('#dshm-startup').waitFor({ state: 'detached' });
+      await adb('shell', 'rm', '-f', '/sdcard/dshm-offline-startup.xml');
+      report.startup = { pairedOfflineActionable: true, coverDismissedWithoutHost: true, sameBinding: true, connectedWorkspaceRestored: true };
+    }
+    assert.deepEqual(report.errors, []); report.passed = true;
+    await mark('android-real-persistent-resource-and-incremental-sync');
+  } else if (builtinPanels) {
     report.builtinPanels = await checkBuiltinPanelsAndroid({ page, main, idle, createChat, output, screenshot: () => device.screenshot() });
     assert.deepEqual(report.errors, []); report.passed = true;
     await mark('android-published-builtin-panels-readable');

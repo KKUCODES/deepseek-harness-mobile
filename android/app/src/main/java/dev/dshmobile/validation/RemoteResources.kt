@@ -7,6 +7,8 @@ import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.CompletableFuture
@@ -15,7 +17,8 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
 /** WebView 子资源与页面 RPC 共用已认证 socket；页面和 Worker 都拿不到设备凭据。 */
-class RemoteResources(private val send: (JSONObject) -> Boolean) {
+class RemoteResources(root: File, private val scope: () -> String?, private val send: (JSONObject) -> Boolean) {
+    private val cache = RemoteResourceCache(root)
     private val streams = ConcurrentHashMap<String, Resource>()
     private val slots = Semaphore(4)
     private val lifecycle = Any()
@@ -27,32 +30,90 @@ class RemoteResources(private val send: (JSONObject) -> Boolean) {
         if (request.method !in setOf("GET", "HEAD")) return blocked(405)
         // 在排队前记住连接；空位可能由断开释放，不能把旧页面的等待下载带到新连接。
         val owner = generation
+        val binding = scope() ?: return blocked(403)
+        val path = url.encodedPath + (url.encodedQuery?.let { "?$it" } ?: "")
+        return try {
+            val cached = if (request.method == "GET") cache.read(binding, path) else null
+            if (cached != null) {
+                val (metadata, stream) = open(path, "HEAD", owner)
+                val status = metadata.getInt("status")
+                val etag = metadata.getJSONObject("headers").optString("etag")
+                if (status == 200 && etag == cached.etag && owner == generation) {
+                    stream.use { it.readBytes() }
+                    val input = ByteArrayInputStream(cached.bytes)
+                    return response(metadata, object : InputStream() {
+                        var closed = false
+                        override fun read(): Int { checkCurrent(); return input.read() }
+                        override fun read(bytes: ByteArray, offset: Int, length: Int): Int { checkCurrent(); return input.read(bytes, offset, length) }
+                        private fun checkCurrent() { if (closed || owner != generation || scope() != binding) throw IOException("remote_resource_closed") }
+                        override fun close() { closed = true; input.close() }
+                    })
+                }
+                cache.remove(binding, path)
+                // 删除、拒绝和版本错误不允许用旧内容掩盖。
+                if (status != 200) return response(metadata, stream)
+                stream.use { it.readBytes() }
+            }
+            val stamp = cache.stamp()
+            val (metadata, stream) = open(path, request.method, owner)
+            val etag = metadata.getJSONObject("headers").optString("etag")
+            val body = if (request.method == "GET" && metadata.getInt("status") == 200 &&
+                etag.matches(Regex("\"sha256-[a-f0-9]{64}\""))) storing(stream, binding, path, etag, stamp, owner) else stream
+            response(metadata, body)
+        } catch (_: Exception) { blocked(502) }
+    }
+
+    private fun response(metadata: JSONObject, stream: InputStream): WebResourceResponse {
+        val headers = metadata.getJSONObject("headers")
+        val values = mutableMapOf("Cache-Control" to "no-store", "X-Content-Type-Options" to "nosniff")
+        // WebResourceResponse 根据 mime/encoding 生成 Content-Type，重复添加会被合并为非法 MIME。
+        for (key in headers.keys()) if (!key.equals("content-type", ignoreCase = true)) values[key] = headers.getString(key)
+        val mime = headers.optString("content-type", "application/octet-stream").substringBefore(';')
+        val status = metadata.getInt("status")
+        if (status !in 200..599 || status in 300..399) { stream.close(); throw IOException("invalid_resource_status") }
+        return WebResourceResponse(mime, if (mime.startsWith("text/") || mime == "application/json") "UTF-8" else null,
+            status, if (status < 400) "OK" else "Unavailable", values, stream)
+    }
+
+    private fun storing(input: InputStream, binding: String, path: String, etag: String, stamp: Long, owner: Long) = object : InputStream() {
+        var buffer: ByteArrayOutputStream? = ByteArrayOutputStream()
+        var finished = false
+        override fun read(): Int { val byte = ByteArray(1); return if (read(byte, 0, 1) == -1) -1 else byte[0].toInt() and 255 }
+        override fun read(bytes: ByteArray, offset: Int, length: Int): Int {
+            val count = input.read(bytes, offset, length)
+            if (count > 0) {
+                val pending = buffer
+                if (pending != null && pending.size() + count <= RemoteResourceCache.MAX_ENTRY) pending.write(bytes, offset, count)
+                else buffer = null
+            } else if (count == -1 && !finished) {
+                finished = true
+                val pending = buffer; buffer = null
+                if (pending != null && owner == generation && scope() == binding)
+                    cache.write(binding, path, RemoteResourceCache.Entry(etag, pending.toByteArray()), stamp)
+            }
+            return count
+        }
+        override fun close() { buffer = null; input.close() }
+    }
+
+    private fun open(path: String, verb: String, owner: Long): Pair<JSONObject, Resource> {
         try {
-            if (!slots.tryAcquire(30, TimeUnit.SECONDS)) return blocked(if (owner == generation) 503 else 502)
-        } catch (_: InterruptedException) { Thread.currentThread().interrupt(); return blocked(502) }
+            if (!slots.tryAcquire(30, TimeUnit.SECONDS)) throw IOException("remote_resource_busy")
+        } catch (_: InterruptedException) { Thread.currentThread().interrupt(); throw IOException("remote_resource_interrupted") }
         val id = UUID.randomUUID().toString()
         val stream = Resource(id, owner)
         try {
-            val path = url.encodedPath + (url.encodedQuery?.let { "?$it" } ?: "")
             synchronized(lifecycle) {
-                if (owner != generation) { slots.release(); return blocked(502) }
+                if (owner != generation) { slots.release(); throw IOException("remote_resource_closed") }
                 // 登记、发送与断开必须互斥，否则清理快照可能漏掉刚加入的下载。
                 streams[id] = stream
                 if (!send(JSONObject().put("type", "request").put("id", id).put("operation", JSONObject()
-                        .put("method", "remote.resource").put("verb", request.method).put("path", path)))) throw IOException("remote_not_connected")
+                        .put("method", "remote.resource").put("verb", verb).put("path", path)))) throw IOException("remote_not_connected")
             }
             val metadata = stream.headers.get(30, TimeUnit.SECONDS)
             if (owner != generation) throw IOException("remote_resource_closed")
-            val headers = metadata.getJSONObject("headers")
-            val values = mutableMapOf("Cache-Control" to "no-store", "X-Content-Type-Options" to "nosniff")
-            // WebResourceResponse 根据 mime/encoding 生成 Content-Type，重复添加会被合并为非法 MIME。
-            for (key in headers.keys()) if (!key.equals("content-type", ignoreCase = true)) values[key] = headers.getString(key)
-            val mime = headers.optString("content-type", "application/octet-stream").substringBefore(';')
-            val status = metadata.getInt("status")
-            if (status !in 200..599 || status in 300..399) throw IOException("invalid_resource_status")
-            return WebResourceResponse(mime, if (mime.startsWith("text/") || mime == "application/json") "UTF-8" else null,
-                status, if (status < 400) "OK" else "Unavailable", values, stream)
-        } catch (_: Exception) { stream.close(); return blocked(502) }
+            return metadata to stream
+        } catch (error: Exception) { stream.close(); throw error }
     }
 
     /** true 表示内部资源帧，不再把它广播进 JavaScript 的 RPC 队列。 */

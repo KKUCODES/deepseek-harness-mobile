@@ -12,6 +12,7 @@ import { registerRemoteClipboard } from './ordinary-clipboard.mjs';
 import { installRemotePluginSlots, RemotePluginScope } from './remote-plugin-slots.jsx';
 import { RemotePlugins } from './remote-plugins.jsx';
 import { captureRemoteResume } from './remote-resume.mjs';
+import { RemoteSyncCache } from './remote-sync-cache.mjs';
 import { pairingServerOf } from './remote-pair-link.mjs';
 import { RemoteDraftStore } from './remote-drafts.mjs';
 import { ThemePresenter } from '../../deepseek-harness/packages/client/ui-layout/src/client/theme-presenter.ts';
@@ -28,16 +29,20 @@ const failures = { pairing_unavailable: '链接已过期或已被领取，请在
 export function RemoteApp() {
   const [client] = useState(() => new RemoteClient());
   const [language, setLanguage] = useState('zh');
-  useEffect(() => watchPhoneAppearance(client, new ThemePresenter(), { onLanguage: setLanguage }), [client]);
-  return <LocaleProvider locale={language}><RemoteConnection client={client} language={language}/></LocaleProvider>;
+  const [appearanceReady, setAppearanceReady] = useState(false);
+  useEffect(() => watchPhoneAppearance(client, new ThemePresenter(), { onLanguage: setLanguage, onReady: () => setAppearanceReady(true) }), [client]);
+  return <LocaleProvider locale={language}><RemoteConnection client={client} language={language} appearanceReady={appearanceReady}/></LocaleProvider>;
 }
 
-function RemoteConnection({ client, language }) {
+function RemoteConnection({ client, language, appearanceReady }) {
   const t = useTranslate();
   const languageRef = useRef(language);
   languageRef.current = language;
   useEffect(() => registerRemoteClipboard(text => client.call('clipboard.write', { text })), [client]);
   const [binding, setBinding] = useState(null), [stage, setStage] = useState('idle');
+  const [bindingReady, setBindingReady] = useState(false);
+  // 只等待本地外观和绑定读取；电脑离线时也要及时显示可操作的连接页。
+  useEffect(() => { if (bindingReady && appearanceReady) window.__dshmStartup?.ready(); }, [bindingReady, appearanceReady]);
   const [link, setLink] = useState(''), [name, setName] = useState('DSHM Android');
   const pairingServer = pairingServerOf(link);
   const [status, setStatus] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false), [menu, setMenu] = useState(false);
@@ -119,7 +124,9 @@ function RemoteConnection({ client, language }) {
         if (!mounted.current || !client.connected) return;
         const draftStore = await RemoteDraftStore.open(identity).catch(error => new RemoteDraftStore(identity, () => { throw error; }));
         if (!mounted.current || !client.connected) { draftStore.close(); return; }
-        const next = new RemoteModel(client, { draftStore, notificationKey: JSON.stringify([identity.origin, identity.deviceId, identity.fingerprint]) });
+        const syncCache = await RemoteSyncCache.open(identity);
+        if (!mounted.current || !client.connected) { draftStore.close(); syncCache?.close(); return; }
+        const next = new RemoteModel(client, { syncCache, draftStore, notificationKey: JSON.stringify([identity.origin, identity.deviceId, identity.fingerprint]) });
         runtime.current = next;
         let rebuilding = false;
         next.requestRebuild = () => {
@@ -201,7 +208,7 @@ function RemoteConnection({ client, language }) {
         const device = await client.call('binding.status'); setStatus(device.status);
         if (device.status === 'active') await connect();
       });
-    }).catch(report);
+    }).catch(report).finally(() => { if (mounted.current) setBindingReady(true); });
     return () => { mounted.current = false; cancelRecovery(true); unsubscribe(); void stop(); void client.release().catch(() => {}); };
   }, [client]);
   const back = () => void run(() => client.call('ordinary.open'));
@@ -287,7 +294,7 @@ function RemoteConnection({ client, language }) {
       <Button className="option" onClick={() => { setMenu(false); setDiagnostics(true); }}>{t('问题诊断')}</Button>
       <p>{binding?.origin ?? t('尚未连接电脑')}</p>
       {binding?.paired && <><Button className="option" onClick={() => void run(async () => { setMenu(false); await disconnect(); })}>{t('断开连接')}</Button>
-        <details><summary>{t('移除本机绑定')}</summary><p>{t('移除后清理这台电脑的本机草稿，需要重新配对；电脑上的设备记录仍可在电脑端撤销。')}</p><Button onClick={() => void run(async () => { await disconnect(); await stop(); const drafts = await RemoteDraftStore.open(binding); try { await drafts.clear(); } finally { drafts.close(); } await client.call('binding.forget'); setBinding({ paired: false }); setStatus(''); setMenu(false); })}>{t('确认移除')}</Button></details></>}
+        <details><summary>{t('移除本机绑定')}</summary><p>{t('移除后清理这台电脑的本机草稿，需要重新配对；电脑上的设备记录仍可在电脑端撤销。')}</p><Button onClick={() => void run(async () => { await model?.transport.syncCache?.clear(); await disconnect(); await stop(); const drafts = await RemoteDraftStore.open(binding); try { await drafts.clear(); } finally { drafts.close(); } await client.call('binding.forget'); setBinding({ paired: false }); setStatus(''); setMenu(false); })}>{t('确认移除')}</Button></details></>}
     </Surface>}</SurfacePresence>
     {diagnostics && <SupportDiagnostics read={async () => {
       const info = await client.call('app.info');

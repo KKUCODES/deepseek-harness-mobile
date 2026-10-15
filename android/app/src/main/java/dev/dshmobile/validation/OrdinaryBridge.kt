@@ -96,6 +96,7 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
                     "cache.clear" -> {
                         if (data.length() != 0) throw Failure("invalid_request")
                         webView.clearCache(true)
+                        (activity.application as DshmApplication).clearRemoteCaches()
                         respond(reply, id, JSONObject())
                     }
                     "files.pick" -> {

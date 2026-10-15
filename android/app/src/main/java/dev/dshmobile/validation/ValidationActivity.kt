@@ -19,6 +19,7 @@ class ValidationActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var ordinary: OrdinaryBridge
     private var pendingAppearance = false
+    private var startup: StartupScreen? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,7 +39,14 @@ class ValidationActivity : Activity() {
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView, url: String?) { deliverAppearanceNavigation() }
                 override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                    startup?.loading()
                     if (::ordinary.isInitialized) ordinary.pageLeaving()
+                }
+                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
+                    if (request.isForMainFrame) startup?.fail()
+                }
+                override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
+                    if (request.isForMainFrame) startup?.fail()
                 }
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val uri = request.url
@@ -63,6 +71,7 @@ class ValidationActivity : Activity() {
         if (!MobileWebWindow.install(this, webView)) setContentView(webView)
         stopWindowAppearance = MobileWebWindow.observeAppearance(this)
         val entry = if (BuildConfig.DEBUG && intent.getBooleanExtra("diagnostics", false)) "index.html" else "mobile.html"
+        if (entry == "mobile.html") startup = StartupScreen(this, webView)
         webView.loadUrl("https://appassets.androidplatform.net/assets/web/$entry")
     }
 
@@ -88,6 +97,7 @@ class ValidationActivity : Activity() {
     }
 
     override fun onDestroy() {
+        startup?.close()
         stopWindowAppearance?.invoke()
         ordinary.close()
         webView.destroy()

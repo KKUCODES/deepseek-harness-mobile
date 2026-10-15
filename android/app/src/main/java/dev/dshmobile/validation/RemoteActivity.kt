@@ -22,6 +22,7 @@ class RemoteActivity : Activity() {
     private lateinit var bridge: RemoteBridge
     private lateinit var files: RemoteFileChooser
     private var stopWindowAppearance: (() -> Unit)? = null
+    private var startup: StartupScreen? = null
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,8 +34,15 @@ class RemoteActivity : Activity() {
             settings.allowFileAccess = false; settings.allowContentAccess = false
             webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                    startup?.loading()
                     if (::files.isInitialized) files.cancel()
                     if (::bridge.isInitialized) bridge.disconnect()
+                }
+                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
+                    if (request.isForMainFrame) startup?.fail()
+                }
+                override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
+                    if (request.isForMainFrame) startup?.fail()
                 }
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = !bridge.allowsHtmlNavigation(request)
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse =
@@ -57,6 +65,7 @@ class RemoteActivity : Activity() {
         files = RemoteFileChooser(this, bridge::connectionGeneration)
         if (!MobileWebWindow.install(this, webView)) setContentView(webView)
         stopWindowAppearance = MobileWebWindow.observeAppearance(this)
+        startup = StartupScreen(this, webView, StartupScreen.Page.REMOTE)
         webView.loadUrl(RemoteBridge.ORIGIN + "/assets/web/remote.html")
     }
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -66,7 +75,7 @@ class RemoteActivity : Activity() {
         MobileWebWindow.updateAppearance(this)
     }
 
-    override fun onDestroy() { stopWindowAppearance?.invoke(); files.cancel(); bridge.close(); webView.destroy(); super.onDestroy() }
+    override fun onDestroy() { startup?.close(); stopWindowAppearance?.invoke(); files.cancel(); bridge.close(); webView.destroy(); super.onDestroy() }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.DSHM.Launch" parent="Theme.DSHM">
+        <item name="android:windowBackground">@drawable/startup_background</item>
+        <item name="android:windowSplashScreenBackground">?android:attr/colorBackground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

@@ -47,6 +47,7 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
     try { return await action(); } catch (error) { setNotice(t(ordinaryError(error))); }
   };
   useEffect(() => { session.setDefaultModel(host.settings.bind({ namespace: 'ordinary-chat' }).getSnapshot().value.model); void session.start(); return () => { void session.dispose(); }; }, [session, host]);
+  useEffect(() => { if (state.ready) window.__dshmStartup?.ready(); }, [state.ready]);
   useEffect(() => {
     const openAppearance = () => {
       if (!window.dshmOpenAppearance) return;

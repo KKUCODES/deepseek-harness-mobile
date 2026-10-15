@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.3/DSHM-0.1.0-preview.3.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.4/DSHM-0.1.0-preview.4.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -68,7 +68,7 @@ flowchart LR
 
 开发预览，尚未进入应用商店。核心 Remote 已在 **官方 DSH `0.2.1-alpha.2`＋插件 `0.1.80-latest.0`＋配套 Android** 上完成 Web + MuMu 本地验收；扩展范围见[兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
 
-[0.1.0-preview.3](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.3) 改善 Remote 过渡动画、工具与面板排版，补齐等待回复的思考提示，并统一回复操作图标。继续支持官方 `0.2.0-rc.2` / `0.2.1-alpha.2`，配套电脑插件 `0.1.84-latest.0`；[双版本验证范围](./docs/integration/market-baseline.md)。新版沿用原签名，可直接覆盖更新 preview.1 / preview.2，保留本地数据。
+[0.1.0-preview.4](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.4) 新增 Remote 资源缓存与工作区/聊天差量同步，并统一普通聊天、Remote 的 Logo 启动交接。配套电脑插件 `0.1.85-latest.0`，继续支持官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`；[版本验证范围](./docs/integration/market-baseline.md)。沿用原身份和签名，可覆盖 preview.1 / preview.2 / preview.3，保留本地数据。
 
 - 首版仅 Android。真机、完整公网链路及其他版本、插件、模型仍需验证。
 - 电脑和 DSH 保持运行，只安装独立插件，不修改 DSH 本体。
@@ -107,6 +107,7 @@ docs/        使用、开发与技术文档
 
 - [使用指南](./docs/usage.md)：普通聊天、配对与限制。
 - [开发指南](./docs/development.md)：环境、构建与测试。
+- [Remote 缓存](./docs/integration/remote-cache-current.md)：资源校验、增量同步与实测范围；需配套插件 0.1.85-latest.0，现有中转无需升级。
 - [构建与下载](./docs/releases.md)：自动签名、公开 APK、摘要与版本信息。
 - [兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)：版本与支持范围。
 - [知识库](./docs/project-knowledge/catalog.md)：架构、设计与验证资料。

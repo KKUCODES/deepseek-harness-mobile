@@ -56,3 +56,18 @@ test('Remote按手机偏好响应系统主题，拒绝迟到读取，卸载后�
   assert.equal(languages.at(-1), 'en');
   assert.equal(disposed, 2);
 });
+
+test('Remote首屏在本地外观读取结算后就绪，读取失败回退且卸载忽略迟到结果', async () => {
+  for (const outcome of ['success', 'failure', 'disposed']) {
+    let resolve, reject, ready = 0;
+    const off = watchPhoneAppearance({ call: () => new Promise((yes, no) => { resolve = yes; reject = no; }) },
+      { apply() {}, dispose() {} }, { events: new EventTarget(), media: Object.assign(new EventTarget(), { matches: false }), onReady: () => ready++ });
+    assert.equal(ready, 0);
+    if (outcome === 'disposed') off();
+    if (outcome === 'failure') reject(new Error('bridge_unavailable'));
+    else resolve(value);
+    await tick();
+    assert.equal(ready, outcome === 'disposed' ? 0 : 1);
+    off();
+  }
+});

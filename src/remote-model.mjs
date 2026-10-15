@@ -51,7 +51,7 @@ export class RemoteModel {
   draftTransfers = new Set();
   selectingModels = new Set();
   pendingImageUrls = new Set();
-  constructor(client, { transport = new RemoteTransport(client), loadRemotes, draftStore, notificationKey } = {}) {
+  constructor(client, { syncCache, transport = new RemoteTransport(client, { syncCache }), loadRemotes, draftStore, notificationKey } = {}) {
     this.client = client;
     this.transport = transport;
     this.transport.pluginOperations?.setScope(notificationKey, draftStore);

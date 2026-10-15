@@ -1,5 +1,9 @@
 # 手机端知识总目录
 
+启动交接：[普通聊天与 Remote 共用 Logo 封面、首帧淡出与失败重试](../integration/startup-transition-current.md)。两入口已接入，本地修复尚未发布。
+
+Remote 缓存：[插件资源持久缓存、工作区/聊天差量、实时更新与实际流量](../integration/remote-cache-current.md)。本地候选通过，尚未公开发布；需要配套插件，不要求升级中转或修改 DSH。
+
 Remote 回复操作：[分支图标、反馈同行、触摸区域与真实显示验证](../integration/remote-reply-actions-current.md)。
 
 Remote 等待反馈：[独立思考提示、原开轮计时、旧WebView颜色及真实同一轮验证](../integration/remote-running-status-current.md)。

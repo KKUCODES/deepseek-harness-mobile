@@ -140,6 +140,7 @@ async function setThemeModule(enabled) {
   };
   return host;
 } catch (error) {
+  window.__dshmStartup?.fail();
   document.getElementById('app').textContent = `启动失败：${String(error)}`;
   console.error(error);
 }

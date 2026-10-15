@@ -7,6 +7,15 @@ import java.io.File
 
 /** 只观察本进程的页面生命周期，不启动服务或注册唤醒入口。 */
 class DshmApplication : Application(), Application.ActivityLifecycleCallbacks {
+    private val cacheListeners = java.util.concurrent.CopyOnWriteArraySet<() -> Unit>()
+    fun cacheEpoch(): Long = getSharedPreferences("dshm.cache.v1", MODE_PRIVATE).getLong("epoch", 0)
+    fun observeCacheClear(listener: () -> Unit): () -> Unit { cacheListeners.add(listener); return { cacheListeners.remove(listener) } }
+    fun clearRemoteCaches() {
+        val preferences = getSharedPreferences("dshm.cache.v1", MODE_PRIVATE)
+        check(preferences.edit().putLong("epoch", cacheEpoch() + 1).commit())
+        RemoteResourceCache.clear(File(cacheDir, "remote-resources"))
+        for (listener in cacheListeners) listener()
+    }
     internal lateinit var appearance: PhoneAppearance
         private set
     internal lateinit var notices: RemoteNotifications

@@ -60,7 +60,7 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
         }
         if (resourcesOnly) {
             val result = Bundle()
-            try { RemoteResourceChecks.run(); result.putString("result", "PASS: native resource streaming, cancellation and queued connection isolation"); finish(Activity.RESULT_OK, result) }
+            try { RemoteResourceChecks.run(targetContext); result.putString("result", "PASS: native resource streaming, persistent cache, HEAD revalidation, updates, deletion, identity, corruption, clearing and cancellation"); finish(Activity.RESULT_OK, result) }
             catch (error: Exception) {
                 result.putString("result", "FAIL: native resources")
                 result.putString("location", error.stackTrace.firstOrNull { it.className.contains("RemoteResourceChecks") }?.toString())
@@ -120,7 +120,7 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
             check(runCatching { credentials.read() }.isFailure)
             credentials.clear()
             check(!file.exists() && !credentials.configured())
-            RemoteResourceChecks.run()
+            RemoteResourceChecks.run(targetContext)
             RemoteDownloadChecks.run(targetContext)
             RemoteShareChecks.run(targetContext)
             RemoteHtmlChecks.run(targetContext)

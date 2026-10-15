@@ -12,7 +12,7 @@
             android:exported="false" android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/remote_share_paths" />
         </provider>
-        <activity android:name=".RemoteActivity" android:exported="false" android:configChanges="uiMode" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".RemoteActivity" android:exported="false" android:theme="@style/Theme.DSHM.Launch" android:configChanges="uiMode" android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.journeyapps.barcodescanner.CaptureActivity" android:exported="false"
             android:screenOrientation="portrait" tools:replace="android:screenOrientation" />
         <activity android:name=".PairingEntryActivity" android:exported="true" android:excludeFromRecents="true"
@@ -30,6 +30,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".ValidationActivity" android:exported="true"
+            android:theme="@style/Theme.DSHM.Launch"
             android:configChanges="uiMode"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

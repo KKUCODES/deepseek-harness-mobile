@@ -10,8 +10,11 @@ const mobileSdkVersion = typeof DSHM_MOBILE_SDK_VERSION === 'string' ? DSHM_MOBI
 
 /** DSH 原始 ClientTransportHooks；身份、凭据和 socket 仍由独立 Remote 原生桥持有。 */
 export class RemoteTransport {
-  constructor(client, { fetchResource = globalThis.fetch.bind(globalThis), loadScript = script } = {}) {
+  constructor(client, { fetchResource = globalThis.fetch.bind(globalThis), loadScript = script, syncCache } = {}) {
     this.client = client;
+    this.syncCache = syncCache;
+    this.clearCache = () => { void this.syncCache?.clear(); };
+    globalThis.addEventListener?.('dshm-cache-clear', this.clearCache);
     this.pluginOperations = new RemotePluginOperations(client, () => this.capabilities);
     this.fetchResource = fetchResource;
     this.loadScript = loadScript;
@@ -20,6 +23,7 @@ export class RemoteTransport {
     this.lifetime = new AbortController();
     this.unsubscribe = client.subscribe(frame => {
       if (frame.type === 'closed' || frame.type === 'ready') {
+        if (['device_revoked', 'permissions_changed', 'credential_expired'].includes(frame.reason)) this.clearCache();
         this.generation++;
         this.hostOffline = frame.type === 'closed' || frame.hostOnline === false;
         this.capabilities = undefined;
@@ -93,11 +97,8 @@ export class RemoteTransport {
       return promptRemote(this.client, payload, this.lifetime.signal, signal, endpoint);
     }
     const generation = this.generation;
-    const request = this.client.request({ method: 'remote.rpc', endpoint, payload });
-    const cancel = () => request.cancel();
-    signal?.addEventListener('abort', cancel, { once: true });
     try {
-      const result = await request.promise;
+      const result = await this.rpcResult(endpoint, payload, signal, generation);
       signal?.throwIfAborted();
       if (typeof result?.ok !== 'boolean') throw new Error('invalid_remote_result');
       if (result.ok) this.lastReceivedAt = Date.now();
@@ -113,11 +114,33 @@ export class RemoteTransport {
       }
       return result;
     } catch (error) { this.pauseHostOperations(error, generation); throw error; }
-    finally { signal?.removeEventListener('abort', cancel); }
+  }
+  async rpcResult(endpoint, payload, signal, generation) {
+    const cache = this.capabilities?.syncCacheVersion === 1 ? this.syncCache : undefined;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const hint = cache ? await cache.prepare(endpoint, payload, false, this.capabilities.dshVersion, attempt > 0) : undefined;
+      signal?.throwIfAborted();
+      if (generation !== this.generation) throw Error('remote_generation_changed');
+      const request = this.client.request({ method: 'remote.rpc', endpoint, payload: hint?.payload ?? payload });
+      const cancel = () => request.cancel();
+      signal?.addEventListener('abort', cancel, { once: true });
+      try {
+        const value = await request.promise;
+        return hint ? await cache.decode(value, hint, signal) : value;
+      } catch (error) {
+        if (!hint || error.dshmSyncDecodeFailure !== true || attempt > 0) throw error;
+      } finally { signal?.removeEventListener('abort', cancel); }
+    }
   }
   async *stream(channel, endpoint, payload, signal) {
     const generation = this.generation;
-    try { yield* this.readStream(channel, endpoint, payload, signal); }
+    try {
+      try { yield* this.readStream(channel, endpoint, payload, signal); }
+      catch (error) {
+        if (error.dshmSyncDecodeFailure !== true || signal.aborted || generation !== this.generation) throw error;
+        yield* this.readStream(channel, endpoint, payload, signal, true);
+      }
+    }
     catch (error) {
       this.pauseHostOperations(error, generation);
       // 仅恢复只读订阅；写操作仍以原错误结束，不能自动重放。
@@ -129,11 +152,16 @@ export class RemoteTransport {
       throw error;
     }
   }
-  async *readStream(channel, endpoint, payload, signal) {
+  async *readStream(channel, endpoint, payload, signal, forceFull = false) {
     this.channel(channel); signal.throwIfAborted();
+    const generation = this.generation;
+    const cache = this.capabilities?.syncCacheVersion === 1 ? this.syncCache : undefined;
+    const hint = cache ? await cache.prepare(endpoint, payload, true, this.capabilities.dshVersion, forceFull) : undefined;
+    signal.throwIfAborted();
+    if (generation !== this.generation) throw Error('remote_generation_changed');
     const queue = []; let bytes = 0, ended = false, failure, wake;
     const notify = () => wake?.();
-    const request = this.client.request({ method: 'remote.stream', endpoint, payload }, value => {
+    const request = this.client.request({ method: 'remote.stream', endpoint, payload: hint?.payload ?? payload }, value => {
       const size = JSON.stringify(value).length;
       if (queue.length >= 256 || bytes + size > 8 * 1024 * 1024) {
         failure = new Error('remote_consumer_too_slow'); request.cancel(); notify(); return;
@@ -149,7 +177,7 @@ export class RemoteTransport {
         signal.throwIfAborted();
         if (failure) throw failure;
         const item = queue.shift();
-        if (item) { bytes -= item.size; yield item.value; }
+        if (item) { bytes -= item.size; yield hint ? await cache.decode(item.value, hint, signal) : item.value; }
         else if (ended) return;
         else await new Promise(resolve => { wake = resolve; });
       }
@@ -172,7 +200,10 @@ export class RemoteTransport {
     if (!this.capabilities) throw new Error('remote_not_negotiated');
     return this.loadScript(this.resourceUrl(url), signal ? AbortSignal.any([this.lifetime.signal, signal]) : this.lifetime.signal, generation);
   }
-  dispose() { this.unsubscribe(); this.pluginOperations.dispose(); this.generation++; this.capabilities = undefined; this.lifetime.abort(); }
+  dispose() {
+    this.unsubscribe(); this.pluginOperations.dispose(); this.generation++; this.capabilities = undefined; this.lifetime.abort();
+    globalThis.removeEventListener?.('dshm-cache-clear', this.clearCache); this.syncCache?.close();
+  }
 }
 
 function script(url, signal, generation) {
