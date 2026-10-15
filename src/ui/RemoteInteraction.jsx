@@ -2,12 +2,15 @@ import React, { useRef, useState } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { planReviewOf } from '@upstream/ui-user-questions/src/client/contract/slots.ts';
 import { useTranslate } from './locale.jsx';
+import { useSceneMotion } from './motion.jsx';
 
 /** 结果沿用 DSH 原审批/提问协议；失效由事件取消撤下组件。 */
 export function RemoteInteraction({ event, model, view = model, renderContent }) {
   const t = useTranslate();
   const [answers, setAnswers] = useState({}), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const submitting = useRef(false);
+  const card = useRef(null);
+  useSceneMotion(card, event.eventId, 1, true);
   const settle = async outcome => {
     if (submitting.current) return;
     submitting.current = true;
@@ -17,7 +20,7 @@ export function RemoteInteraction({ event, model, view = model, renderContent })
     catch { setError('未能确认处理结果，请核对电脑上的最新状态。'); }
   };
   const submit = value => settle({ kind: 'result', value });
-  if (event.event === 'approval/request') return <section className="remote-tool-card" aria-label={t('等待审批')}>
+  if (event.event === 'approval/request') return <section ref={card} className="remote-tool-card" aria-label={t('等待审批')} aria-busy={busy}>
     <h3>{t('需要你的批准')}</h3><strong>{event.request.toolName}</strong>
     {event.request.reason && renderContent(event.request.reason, false)}
     {error && <p role="alert">{t(error)}</p>}
@@ -25,7 +28,7 @@ export function RemoteInteraction({ event, model, view = model, renderContent })
   </section>;
   const questions = event.request.questions;
   const review = planReviewOf(questions);
-  if (review) return <section className="remote-tool-card" aria-label={t('等待计划确认')}>
+  if (review) return <section ref={card} className="remote-tool-card" aria-label={t('等待计划确认')} aria-busy={busy}>
     <h3>{t('确认计划')}</h3>
     {renderContent(review.plan, false)}
     {error && <p role="alert">{t(error)}</p>}
@@ -37,7 +40,7 @@ export function RemoteInteraction({ event, model, view = model, renderContent })
   </section>;
   const ready = questions.every(question => answers[question.id]?.selected?.length || answers[question.id]?.custom?.trim());
   const change = (id, patch) => setAnswers(current => ({ ...current, [id]: { selected: [], ...current[id], ...patch } }));
-  return <section className="remote-tool-card" aria-label={t('等待回答')}>
+  return <section ref={card} className="remote-tool-card" aria-label={t('等待回答')} aria-busy={busy}>
     {questions.map(question => <fieldset key={question.id} disabled={busy}>
       <legend>{question.question}</legend>{question.detail && renderContent(question.detail, false)}
       {question.options?.map(option => <label className="remote-question-option" key={option.label}>

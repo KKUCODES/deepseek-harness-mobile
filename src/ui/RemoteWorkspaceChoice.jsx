@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Surface, IconButton } from './Surface.jsx';
+import { SurfacePresence } from './motion.jsx';
 import { useTranslate } from './locale.jsx';
 import { useRemoteConversationLayout } from '../remote-plugin-slots.jsx';
 
@@ -27,14 +28,14 @@ export function RemoteWorkspaceChoice({ model, state, unbound = false }) {
       {layout.workspaceTitle ?? t('选择工作区')}
     </Button>
     {renderSlot('conversation.hero.workspace', { open, anchorRef, selectedId: layout.workspaceId,
-      onPick: id => { void choose(id); }, onClose: () => setOpen(false) }, { fallback: open && <Surface title={t('选择工作区')} onClose={() => setOpen(false)}>
+      onPick: id => { void choose(id); }, onClose: () => setOpen(false) }, { fallback: <SurfacePresence>{open && <Surface title={t('选择工作区')} onClose={() => setOpen(false)}>
       <header><h2>{t('选择工作区')}</h2><IconButton label={t('关闭窗口')} onClick={() => setOpen(false)}><IconCloseOutline16/></IconButton></header>
       {busy && <p role="status">{t(unbound ? '正在打开聊天…' : '正在转移草稿…')}</p>}
       {state.workspaces?.phase !== 'ready' && <p role="status">{t('正在读取电脑工作区…')}</p>}
       {state.workspaces?.phase === 'ready' && !state.workspaces.items.length && <p role="status">{t('电脑还没有工作区，请先在电脑添加。')}</p>}
       {state.workspaces?.items.map(item => <Button className="option" key={item.workspaceId} disabled={disabled}
         onClick={() => void choose(item.workspaceId)}>{item.title}</Button>)}
-    </Surface> })}
+    </Surface>}</SurfacePresence> })}
     {error && <p role="alert">{t(error)}</p>}
   </>;
 }

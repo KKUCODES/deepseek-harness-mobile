@@ -6,6 +6,7 @@ import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx'
 import { desktopAppsRequest } from '../remote-desktop-apps.mjs';
 import { RemoteDesktopApps } from './RemoteDesktopApps.jsx';
 import { Surface, IconButton } from './Surface.jsx';
+import { SurfacePresence } from './motion.jsx';
 import { useLocale, useTranslate } from './locale.jsx';
 import { MobilePluginFrame } from './MobilePluginFrame.jsx';
 import { useDesktopAppIcons } from './RemoteDesktopAppIcons.jsx';
@@ -46,9 +47,9 @@ export function RemoteDesktopAppAction({ model, sessionId }) {
         if (model.getSnapshot().selected === sessionId && catalog.apps.includes(appId)) setTarget({ appId, id: crypto.randomUUID() });
       }}/>
     </MobilePluginFrame>
-    {target && <Surface kind="sheet" title={translate('在电脑应用中打开')} onClose={() => setTarget(null)}>
+    <SurfacePresence>{target && <Surface kind="sheet" title={translate('在电脑应用中打开')} onClose={() => setTarget(null)}>
       <header><h2>{translate('在电脑应用中打开')}</h2><IconButton label={translate('关闭窗口')} onClick={() => setTarget(null)}><IconCloseOutline16/></IconButton></header>
       <RemoteDesktopApps key={target.id} model={model} sessionId={sessionId} initialAppId={target.appId}/>
-    </Surface>}
+    </Surface>}</SurfacePresence>
   </div>;
 }

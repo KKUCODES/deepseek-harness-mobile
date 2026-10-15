@@ -4,6 +4,7 @@ import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { Switch } from '@upstream/ui-primitives/src/Switch.tsx';
 import { IconChevronLeftOutline14, IconChevronRightOutline14, IconCloseOutline16, IconCordisPluginOutline14, IconPlusOutline16, IconSearchOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { IconButton, Surface } from './Surface.jsx';
+import { SurfacePresence } from './motion.jsx';
 import { PHONE_PLUGIN_CATALOG } from '../phone-plugins.mjs';
 import { ordinaryError } from '../ordinary-errors.mjs';
 import './plugins.css';
@@ -42,12 +43,12 @@ export function PhonePluginsPage({ host, onBack, onRemote, renderSlot, registerB
         <div className="plugin-section-heading"><h2>{catalog ? t('可安装的手机插件') : t('已安装')}</h2></div><div className="plugin-list">{PHONE_PLUGIN_CATALOG.filter(plugin => (catalog || state.record[plugin.id].installed) && `${t(plugin.name)} ${plugin.source}`.toLowerCase().includes(query.trim().toLowerCase())).map(plugin => <button key={plugin.id} className="plugin-row" onClick={() => { setError(''); setSelected(plugin.id); }}><span className="plugin-symbol"><IconCordisPluginOutline14 size={22}/></span><span className="plugin-row-main"><strong>{t(plugin.name)}</strong><span>{t(plugin.description)}</span><small className={state.record[plugin.id].enabled ? 'plugin-running' : ''}>{!state.record[plugin.id].installed ? t('未安装') : state.record[plugin.id].enabled ? t('运行中') : t('已停用')}</small></span><IconChevronRightOutline14/></button>)}</div>
       </>}
     </section>
-    {sheet && <Surface title={sheet === 'uninstall' ? t('卸载插件') : t('插件设置')} onClose={() => setSheet(null)}><header><h2>{sheet === 'uninstall' ? t('卸载 {name}', { name: t(current.name) }) : t(current.name)}</h2><IconButton label={t("关闭窗口")} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
+    <SurfacePresence>{sheet && <Surface title={sheet === 'uninstall' ? t('卸载插件') : t('插件设置')} onClose={() => setSheet(null)}><header><h2>{sheet === 'uninstall' ? t('卸载 {name}', { name: t(current.name) }) : t(current.name)}</h2><IconButton label={t("关闭窗口")} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
       {sheet === 'uninstall' ? <><p>{t("卸载后该插件停止运行，聊天记录和插件设置会保留。")}</p><Button variant="primary" disabled={busy} onClick={() => change('uninstall')}>{t("确认卸载")}</Button></> : current.id === 'theme' ? renderSlot('settings.general.item', {}) : <>
         {prompts.map((prompt, index) => <div className="prompt-field" key={index}><label>{t("触发词")}<input value={prompt.name} onChange={event => setPrompts(rows => rows.map((item, i) => i === index ? { ...item, name: event.target.value } : item))}/></label><label>{t("名称")}<input value={prompt.label} onChange={event => setPrompts(rows => rows.map((item, i) => i === index ? { ...item, label: event.target.value } : item))}/></label><label>{t("提示词")}<textarea value={prompt.value} onChange={event => setPrompts(rows => rows.map((item, i) => i === index ? { ...item, value: event.target.value } : item))}/></label><Button onClick={() => setPrompts(rows => rows.filter((_, i) => i !== index))}>{t("移除这条提示词")}</Button></div>)}
         <Button disabled={prompts.length >= 30} onClick={() => setPrompts(rows => [...rows, { name: `prompt${rows.length + 1}`, label: t('新提示词'), value: '' }])}>{t("添加提示词")}</Button><Button variant="primary" onClick={async () => { try { await promptScope.set('prompts', prompts); setSheet(null); } catch { setError(t('保存失败：触发词需唯一且不含空格，名称和提示词不能为空。')); } }}>{t("保存")}</Button>
       </>}
       {error && <p role="alert">{error}</p>}
-    </Surface>}
+    </Surface>}</SurfacePresence>
   </main>;
 }

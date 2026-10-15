@@ -3,6 +3,7 @@ import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconChevronLeftOutline14, IconChevronRightOutline14, IconCloseOutline16, IconDataOutline16, IconPersonalizationOutline16, IconBrowseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { IconButton, Surface } from './Surface.jsx';
+import { SurfacePresence } from './motion.jsx';
 import { ORDINARY_MODELS } from '../ordinary-models.mjs';
 import { decodeBackup } from '../ordinary-backup.mjs';
 import { ordinaryError } from '../ordinary-errors.mjs';
@@ -66,7 +67,7 @@ export function OrdinarySettings({ host, session, state, onBack, registerBack, r
       </>}
     </section>
     {diagnostics && <SupportDiagnostics read={async () => ({ info: await session.appInfo(), mode: 'ordinary' })} copy={session.copyText} onClose={() => setDiagnostics(false)}/>}
-    {sheet && <Surface title={{ model: t('默认模型'), theme: t('主题'), language: t('语言'), import: t('导入聊天'), cache: t('清理临时缓存'), clear: t('清空本地聊天') }[sheet]} onClose={() => { if (!busy) setSheet(null); }}><header><h2>{{ model: t('默认模型'), theme: t('主题'), language: t('语言'), import: t('导入聊天'), cache: t('清理临时缓存'), clear: t('清空本地聊天') }[sheet]}</h2><IconButton label={t("关闭窗口")} disabled={busy} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
+    <SurfacePresence>{sheet && <Surface title={{ model: t('默认模型'), theme: t('主题'), language: t('语言'), import: t('导入聊天'), cache: t('清理临时缓存'), clear: t('清空本地聊天') }[sheet]} onClose={() => { if (!busy) setSheet(null); }}><header><h2>{{ model: t('默认模型'), theme: t('主题'), language: t('语言'), import: t('导入聊天'), cache: t('清理临时缓存'), clear: t('清空本地聊天') }[sheet]}</h2><IconButton label={t("关闭窗口")} disabled={busy} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
       {sheet === 'model' ? ORDINARY_MODELS.map(model => <Button className="option" key={model.id} aria-pressed={model.id === defaultModel.id} disabled={busy} onClick={() => perform(async () => { await preferences.set('model', model.id); session.setDefaultModel(model.id); setSheet(null); })}>{model.label}<span>{model.id === defaultModel.id ? t('已选') : ''}</span></Button>)
         : sheet === 'theme' ? [['system', t('跟随系统')], ['light', t('浅色')], ['dark', t('深色')]].map(([id, title]) => <Button className="option" key={id} disabled={busy} aria-pressed={theme.value.preference === id} onClick={() => perform(async () => { await themeScope.set('preference', id); setSheet(null); })}>{title}</Button>)
         : sheet === 'language' ? [['zh', t('简体中文')], ['en', 'English']].map(([id, title]) => <Button className="option" key={id} disabled={busy} aria-pressed={(locale.value.preference ?? 'zh') === id} onClick={() => perform(async () => { await localeScope.set('preference', id); setSheet(null); })}>{title}</Button>)
@@ -77,6 +78,6 @@ export function OrdinarySettings({ host, session, state, onBack, registerBack, r
           setSheet(null);
         })}>{t(sheet === 'import' ? '确认导入' : sheet === 'clear' ? '确认清空' : '确认清理')}</Button></div></>}
       {notice && <p role="status">{notice}</p>}
-    </Surface>}
+    </Surface>}</SurfacePresence>
   </main>;
 }

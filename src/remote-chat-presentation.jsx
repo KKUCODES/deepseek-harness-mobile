@@ -3,3 +3,6 @@ export const chatPresentation = undefined;
 export const chatNodeHooks = undefined;
 export const chatNodeBottom = false;
 export const chatSeatProps = undefined;
+export const createChatFlowMotion = undefined;
+export const ChatRunningStatus = undefined;
+export { useSearchableHidden as useChatProcessHidden } from '@upstream/ui-chat/src/client/chat/searchable-hidden.ts';

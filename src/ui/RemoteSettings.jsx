@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { NativePanelFrame } from './NativePanelFrame.jsx';
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots';
 import { RemoteSettingsSectionExtension } from '../remote-plugin-slots.jsx';
 import { useTranslate } from './locale.jsx';
 import { RemoteConnectionNotice } from './RemoteConnectionNotice.jsx';
+import { useSceneMotion } from './motion.jsx';
 
 /** 手机承担设置窗口与导航；插件收到原 root 作用域和 close owner。 */
 export function RemoteSettings({ model, onClose, navigation }) {
@@ -20,6 +22,8 @@ export function RemoteSettings({ model, onClose, navigation }) {
     .map(entry => ({ id: entry.options.id, order: entry.options.order ?? 0, label: resolveSlotLabel(entry.options.label) ?? entry.options.id }))
     .sort((a, b) => a.order - b.order) : [];
   const active = entries.some(entry => entry.id === selected) ? selected : entries.some(entry => entry.id === 'models') ? 'models' : entries[0]?.id;
+  const content = useRef(null);
+  useSceneMotion(content, active, 1);
   const [visited, setVisited] = useState(() => new Set([initialSection]));
   useEffect(() => {
     if (!navigation) return;
@@ -36,10 +40,12 @@ export function RemoteSettings({ model, onClose, navigation }) {
         {entries.map(entry => <option key={entry.id} value={entry.id}>{entry.id === 'models' ? t('模型设置') : entry.label}</option>)}
       </select>
     </label>}
-    <fieldset className="remote-settings-content" disabled={!connected} inert={!connected ? '' : undefined}>
+    <fieldset ref={content} className="remote-settings-content" disabled={!connected} inert={!connected ? '' : undefined}>
+      <NativePanelFrame view="settings-content" flow>
       {entries.filter(entry => visited.has(entry.id) || entry.id === active).map(entry => <div key={entry.id} hidden={active !== entry.id}>
         <RemoteSettingsSectionExtension id={entry.id} onClose={onClose} active={connected && active === entry.id}/>
       </div>)}
+      </NativePanelFrame>
     </fieldset>
   </>;
 }

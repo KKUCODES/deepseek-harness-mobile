@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TerminalBlock } from '@upstream/ui-primitives/src/TerminalBlock.tsx';
 import { parseAnsiLines } from '@upstream/ui-primitives/src/ansi.ts';
 import { writeClipboard } from '../ordinary-clipboard.mjs';
@@ -9,11 +9,13 @@ import { RemoteCommandOutput } from './RemoteCommandOutput.jsx';
 import { Surface, IconButton } from './Surface.jsx';
 import { FullscreenIcon } from './FullscreenIcon.jsx';
 import { RemoteOfflineStatus } from './RemoteOfflineStatus.jsx';
+import { useSurfacePresent } from './motion.jsx';
 
 import { useTranslate } from './locale.jsx';
 
 export function RemoteCommand({ model, target, tool, sessionCwd, onClose }) {
   const t = useTranslate();
+  const present = useSurfacePresent();
   const labels = { commandLine: line => t('命令第 {line} 行', { line }),
     signal: signal => t('终止信号 {signal}', { signal }), exitCode: code => t('退出码 {code}', { code }), noExitCode: t('未提供退出码'),
     running: t('执行中'), failed: t('执行失败'), done: t('调用已结束'), copy: t('复制输出'), copied: t('已复制'), noOutput: t('没有输出'),
@@ -29,20 +31,20 @@ export function RemoteCommand({ model, target, tool, sessionCwd, onClose }) {
   useEffect(() => {
     if (body.current && resume) body.current.scrollTop = resume.scrollTop ?? 0;
   }, []);
-  useEffect(() => {
-    if (!model) return;
+  useLayoutEffect(() => {
+    if (!model || !present) return;
     model.commandResume = undefined;
     const capture = () => ({ target, liveOutput, full, scrollTop: body.current?.scrollTop ?? 0,
       output: retained.capture?.() ?? retained.current });
     model.captureCommand = capture;
     return () => { if (model.captureCommand === capture) delete model.captureCommand; };
-  }, [model, target, liveOutput, full]);
+  }, [model, target, liveOutput, full, present]);
   const lines = useMemo(() => parseAnsiLines(detail?.output ?? ''), [detail?.output]);
   useEffect(() => {
-    if (!detail?.running) return;
+    if (!detail?.running || !present) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [detail?.running]);
+  }, [detail?.running, present]);
   useEffect(() => { setCopyState(''); }, [tool]);
   const seconds = detail?.start === null || !detail ? null : Math.max(0, ((detail.end ?? now) - detail.start) / 1000).toFixed(1);
   return <Surface title={t('命令详情')} onClose={onClose} className={`remote-file-preview remote-command-preview${full ? ' is-fullscreen' : ''}`}>

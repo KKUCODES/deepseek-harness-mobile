@@ -15,6 +15,7 @@ import { Surface, IconButton } from './ui/Surface.jsx';
 import { ChatSearch } from './ui/ChatSearch.jsx';
 import { PhonePluginsPage } from './ui/PhonePlugins.jsx';
 import { OrdinarySettings } from './ui/OrdinarySettings.jsx';
+import { SurfacePresence } from './ui/motion.jsx';
 
 
 export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
@@ -137,7 +138,7 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
             <IconButton label={preferences.thinking ? t('关闭深度思考') : t('开启深度思考')} tabIndex={focused ? 0 : -1} aria-hidden={!focused} aria-pressed={preferences.thinking} className={`icon-button thinking ${preferences.thinking ? 'thinking-on' : ''}`} onClick={() => act(() => session.preferences({ thinking: !preferences.thinking }))}><IconThinkOutline14 size={18}/></IconButton></>,
         }}/>
     </> : null}
-    {drawer && <Surface kind="drawer" title={t("侧边导航")} onClose={() => setDrawer(false)}><nav className={`${sidebarStyle.root} drawer-content`} aria-label={t("侧边导航")}>
+    <SurfacePresence>{drawer && <Surface kind="drawer" title={t("侧边导航")} onClose={() => setDrawer(false)}><nav className={`${sidebarStyle.root} drawer-content`} aria-label={t("侧边导航")}>
       <div className="drawer-brand"><FishLogo size={27}/><strong>DSHM</strong><IconButton label={t("搜索聊天")} onClick={() => { setDrawer(false); setPage('search'); }}><IconSearchOutline16 size={22}/></IconButton></div>
       <Button className="nav-row" icon={<IconBrowseOutline16/>} onClick={() => { setDrawer(false); act(session.openRemote); }}>Remote</Button>
       <Button className="nav-row" icon={<IconCordisPluginOutline14 size={18}/>} onClick={() => { setDrawer(false); setPage('plugins'); }}>{t("插件")}</Button>
@@ -146,8 +147,8 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
         {state.items.map(item => <button key={item.id} className={`history-row ${chat?.id === item.id ? 'selected' : ''}`} onClick={() => choose(item.id)}><span>{item.title}</span>{item.draft && <small>{t("草稿")}</small>}</button>)}
         {state.next && <Button onClick={() => act(session.more)}>{t("加载更多")}</Button>}
       </div><Button className="nav-row settings" icon={<IconSettingsOutline16/>} onClick={() => { setDrawer(false); setPage('settings'); }}>{t("设置")}</Button>
-    </nav></Surface>}
-    {sheet && <Surface title={{ models: t('选择模型'), options: t('回复设置'), chat: t('聊天选项'), rename: t('重命名'), edit: t('编辑消息'), clear: t('清空本地聊天'), delete: t('删除聊天'), attachments: t('附件'), import: t('导入聊天') }[sheet.kind]} onClose={() => setSheet(null)}>
+    </nav></Surface>}</SurfacePresence>
+    <SurfacePresence>{sheet && <Surface title={{ models: t('选择模型'), options: t('回复设置'), chat: t('聊天选项'), rename: t('重命名'), edit: t('编辑消息'), clear: t('清空本地聊天'), delete: t('删除聊天'), attachments: t('附件'), import: t('导入聊天') }[sheet.kind]} onClose={() => setSheet(null)}>
       <div className="sheet-handle"/><header><h2>{{ models: t('选择模型'), options: t('回复设置'), chat: chat?.title, rename: t('重命名'), edit: t('编辑消息'), clear: t('清空本地聊天'), delete: t('删除聊天'), attachments: t('附件'), import: t('导入聊天') }[sheet.kind]}</h2><IconButton label={t("关闭窗口")} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
       {sheet.kind === 'models' && ORDINARY_MODELS.map(value => <Button key={value.id} className="option" aria-pressed={value.id === model.id} onClick={() => act(async () => { await session.preferences({ model: value.id }); setSheet(null); })}>{value.label}<span>{value.id === model.id ? t('已选') : ''}</span></Button>)}
       {sheet.kind === 'chat' && <><Button className="option" onClick={() => manage('rename')}>{t("重命名")}</Button><Button className="option" disabled={ownBusy} onClick={() => setSheet({ kind: 'delete' })}>{t("删除聊天")}</Button></>}
@@ -156,8 +157,8 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
       {sheet.kind === 'models' && <Button className="option" onClick={() => setSheet({ kind: 'options' })}>{t('回复设置')}</Button>}
       {sheet.kind === 'options' && <RequestOptions value={preferences.requestOptions} thinking={preferences.thinking} onSave={async requestOptions => { await session.preferences({ requestOptions }); setSheet(null); }}/>}
       {sheet.kind === 'attachments' && <><p>{t("支持 JPEG、PNG、GIF、WebP 图片和 UTF-8 文本文件。图片最多 4 MB，每条消息最多 4 个附件；图片理解需使用 DeepSeek Flash。")}</p><div className="attachment-options"><Button variant="outline" onClick={() => act(async () => { await session.pickAttachment('photo'); setSheet(null); })}>{t("从相册选择")}</Button><Button variant="outline" onClick={() => act(async () => { await session.pickAttachment('file'); setSheet(null); })}>{t("选择文件")}</Button></div></>}
-    </Surface>}
-    {attachmentView && <Surface title={attachmentView.name} onClose={() => setAttachmentView(null)}><header><h2>{attachmentView.name}</h2><IconButton label={t("关闭附件")} onClick={() => setAttachmentView(null)}><IconCloseOutline16/></IconButton></header><p className="muted">{attachmentView.mime} · {Math.ceil(attachmentView.size / 1024)} KB</p>{attachmentView.kind === 'image' ? <img className="attachment-image" src={attachmentView.data} alt={attachmentView.name}/> : <pre className="attachment-text">{attachmentView.text}</pre>}</Surface>}
+    </Surface>}</SurfacePresence>
+    <SurfacePresence>{attachmentView && <Surface title={attachmentView.name} onClose={() => setAttachmentView(null)}><header><h2>{attachmentView.name}</h2><IconButton label={t("关闭附件")} onClick={() => setAttachmentView(null)}><IconCloseOutline16/></IconButton></header><p className="muted">{attachmentView.mime} · {Math.ceil(attachmentView.size / 1024)} KB</p>{attachmentView.kind === 'image' ? <img className="attachment-image" src={attachmentView.data} alt={attachmentView.name}/> : <pre className="attachment-text">{attachmentView.text}</pre>}</Surface>}</SurfacePresence>
     {notice && <div role="status" className="toast">{notice}</div>}
     {renderSlot('shell.overlay', {})}
   </main>;

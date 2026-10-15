@@ -9,6 +9,12 @@
 
 | 任务 | 阅读入口 |
 | --- | --- |
+| Remote回复分支图标 | [原图标、反馈同行、兼容入口与真实显示检查](../../../../integration/remote-reply-actions-current.md) |
+| Remote等待首段输出 | [独立状态组件、原开轮时间及真实同一轮验证](../../../../integration/remote-running-status-current.md)；传输已有running，补齐原消息节点之外的活动提示 |
+| Remote 内置面板全面检查 | [统一尺寸、最小字号、表单高度与真实入口验收矩阵](../../../../integration/builtin-panel-layout-current.md) |
+| Remote 文件预览与列表排版 | [统一面板尺寸、正文/路径、目录入口与第三方适配边界](../../../../integration/file-preview-layout-current.md) |
+| Remote 工具记录排版 | [字号、间距、官方域和第三方自适应边界](../../../../integration/tool-record-layout-current.md) |
+| Remote 页面动效 | [页面进退、窗口退出、全屏与执行过程](../../../../integration/motion-current.md)，包含业务关闭与视觉退出分离、插件状态/草稿保留及验证边界 |
 | 电脑插件自适应设置 | [作者声明与用户开关](../../../../integration/official-plugin-only.md#电脑插件的自适应设置)实际通过；用户覆盖、恢复默认、正常重连、页面重载和卸载声明释放均核对，仅变换外层，内部720px尺寸/style及交互保持；其他插件与进程结束另验 |
 | 历史分页在途隔离 | [真实分页回执在途切换聊天与断线](../../../../integration/official-plugin-only.md#加载历史时切换聊天与断线)通过；迟到回执实际送达，另一会话/原记录/草稿保持、无迟到错误，正常重连无旧分页自动重放，显式重试补齐三页561条原事件。源专用长会话只读；撤权/进程结束及其他生命周期另验 |
 | 长聊天分页与重连 | [普通会话52轮真实回复、三页完整原事件、实际历史按钮及阅读位置/草稿保持](../../../../integration/official-plugin-only.md#长聊天记录的加载与恢复)通过；断线后包含实际审批结果的559条完整历史再加载通过。只复用现有产品，加载在途切换/撤权与其他生命周期另验 |

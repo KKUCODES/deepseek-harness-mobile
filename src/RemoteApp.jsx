@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconChevronLeftOutline14, IconCloseOutline16, IconEllipsisOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Surface, IconButton } from './ui/Surface.jsx';
+import { SurfacePresence } from './ui/motion.jsx';
 import { RemoteClient } from './remote-client.mjs';
 import { RemoteModel } from './remote-model.mjs';
 import { isRemoteHostDisconnect } from './remote-transport.mjs';
@@ -282,12 +283,12 @@ function RemoteConnection({ client, language }) {
       </section>
     </main>
     {stage === 'ready' && model && <RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={back} onConnection={() => setMenu(true)}/></RemotePluginScope>}
-    {menu && <Surface title={t('电脑连接')} onClose={() => setMenu(false)}><header><h2>{t('电脑连接')}</h2><IconButton label={t('关闭窗口')} onClick={() => setMenu(false)}><IconCloseOutline16/></IconButton></header>
+    <SurfacePresence>{menu && <Surface title={t('电脑连接')} onClose={() => setMenu(false)}><header><h2>{t('电脑连接')}</h2><IconButton label={t('关闭窗口')} onClick={() => setMenu(false)}><IconCloseOutline16/></IconButton></header>
       <Button className="option" onClick={() => { setMenu(false); setDiagnostics(true); }}>{t('问题诊断')}</Button>
       <p>{binding?.origin ?? t('尚未连接电脑')}</p>
       {binding?.paired && <><Button className="option" onClick={() => void run(async () => { setMenu(false); await disconnect(); })}>{t('断开连接')}</Button>
         <details><summary>{t('移除本机绑定')}</summary><p>{t('移除后清理这台电脑的本机草稿，需要重新配对；电脑上的设备记录仍可在电脑端撤销。')}</p><Button onClick={() => void run(async () => { await disconnect(); await stop(); const drafts = await RemoteDraftStore.open(binding); try { await drafts.clear(); } finally { drafts.close(); } await client.call('binding.forget'); setBinding({ paired: false }); setStatus(''); setMenu(false); })}>{t('确认移除')}</Button></details></>}
-    </Surface>}
+    </Surface>}</SurfacePresence>
     {diagnostics && <SupportDiagnostics read={async () => {
       const info = await client.call('app.info');
       return { info, mode: 'remote', stage: model?.getSnapshot().connectionState ?? stage, binding,

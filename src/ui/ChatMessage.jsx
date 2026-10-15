@@ -2,6 +2,7 @@ import React from 'react';
 import { IconChevronDownOutline14, IconThinkOutline14 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import messageStyle from '@upstream/ui-chat/src/client/chat/MessageItem.module.css';
 import { useTranslate } from './locale.jsx';
+import { MotionDetails } from './motion.jsx';
 
 /** 两种会话只注入内容和操作；消息布局由同一组件维护。 */
 export function UserMessage({ children, attachments, actions }) {
@@ -10,7 +11,7 @@ export function UserMessage({ children, attachments, actions }) {
 
 export function MessageReasoning({ text, active, renderContent }) {
   const t = useTranslate();
-  return <details><summary><IconThinkOutline14/>{t('思考过程')}<IconChevronDownOutline14/></summary><div className="thought">{renderContent(text, active)}</div></details>;
+  return <MotionDetails title={<><IconThinkOutline14/>{t('思考过程')}<IconChevronDownOutline14/></>}><div className="thought">{renderContent(text, active)}</div></MotionDetails>;
 }
 
 export function AssistantMessage({ content, reasoning, body, active, error, renderContent, contentOptions, actions, children }) {

@@ -11,6 +11,10 @@ import { zh as chatZh, en as chatEn, NS as chatNS } from '../../deepseek-harness
 import { zh as conversationZh, en as conversationEn, NS as conversationNS } from '../../deepseek-harness/packages/client/ui-conversation/src/client/locales.ts';
 import { MobilePluginLayout, pluginIdentity } from './mobile-plugin-layout.mjs';
 import { MobilePluginFrame } from './ui/MobilePluginFrame.jsx';
+import { nativeToolSlot, NativeToolFrame } from './remote-tool-typography.jsx';
+import { isRemoteDocumentComposition } from './remote-document-previews.jsx';
+import { nativePanelSlot } from './remote-panel-layout.mjs';
+import { IconEllipsisOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { RemoteDesktopAppAction } from './ui/RemoteDesktopAppAction.jsx';
 import { installRemoteWorkflow } from './remote-workflow-slots.jsx';
 import { installRemoteCommandActions } from './remote-command-actions.jsx';
@@ -39,8 +43,10 @@ import { installRemoteCordisApprovals } from './remote-cordis-approvals.mjs';
 import { originalComponent, rememberComponentAdapter } from './remote-component-identity.mjs';
 import { installRemoteGlobalPanels, RemoteGlobalPanels } from './remote-global-panels.jsx';
 import { RemoteToolCancellationTree } from './remote-tool-cancellation.jsx';
+import { NativePanelFrame } from './ui/NativePanelFrame.jsx';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
-import { chatPresentation, chatNodeHooks, chatNodeBottom, chatSeatProps } from '@dshm/chat-presentation';
+import { chatPresentation, chatNodeHooks, chatNodeBottom, chatSeatProps, ChatRunningStatus } from '@dshm/chat-presentation';
+import { runningTurnStartTime } from './remote-running-status.mjs';
 import { RemotePresetDefaults } from './remote-preset-defaults.mjs';
 import { installRemoteConfigForms } from '@dshm/config-forms';
 import { agentPresetText } from './remote-agent-presets.mjs';
@@ -151,14 +157,28 @@ class MobileSlotRegistry extends SlotRegistry {
     if (id === '@deepseek-ai/dsh-client-ui-message-feedback' && options.name === 'conversation.chat.assistant-actions' && options.id === 'feedback') {
       options = syncFeedbackSlot(options, this.model);
     }
-    if (!id || this.ctx.fiber === this.rootOwner || isRemoteSidebarComposition(options, component)) return register(options, component);
+    if (!id || this.ctx.fiber === this.rootOwner || isRemoteSidebarComposition(options, component)
+      || isRemoteDocumentComposition(options, component)) return register(options, component);
     if (id === '@deepseek-ai/dsh-client-ui-agent-preset' && options.name === 'conversation.hero.agentPreset') {
       const Original = component, model = this.model;
       component = props => <GuardedPresetSeat {...props} Component={Original} model={model}/>;
     }
+    // 官方工具行按手机宽度排版；长错误不能按桌面整行宽度缩成几像素。
+    if (nativeToolSlot(this.ctx, options)) {
+      const Native = props => <NativeToolFrame>{React.createElement(remoteFactoryCaller(component, this.model), props)}</NativeToolFrame>;
+      return super.register(options, rememberComponentAdapter(Native, declared));
+    }
+    const nativePanel = nativePanelSlot(this.ctx, options);
+    if (nativePanel) {
+      const Native = props => <NativePanelFrame view={nativePanel} flow={options.name.startsWith('settings.')}>
+        {React.createElement(remoteFactoryCaller(component, this.model), props)}
+      </NativePanelFrame>;
+      return super.register(options, rememberComponentAdapter(Native, declared));
+    }
     // 在插件本体适配调用入口，外层仅负责尺寸，不重复包装工厂调用。
     const Framed = props => <MobilePluginFrame id={id} layout={layout} floating={options.name === 'conversation.input.overlay'}
       viewportOverlay={options.name === 'sidebar.footer.action'} shellOverlay={options.name === 'shell.overlay'}
+      inline={id === '@deepseek-ai/dsh-client-ui-message-feedback' && options.name === 'conversation.chat.assistant-actions'}
       fill={options.name === 'sidebar.chat.conversation'}>{React.createElement(remoteFactoryCaller(component, this.model), props)}</MobilePluginFrame>;
     return super.register(options, rememberComponentAdapter(Framed, declared));
   }
@@ -345,6 +365,7 @@ export function installRemotePluginSlots(model) {
   } });
   slots.register({ name: 'root', children: {
     'dshm.chat.node': { kind: 'single', scope: 'session' },
+    'dshm.chat.running': { kind: 'single', scope: 'session' },
     'dshm.sidebar': { kind: 'single', scope: 'session' },
     'sidebar.footer.action': { kind: 'list', scope: 'root' },
     'settings.models.footer': { kind: 'list', scope: 'root' },
@@ -381,6 +402,7 @@ export function installRemotePluginSlots(model) {
   slots.register({ name: 'dshm.chat.node', store: createChatStore(), locale: chatNS,
     ...(chatPresentation ? { inject: () => ({ hooks: { presentation: chatPresentation } }) } : {}),
   }, MobileChatNodeSeat);
+  slots.register({ name: 'dshm.chat.running', locale: chatNS, inject: () => ({ model }) }, MobileChatRunningStatus);
   const ready = Promise.all([installRemoteInteractionPlugins(model), ...(configForms ? [configForms.await()] : [])]);
   return { layout, locale, imageLoader, ready, render: props => slots.renderSlot('root', { model, ...props, rootModel: model }) };
 }
@@ -392,6 +414,25 @@ export function RemotePluginPanels() {
   return <SessionProvider session={reference}>{renderSlot('dshm.sidebar', {
     footer: renderSlot('sidebar.footer.action', { wide: true }),
   })}</SessionProvider>;
+}
+
+/** 独立于消息节点：尚无首段输出时也显示原会话的活动状态，主聊天与旁栏共用。 */
+function MobileChatRunningStatus({ model, useSession, useChat, t }) {
+  const running = useSession(state => state.running && state.openState === 'open');
+  const timeline = useChat(snapshot => snapshot.timeline);
+  const connected = useSyncExternalStore(model.subscribeView, () => model.getSnapshot().connectionState) === 'connected';
+  if (!running || !connected) return null;
+  return <div className="remote-running-status">
+    {ChatRunningStatus ? <ChatRunningStatus startTime={runningTurnStartTime(timeline)} t={t}/>
+      : <div data-chat-running role="status" aria-live="polite">{t('chat.deepDiving')}</div>}
+  </div>;
+}
+
+export function RemoteRunningStatus() {
+  const host = useContext(PluginSlots);
+  if (!host?.reference) return null;
+  const { SessionProvider, renderSlot, reference } = host;
+  return <SessionProvider session={reference}>{renderSlot('dshm.chat.running', {})}</SessionProvider>;
 }
 
 /** 主视图保留既有引用，工厂只负责内容呈现，不另建会话或输入状态机。 */
@@ -533,16 +574,20 @@ export function RemoteHeaderAncestors({ model }) {
 function MobileChatNodeSeat({ node, dispatchNode, children, useSession, ...props }) {
   const historyIncomplete = useSession(snapshot => snapshot.hasMore);
   const t = useTranslate();
-  const renderNode = useCallback((name, owner, options) => <>{dispatchNode(name, owner, {
-    ...options,
-    fallback: owner.node.kind === 'turn-process'
-      ? <TurnProcessNodeView node={owner.node} turnProcess={owner.turnProcess} t={props.t}/>
-      : React.cloneElement(children, { turnProcess: owner.turnProcess }),
-  })}
-    {/* 入口留在插件缩放框外，同时遵循原节点的过程折叠与可见性。 */}
-    {owner.node.kind === 'tool-call' && <button type="button" className="remote-file-link" data-tool-details
-      onClick={() => owner.inspectCall(owner.node.data.root.callId)}>{t('工具详情')}</button>}
-  </>, [dispatchNode, children, props.t, t]);
+  const renderNode = useCallback((name, owner, options) => {
+    const content = dispatchNode(name, owner, {
+      ...options,
+      fallback: owner.node.kind === 'turn-process'
+        ? <TurnProcessNodeView node={owner.node} turnProcess={owner.turnProcess} t={props.t}/>
+        : React.cloneElement(children, { turnProcess: owner.turnProcess }),
+    });
+    if (owner.node.kind !== 'tool-call') return content;
+    return <div className="remote-tool-entry">{content}
+      {/* 保留独立的工具详情入口，放在行尾，避免每条记录多占一行。 */}
+      <button type="button" className="remote-tool-inspect" data-tool-details aria-label={t('工具详情')} title={t('工具详情')}
+        onClick={() => owner.inspectCall(owner.node.data.root.callId)}><IconEllipsisOutline16/></button>
+    </div>;
+  }, [dispatchNode, children, props.t, t]);
   return <ChatNodeSeat {...props} {...chatSeatProps} nodeKey={node.key} historyIncomplete={historyIncomplete} compactTranscript renderSlot={renderNode}/>;
 }
 
@@ -654,14 +699,16 @@ export function RemoteProviderCardExtension({ view }) {
   return <SessionProvider session={undefined} empty={() => renderSlot('settings.models.provider-card', view, { entryKey: view.provider.settingsNs })}/>;
 }
 
-export function RemoteTurnExtensions({ node, openFile }) {
+/** 原反馈与手机分支共用操作行；功能型 turnTail 扩展仍独立呈现。 */
+export function RemoteTurnExtensions({ node, openFile, children }) {
   const host = useContext(PluginSlots);
-  if (!host || !host.reference || !['turn', 'step'].includes(node.location?.kind)) return null;
-  const { SessionProvider, renderSlot, reference } = host;
   const closing = node.data.closing;
+  const actions = extra => closing && <div className="reply-actions remote-turn-actions" data-turn-tail={node.data.turn}>{extra}{children}</div>;
+  if (!host || !host.reference || !['turn', 'step'].includes(node.location?.kind)) return actions(null);
+  const { SessionProvider, renderSlot, reference } = host;
   const owner = { turn: node.location.turn, seq: closing?.finalNode.seq ?? node.data.seq, openFile };
   return <SessionProvider session={reference}>
     {renderSlot('conversation.chat.turnTail', owner)}
-    {closing?.finalNode.messageId !== undefined && renderSlot('conversation.chat.assistant-actions', { messageId: closing.finalNode.messageId })}
+    {actions(closing?.finalNode.messageId !== undefined && renderSlot('conversation.chat.assistant-actions', { messageId: closing.finalNode.messageId }))}
   </SessionProvider>;
 }

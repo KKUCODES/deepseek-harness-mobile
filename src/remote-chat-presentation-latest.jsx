@@ -2,6 +2,7 @@ import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
 import { derivePresentationPolicy } from '@upstream/ui-chat/src/client/presentation-policy.ts';
 import { bindDisclosure } from '@upstream/ui-chat/src/client/chat/use-disclosure.ts';
 import { useTurnDataValue } from '@upstream/ui-chat/src/client/chat/use-turn-data.ts';
+export { RunningStatus as ChatRunningStatus } from '@upstream/ui-chat/src/client/chat/RunningStatus.tsx';
 
 // 手机沿用现有紧凑过程布局，新版节点统一从原 presentation 策略读取。
 export const chatPresentation = derivePresentationPolicy(createSnapshotStore('compact'), createSnapshotStore('completion'));
@@ -12,3 +13,5 @@ export const chatNodeHooks = {
 };
 export const chatNodeBottom = false;
 export const chatSeatProps = undefined;
+export const createChatFlowMotion = undefined;
+export { useSearchableHidden as useChatProcessHidden } from '@upstream/ui-chat/src/client/chat/searchable-hidden.ts';

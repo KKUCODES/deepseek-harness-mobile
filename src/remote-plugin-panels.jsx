@@ -21,10 +21,12 @@ import { installRemoteDocumentPreviews, TEXTPREVIEW_ID } from './remote-document
 import { RemoteDocumentActions } from './ui/RemoteDocumentActions.jsx';
 import { RemoteDesktopOpen } from './ui/RemoteDesktopOpen.jsx';
 import { canOpenDesktopFile } from './remote-desktop.mjs';
-import { installRemoteReviewPreview, CHANGES_REVIEW_ID } from './remote-review-preview.jsx';
+import { installRemoteReviewPreview } from './remote-review-preview.jsx';
 import { installRemoteDeliverables } from './remote-deliverables.jsx';
 import { RemotePanelMemory } from './remote-panel-memory.mjs';
 import { retainRemoteSurface } from './remote-surface-inert.mjs';
+import { SurfacePresence, useSurfaceMotion, useSceneMotion } from './ui/motion.jsx';
+import { panelFillsViewport } from './remote-panel-layout.mjs';
 
 const FILE_ID = 'dshm/file-preview';
 // 旧版没有快捷键目录；新版读取真实客户端服务，不能以电脑目录代替手机绑定。
@@ -128,24 +130,28 @@ function PanelTab({ tab, title = false, active = false, controller, sessionId, u
 /** 原插件把菜单和 Modal portal 到 body；外壳不能将它们置于 native dialog 的 inert 区外。 */
 export function PanelSurface({ open, title, onClose, model, children, backKey = 'pluginPanelBack', global = false, role = 'region', className = '', priority = global ? 70 : 50 }) {
   const panel = useRef(null);
+  const { mounted, present } = useSurfaceMotion(panel, open, 'panel', className);
+  const current = useRef(null); current.current = { present, onClose };
   useEffect(() => {
-    if (!open) return;
+    if (!present) return;
     const releaseSurface = retainRemoteSurface(panel.current, priority);
-    const visible = selector => [...document.querySelectorAll(selector)].some(element => element !== panel.current && element.getClientRects().length > 0);
+    const visible = selector => [...document.querySelectorAll(selector)].some(element => element !== panel.current
+      && element.dataset.motionPresence !== 'closed' && element.getClientRects().length > 0);
     const escape = event => {
       if (backKey === 'pluginPanelBack' && model.pluginGlobalBack) return;
       if (event.key !== 'Escape') return;
+      if (!current.current.present) { event.preventDefault(); event.stopImmediatePropagation(); return; }
       if (visible('[role="menu"]')) {
         // 原 Menu/TabMenu 都有外部 pointerdown 关闭契约；避免 Escape 同时关闭原 Modal。
         event.preventDefault(); event.stopImmediatePropagation();
         document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
       } else if (!visible('dialog[open], [role="dialog"][aria-modal="true"]')) {
-        event.preventDefault(); event.stopImmediatePropagation(); onClose();
+        event.preventDefault(); event.stopImmediatePropagation(); current.current.onClose();
       }
     };
     window.addEventListener('keydown', escape, true);
     const back = () => {
-      const dialog = [...document.querySelectorAll('dialog[open]')].findLast(element => element.getClientRects().length > 0);
+      const dialog = [...document.querySelectorAll('dialog[open]')].findLast(element => element.dataset.motionPresence !== 'closed' && element.getClientRects().length > 0);
       // 合成Escape没有浏览器默认取消行为；Android返回需沿原生dialog的cancel契约关闭。
       if (dialog && !visible('[role="menu"]')) {
         if (dialog.dispatchEvent(new Event('cancel', { cancelable: true }))) dialog.close();
@@ -158,9 +164,9 @@ export function PanelSurface({ open, title, onClose, model, children, backKey = 
       if (model[backKey] === back) delete model[backKey];
       releaseSurface();
     };
-  }, [open, onClose, model, backKey, priority]);
+  }, [present, model, backKey, priority]);
   return createPortal(<section ref={panel} tabIndex={-1} role={role} aria-modal={role === 'dialog' ? true : undefined} aria-label={title}
-    className={`remote-plugin-panel${global ? ' remote-global-panel' : ''} ${className}`} hidden={!open}>{children}</section>, document.body);
+    className={`remote-plugin-panel${global ? ' remote-global-panel' : ''} ${className}`} hidden={!mounted}>{children}</section>, document.body);
 }
 
 function MobilePluginPanels(props) {
@@ -169,6 +175,8 @@ function MobilePluginPanels(props) {
   const t = useTranslate(), surfaces = useStore(state => state.bySession);
   const types = useTabTypes(types => types);
   const surface = surfaces[sessionId], layout = surface?.layout;
+  const content = useRef(null);
+  useSceneMotion(content, layout?.nodes[layout?.activePaneId]?.activeTabId, 1);
   const close = useCallback(() => actions.setExpanded(sessionId, false), [actions, sessionId]);
   useLayoutEffect(() => {
     if (measure) { measure(sessionId, () => false); return; }
@@ -181,8 +189,7 @@ function MobilePluginPanels(props) {
   const activeId = layout.nodes[layout.activePaneId]?.activeTabId;
   const active = layout.tabs[activeId] ?? records[0];
   const documentActive = active && types.find(type => type.kind === active.kind)?.id === TEXTPREVIEW_ID;
-  const isDocument = tab => [TEXTPREVIEW_ID, CHANGES_REVIEW_ID].includes(types.find(type => type.kind === tab?.kind)?.id);
-  const fillsPanel = tab => isDocument(tab) || tab?.kind === 'subagentchat';
+  const fillsPanel = tab => panelFillsViewport(types.find(type => type.kind === tab?.kind)?.id, tab?.kind);
   const file = documentActive ? model.documentFiles?.get(active.contentId) ?? resolveDocumentAddress(active.contentId) : undefined;
   const fileActive = active && types.find(type => type.kind === active.kind)?.id === FILE_ID;
   // 收起窗口或临时看文件时保留插件组件，局部表单不因外壳切换丢失。
@@ -202,7 +209,7 @@ function MobilePluginPanels(props) {
       {canOpenDesktopFile(model, file) && <RemoteDesktopOpen model={model} file={file}/>}
       <RemoteDocumentActions model={model} file={file}/>
     </React.Fragment>}
-    <div className={`remote-plugin-panel-content${fillsPanel(active) ? ' is-document' : ''}`}>{records.filter(tab => types.find(type => type.kind === tab.kind)?.id !== FILE_ID).map(tab => <div className={fillsPanel(tab) ? 'remote-document-tab' : undefined} key={tab.id} hidden={tab.id !== active?.id}>
+    <div ref={content} className={`remote-plugin-panel-content${fillsPanel(active) ? ' is-document' : ''}`}>{records.filter(tab => types.find(type => type.kind === tab.kind)?.id !== FILE_ID).map(tab => <div className={fillsPanel(tab) ? 'remote-document-tab' : undefined} key={tab.id} hidden={tab.id !== active?.id}>
       <RemotePanelActive.Provider value={layout.expanded && tab.id === active?.id}>
       <RemotePanelIdentity.Provider value={{ key: JSON.stringify([sessionId, tab.id]), signal: controller.tabDomain.occurrence(sessionId, tab).signal }}>
         <PanelTab {...props} tab={tab} active={layout.expanded && tab.id === active?.id} fallback={<p role="status">{t('此面板的插件暂不可用。')}</p>}/>
@@ -215,5 +222,5 @@ function MobilePluginPanels(props) {
   {layout.expanded && !fileActive && menu && menu.tabId === active?.id && <TabMenu labels={{ closeTab: t('关闭当前面板') }} anchor={menu.anchor}
     onClose={active.kind === 'guide' ? undefined : () => { dismissMenu(); controller.close(active.id); }} onDismiss={dismissMenu}
     extras={renderSlot('sidebar.right.tab.menu.item', { tab: active, dismiss: dismissMenu })}/>}
-  {layout.expanded && fileActive && <PanelTab {...props} tab={active} active/>}</>;
+  <SurfacePresence>{layout.expanded && fileActive && <PanelTab {...props} tab={active} active/>}</SurfacePresence></>;
 }

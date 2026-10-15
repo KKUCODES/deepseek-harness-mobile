@@ -3,6 +3,7 @@ import { ToolRow } from '@upstream/ui-tool/src/client/tool/components/ToolRow.ts
 import { toolRowModel } from '@upstream/ui-tool/src/client/tool/models/tool-call-model.ts';
 import { remoteToolCancellation, remoteToolVisibleContent } from './remote-tool-row.mjs';
 import { useTranslate } from './ui/locale.jsx';
+import { NativeToolFrame } from './remote-tool-typography.jsx';
 
 function CancelledTool({ toolName, block, cwd, home, inspect, useDisclosure, t, message }) {
   const translate = useTranslate();
@@ -17,7 +18,8 @@ function CancelledTool({ toolName, block, cwd, home, inspect, useDisclosure, t, 
 export function RemoteToolCancellationTree({ Component, renderSlot, t, ...props }) {
   const render = useCallback((name, owner, options) => {
     const message = name === 'tool.call.toolview' && remoteToolCancellation(owner.block);
-    return message ? <CancelledTool {...owner} t={t} message={message}/> : renderSlot(name, owner, options);
+    return message ? <NativeToolFrame><CancelledTool {...owner} t={t} message={message}/></NativeToolFrame>
+      : renderSlot(name, owner, options?.fallback ? { ...options, fallback: <NativeToolFrame>{options.fallback}</NativeToolFrame> } : options);
   }, [renderSlot, t]);
   return <Component {...props} t={t} renderSlot={render}/>;
 }

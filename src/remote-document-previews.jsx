@@ -11,6 +11,10 @@ import { resolveDocumentAddress, parseAttachmentDocumentAddress } from './remote
 import { RemoteAttachmentDocuments, attachmentDocumentProvider } from './remote-attachment-documents.mjs';
 import { zh, en } from '@upstream/ui-sidebar-documentpreview/src/client/locales.ts';
 import { apply as registerText, PLAIN_BODY_ID } from '@upstream/ui-sidebar-documentpreview/src/client/text/index.ts';
+import { TextBody } from '@upstream/ui-sidebar-documentpreview/src/client/text/TextBody.tsx';
+import { MarkdownBody } from '@upstream/ui-sidebar-documentpreview/src/client/markdown/MarkdownBody.tsx';
+import { CodeBody } from '@dshm/document/code/CodeBody.tsx';
+import { ImageBody } from '@dshm/document/image/ImageBody.tsx';
 import { apply as registerMarkdown } from '@upstream/ui-sidebar-documentpreview/src/client/markdown/index.ts';
 import { apply as registerCode } from '@dshm/document/code/index.ts';
 import { apply as registerImage } from '@dshm/document/image/index.ts';
@@ -32,6 +36,13 @@ import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path';
 import { RemoteToolDiff } from './ui/RemoteDiff.jsx';
 
 export { TEXTPREVIEW_ID };
+
+/** 自有外壳与明确复用的内置预览器使用实际视口；按组件身份识别，第三方同槽扩展仍自行缩放。 */
+export const isRemoteDocumentComposition = (options, component) =>
+  options.name === 'sidebar.right.pane.tab' && component === MobileTextPreview
+  || options.name === 'sidebar.right.tab.document' &&
+    [TextBody, MarkdownBody, CodeBody, ImageBody, LazyPdfBody, MobileOfficeBody, HtmlDocument].includes(component)
+  || options.name === 'sidebar.right.tab.document.office.pdf' && component === LazyPdfBody;
 
 /** 保留原注册表、文件标签、状态机与子插槽；只替换需要电脑 HTTP/大消息的读取边界。 */
 export function installRemoteDocumentPreviews(model) {

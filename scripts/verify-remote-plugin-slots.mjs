@@ -20,6 +20,13 @@ import { checkRemoteReadingContext } from './check-remote-reading-context.mjs';
 import { checkSessionExportStatus } from './check-session-export-status.mjs';
 import { checkDesktopApps } from './check-desktop-apps.mjs';
 import { checkManagementStatus } from './check-management-status.mjs';
+import { checkRemoteMotion } from './check-remote-motion.mjs';
+import { checkRemoteToolLayout } from './check-remote-tool-layout.mjs';
+import { checkRemoteFileLayout } from './check-remote-file-layout.mjs';
+import { checkRemoteFileListLayout } from './check-remote-file-list-layout.mjs';
+import { checkBuiltinPanelLayout } from './check-builtin-panel-layout.mjs';
+import { checkRemoteRunningStatus } from './check-remote-running-status.mjs';
+import { checkRemoteForkActions } from './check-remote-fork-actions.mjs';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
 import { createRequire } from 'node:module';
@@ -29,6 +36,7 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { remoteSourceAliases } from './remote-source-aliases.mjs';
 import { mobileApprovalAccessibility } from './mobile-approval-accessibility.mjs';
+import { latestMobileBuild } from './latest-mobile-build.mjs';
 import { checkTurnProcess } from './check-turn-process.mjs';
 import { checkFileMentions } from './check-file-mentions.mjs';
 import { checkAssistantBlocks } from './check-assistant-blocks.mjs';
@@ -59,6 +67,14 @@ import { checkAttachmentDocuments } from './check-attachment-documents.mjs';
 import { prepare as prepareClientEntries, outputRoot as clientEntriesOutput } from '../../plugin/compatibility/client-entries/build.mjs';
 
 const root = resolve(import.meta.dirname, '..'), require = createRequire(import.meta.url);
+const fileLayoutOnly = process.argv.includes('--file-layout');
+const fileListOnly = process.argv.includes('--file-list-layout');
+const builtinPanelsOnly = process.argv.includes('--builtin-panels');
+const runningOnly = process.argv.includes('--running-status');
+const forkActionsOnly = process.argv.includes('--fork-actions');
+const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly;
+const layoutSdk = layoutOnly && process.argv.includes('--official-alpha2')
+  ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-alpha.2' }) : null;
 const documentOnly = process.argv.includes('--documents');
 const inputOnly = process.argv.includes('--input-contracts');
 const overlayOnly = process.argv.includes('--shell-overlays');
@@ -77,28 +93,38 @@ const managementOnly = process.argv.includes('--management-status');
 const directory = resolve(root, 'artifacts/tests/remote-plugin-slots');
 await mkdir(directory, { recursive: true });
 await prepareClientEntries();
-await build({ absWorkingDir: root, entryPoints: ['tests/fixtures/remote-plugin-slots.jsx'], outfile: resolve(directory, 'test.js'), bundle: true, format: 'esm', platform: 'browser', jsx: 'automatic', logLevel: 'silent',
-  plugins: [mobileApprovalAccessibility()],
-  loader: { '.module.css': 'local-css', '.svg': 'file', '.woff2': 'file', '.woff': 'file', '.ttf': 'file' }, nodePaths: [resolve(root, 'node_modules')],
-  alias: { ...remoteSourceAliases(root), '@upstream': resolve(root, '../deepseek-harness/packages/client'), react: dirname(require.resolve('react/package.json')),
+await build({ absWorkingDir: root,
+  ...(layoutOnly ? { stdin: { contents: "import {model} from './tests/fixtures/remote-plugin-slots.jsx'; import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css'; import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';" + (builtinPanelsOnly ? "import {builtinPanelFixture} from './tests/fixtures/builtin-panel-layout.jsx'; Object.assign(window.fixture,builtinPanelFixture(model));" : ''), resolveDir: root, loader: 'jsx' } }
+    : { entryPoints: ['tests/fixtures/remote-plugin-slots.jsx'] }),
+  outfile: resolve(directory, 'test.js'), bundle: true, format: 'esm', platform: 'browser', jsx: 'automatic', logLevel: 'silent',
+  plugins: [...(layoutSdk ? [layoutSdk.resolver] : []), mobileApprovalAccessibility()],
+  loader: { '.module.css': 'local-css', '.svg': 'file', '.png': 'file', '.woff2': 'file', '.woff': 'file', '.ttf': 'file' }, nodePaths: [...(layoutSdk ? [resolve(layoutSdk.runtime, 'node_modules')] : []), resolve(root, 'node_modules')],
+  alias: { ...remoteSourceAliases(root, layoutSdk ?? {}), '@upstream': resolve(root, '../deepseek-harness/packages/client'), react: dirname(require.resolve('react/package.json')),
     'node:module': resolve(root, '../deepseek-harness/apps/web/src/node-module-stub.ts'),
     '@deepseek-ai/cordis': require.resolve('@deepseek-ai/cordis'), '@deepseek-ai/dsh-client-store': require.resolve('@deepseek-ai/dsh-client-store'),
     '@deepseek-ai/dsh-client-ui-slots': require.resolve('@deepseek-ai/dsh-client-ui-slots'), '@deepseek-ai/dsh-client-ui-primitives': require.resolve('@deepseek-ai/dsh-client-ui-primitives'),
     '@deepseek-ai/dsh-util-values': resolve(root, '../deepseek-harness/packages/util/values/src/index.ts'),
-    '@deepseek-ai/dsh-file-reference/grammar': resolve(root, '../deepseek-harness/packages/context/file-reference/src/grammar.ts') },
-  define: { 'process.env.NODE_ENV': '"production"', 'process.versions.node': '"0.0.0"', 'process.execArgv': '[]', 'process.env.CORDIS_SHARED': 'undefined' },
+    '@deepseek-ai/dsh-file-reference/grammar': resolve(root, '../deepseek-harness/packages/context/file-reference/src/grammar.ts'), ...(layoutSdk?.alias ?? {}) },
+  define: { DSHM_MOBILE_SDK_VERSION: JSON.stringify(layoutSdk?.version ?? '0.1.6-alpha.2'), 'process.env.NODE_ENV': '"production"', 'process.versions.node': '"0.0.0"', 'process.execArgv': '[]', 'process.env.CORDIS_SHARED': 'undefined' },
 });
 const server = createServer(async (req, res) => {
-  if (req.url === '/' || req.url === '/?documents' || req.url === '/?cold-draft') return res.setHeader('Content-Type', 'text/html').end('<div id="app"></div><script type="module" src="/test.js"></script>');
+  if (req.url === '/' || req.url === '/?documents' || req.url === '/?documents&files' || req.url === '/?documents&builtin' || req.url === '/?cold-draft') return res.setHeader('Content-Type', 'text/html').end('<div id="app"></div><script type="module" src="/test.js"></script>');
   if (req.url === '/test.js') return res.setHeader('Content-Type', 'text/javascript').end(await readFile(resolve(directory, 'test.js')));
+  // 原运行状态引用打包后的鲸鱼动画，按受限资源名提供，不能将缺图误判成状态故障。
+  if (/^\/[A-Za-z0-9@_.~-]+\.(png|svg|woff2?|ttf)$/.test(req.url)) {
+    try {
+      const bytes = await readFile(resolve(directory, req.url.slice(1)));
+      return res.setHeader('Content-Type', req.url.endsWith('.png') ? 'image/png' : req.url.endsWith('.svg') ? 'image/svg+xml' : 'font/woff2').end(bytes);
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   res.writeHead(404).end();
 });
 server.listen(0, '127.0.0.1'); await once(server, 'listening');
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
-const report = { errors: [], source: 'isolated protocol replay and local plugin; not a live desktop plugin' };
+const report = { errors: [], sdk: layoutSdk?.version ?? '0.1.6-alpha.2', source: 'isolated protocol replay and local plugin; not a live desktop plugin' };
 let page;
 try {
-  page = await browser.newPage({ viewport: { width: 375, height: 667 } });
+  page = await browser.newPage({ viewport: { width: 375, height: 667 }, hasTouch: forkActionsOnly });
   page.setDefaultTimeout(8000);
   page.on('pageerror', error => report.errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') report.errors.push(message.text()); });
@@ -114,8 +140,68 @@ try {
     } else throw new Error(`Unexpected bundle URL: ${url}`);
     await route.fulfill({ status: 200, contentType: 'text/javascript', body });
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly ? '?documents' : ''}`);
-  if (inputOnly) {
+  await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : builtinPanelsOnly ? '?documents&builtin' : fileListOnly ? '?documents&files' : fileLayoutOnly || documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly ? '?documents' : ''}`);
+  if (forkActionsOnly) {
+    for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) {
+      await page.addStyleTag({ path: resolve(root, file) });
+    }
+    report.forkActions = await checkRemoteForkActions(page, resolve(root, 'artifacts'));
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, `artifacts/remote-fork-actions-${process.argv.includes('--measure-only') ? 'before' : layoutSdk ? 'alpha2' : 'legacy'}.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (runningOnly) {
+    await page.addStyleTag({ path: resolve(directory, 'test.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/mobile.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/ordinary-product.css') });
+    await page.addStyleTag({ path: resolve(root, 'docs/design/ordinary-preview/remote.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/remote-product.css') });
+    report.running = await checkRemoteRunningStatus(page, resolve(root, 'artifacts'));
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, 'artifacts/remote-running-status-web.json'), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (builtinPanelsOnly) {
+    await page.addStyleTag({ path: resolve(directory, 'test.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/mobile.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/ordinary-product.css') });
+    await page.addStyleTag({ path: resolve(root, 'docs/design/ordinary-preview/remote.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/remote-product.css') });
+    report.builtinPanels = await checkBuiltinPanelLayout(page, resolve(root, 'artifacts/builtin-panel-layout'));
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, 'artifacts/builtin-panel-layout-web.json'), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (fileListOnly) {
+    await page.addStyleTag({ path: resolve(directory, 'test.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/mobile.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/remote-product.css') });
+    report.fileList = await checkRemoteFileListLayout(page, resolve(root, 'artifacts/remote-file-list-layout'));
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, `artifacts/remote-file-list-layout-${layoutSdk ? 'alpha2' : 'legacy'}-web.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (fileLayoutOnly) {
+    await page.addStyleTag({ path: resolve(directory, 'test.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/mobile.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/remote-product.css') });
+    report.fileLayout = await checkRemoteFileLayout(page, resolve(root, 'artifacts/remote-file-layout'));
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, `artifacts/remote-file-layout-${layoutSdk ? 'alpha2' : 'legacy'}-web.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (process.argv.includes('--tool-layout')) {
+    await page.addStyleTag({ path: resolve(directory, 'test.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/mobile.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/remote-product.css') });
+    report.toolLayout = await checkRemoteToolLayout(page, resolve(root, 'artifacts/remote-tool-layout.png'));
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, `artifacts/remote-tool-layout-${layoutSdk ? 'alpha2' : 'legacy'}-web.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (process.argv.includes('--motion')) {
+    await page.addStyleTag({ path: resolve(directory, 'test.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/mobile.css') });
+    await page.addStyleTag({ path: resolve(root, 'src/ui/remote-product.css') });
+    report.motion = await checkRemoteMotion(page);
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, 'artifacts/remote-motion-web.json'), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (inputOnly) {
     await page.waitForFunction(() => !!window.fixture);
     report.inputContracts = await page.evaluate(() => window.fixture.checkRemoteInput());
     await page.evaluate(() => window.fixture.select('one'));

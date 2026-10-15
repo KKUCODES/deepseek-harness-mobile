@@ -4,6 +4,7 @@ import { DiffBlock } from '@upstream/ui-primitives/src/DiffBlock.tsx';
 import { hunkRows, renderedHunks } from '@dshm/review-diff';
 import { readChanges, changesError } from '../remote-changes.mjs';
 import { Surface, IconButton } from './Surface.jsx';
+import { useSurfacePresent } from './motion.jsx';
 import { FullscreenIcon } from './FullscreenIcon.jsx';
 import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
@@ -54,9 +55,11 @@ function RemoteReviewRequest({ file, model, onClose }) {
 
 function LegacyChangesPreview({ file, model, onClose, onCurrent }) {
   const t = useTranslate();
+  const present = useSurfacePresent();
   const [summary, setSummary] = useState(null), [index, setIndex] = useState(0), [diff, setDiff] = useState(null);
   const [error, setError] = useState(''), [revision, setRevision] = useState(0), [full, setFull] = useState(false);
   useEffect(() => {
+    if (!present) return;
     const controller = new AbortController(), signal = AbortSignal.any([controller.signal, model.lifetime.signal]);
     setSummary(null); setDiff(null); setError('');
     void readChanges(model, file, signal).then(value => {
@@ -64,8 +67,9 @@ function LegacyChangesPreview({ file, model, onClose, onCurrent }) {
       if (!signal.aborted) { setSummary(value); setIndex(current => current < value.files.length ? current : 0); }
     }).catch(reason => { if (!signal.aborted) setError(changesError(reason)); });
     return () => controller.abort();
-  }, [file, model, revision]);
+  }, [file, model, revision, present]);
   useEffect(() => {
+    if (!present) return;
     setDiff(null);
     if (!summary?.files[index]) return;
     const controller = new AbortController(), signal = AbortSignal.any([controller.signal, model.lifetime.signal]);
@@ -75,7 +79,7 @@ function LegacyChangesPreview({ file, model, onClose, onCurrent }) {
       if (!signal.aborted) setDiff(value);
     }).catch(reason => { if (!signal.aborted) setError(changesError(reason)); });
     return () => controller.abort();
-  }, [summary, index, file, model]);
+  }, [summary, index, file, model, present]);
   return <Surface title={t('本轮文件改动')} onClose={onClose} className={`remote-file-preview${full ? ' is-fullscreen' : ''}`}>
     <header><h2>{t('第 {turn} 轮改动', { turn: file.turn })}</h2><div className="remote-file-header-actions">
       <IconButton label={t(full ? '缩小窗口' : '放大窗口')} onClick={() => setFull(value => !value)}><FullscreenIcon expanded={full}/></IconButton>

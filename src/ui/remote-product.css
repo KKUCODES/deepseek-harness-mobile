@@ -1,8 +1,31 @@
 .remote-runtime { height: 100dvh; display: flex; flex-direction: column; min-width: 0; overflow: clip; }
 .remote-app .messages { font-size: var(--dsh-content-font-size, 14px); gap: 0; }
 /* until-found 保留搜索能力，但隐藏节点仍是 flex 项，不能用 gap 为它们留空。 */
-.remote-app .messages > :not([data-slot]),
-.remote-app .messages > [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]) { margin-bottom: 24px; }
+.remote-app .messages > :not([data-slot]) { margin-bottom: 24px; }
+.remote-app .messages > [data-slot="dshm.chat.node"] > [data-chat-flow-key] { margin-bottom: 0; }
+.remote-app .messages > [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty)
+  ~ [data-chat-flow-key]:not([hidden]):not(:empty) { margin-top: var(--dsh-chat-flow-gap, 6px); }
+.remote-app .messages > [data-slot="dshm.chat.node"]:has(> [data-chat-flow-key]:not([hidden]):not(:empty))
+  ~ [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty) { margin-top: var(--dsh-chat-flow-gap, 6px); }
+.remote-app .messages [data-chat-flow-kind="user"],
+.remote-app .messages [data-chat-flow-kind="steering"],
+.remote-app .messages [data-chat-flow-kind="assistant-step"] { --dsh-chat-flow-gap: 12px; }
+.remote-app .messages :is([data-chat-flow-kind="turn-process"], [data-turn-process-answer]) { --dsh-chat-flow-gap: 16px; }
+.remote-tool-entry { display: flex; align-items: flex-start; min-width: 0; gap: 4px; }
+.remote-tool-entry > :first-child { flex: 1; min-width: 0; }
+.remote-tool-inspect { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: -2px -4px 0 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer; }
+.remote-tool-inspect:is(:hover, :focus-visible) { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); }
+/* 官方工具行有独立的下发类名；只适配自有标记下已核验的行结构，第三方视图不受影响。 */
+.remote-native-tool { width: 100%; min-width: 0; }
+.remote-native-tool > [data-tool] { --dsh-content-font-size-secondary: max(14px, calc(var(--dsh-content-font-size, 14px) - 2px)); }
+.remote-native-tool > [data-tool] [data-disclosure-row] { height: auto; min-height: 24px; align-items: flex-start; }
+.remote-native-tool > [data-tool] [data-disclosure-row] > :first-child { margin-top: 4px; }
+.remote-native-tool > [data-tool] [data-disclosure-header] > [data-disclosure-row] > span:nth-child(2) > span:first-child > :nth-child(2),
+.remote-native-tool > [data-tool]:not(:has([data-disclosure-header])) [data-disclosure-row] > :nth-child(3) { margin-top: 11px; }
+.remote-native-tool > [data-tool] [data-disclosure-header] > [data-disclosure-row] > span:nth-child(2) > span:first-child > :nth-child(3),
+.remote-native-tool > [data-tool]:not(:has([data-disclosure-header])) [data-disclosure-row] > :nth-child(4) { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+.remote-native-tool > [data-tool] [data-disclosure-header] > [data-disclosure-row] > span:nth-child(2) { flex: 1 1 auto; min-width: 0; width: auto; }
+.remote-native-tool > [data-tool] [data-disclosure-header] > [data-disclosure-row] > span:nth-child(2) > span:first-child { align-items: flex-start; }
 .remote-runtime[hidden] { display: none; }
 .remote-runtime-nav { display: flex; justify-content: space-between; padding: 6px 12px; flex: none; }
 .remote-runtime-content { position: relative; flex: 1; min-height: 0; min-width: 0; overflow: clip; }
@@ -64,13 +87,13 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-file-preview h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .remote-file-preview-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; padding-bottom: 12px; }
 .remote-file-preview-body { flex: 1; min-height: 0; overflow: auto; }
-.remote-file-preview-body pre { font: 13px/1.65 monospace; tab-size: 2; margin: 0; white-space: pre; }
+.remote-file-preview-body pre { font: 14px/1.65 monospace; tab-size: 2; margin: 0; white-space: pre; }
 .remote-tool-detail .remote-tool-card pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .remote-file-line-target { display: inline-block; min-width: .5em; color: inherit; background: var(--dsw-alias-interactive-bg-hover, #e9edf8); outline: 1px solid currentColor; outline-offset: 2px; }
 .remote-diff-selector { display: flex; align-items: center; gap: 8px; padding: 8px 0; }
 .remote-diff-selector select { flex: 1; min-width: 0; max-width: 100%; background: var(--dsw-alias-bg-l1); color: inherit; border: 1px solid var(--dsw-alias-border-l2); padding: 8px; border-radius: 8px; }
-.remote-diff-path { margin: 0 0 12px; overflow-wrap: anywhere; font-size: 12px; color: var(--dsw-alias-label-secondary); }
-.remote-recorded-diff { font: 12px/1.7 monospace; }
+.remote-diff-path { margin: 0 0 12px; overflow-wrap: anywhere; font-size: 13px; color: var(--dsw-alias-label-secondary); }
+.remote-recorded-diff { font: 14px/1.7 monospace; }
 .remote-diff-line { display: grid; grid-template-columns: 32px 32px minmax(0, 1fr); }
 .remote-diff-line > span { text-align: right; padding-right: 6px; opacity: .6; user-select: none; }
 .remote-diff-line code { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
@@ -79,8 +102,14 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-diff-range { padding: 8px 0; color: var(--dsw-alias-label-secondary); }
 .remote-command-preview .remote-command-source { white-space: pre-wrap; overflow-wrap: anywhere; margin-bottom: 16px; }
 .remote-command-preview .remote-command-output { margin-top: 12px; }
-.remote-turn-actions { margin: 0 0 20px; }
-.remote-turn-actions button { font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.remote-turn-actions { --dshm-reply-action-size: max(44px, calc(44px + var(--dsh-content-font-delta, 0px))); --dshm-reply-icon-size: calc(20px + var(--dsh-content-font-delta, 0px)); margin: 0 0 20px; align-items: center; gap: 0; }
+/* 官方反馈与分支共享视觉/触摸尺寸；只覆盖本操作行，保留其他插件与弹窗。 */
+.remote-turn-actions :is(.remote-branch-action, [data-plugin-frame="@deepseek-ai/dsh-client-ui-message-feedback"] button) { width: var(--dshm-reply-action-size); height: var(--dshm-reply-action-size); padding: 0; border-radius: var(--dsw-radius-sm, 8px); }
+.remote-turn-actions :is(.remote-branch-action, [data-plugin-frame="@deepseek-ai/dsh-client-ui-message-feedback"] button) svg { width: var(--dshm-reply-icon-size); height: var(--dshm-reply-icon-size); flex: none; }
+.remote-turn-actions [data-plugin-frame="@deepseek-ai/dsh-client-ui-message-feedback"] button { margin-inline-end: 4px; }
+.remote-turn-actions .remote-branch-action { display: inline-flex; align-items: center; justify-content: center; flex: none; border: 0; background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer; }
+.remote-turn-actions .remote-branch-action:not(:disabled):hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); }
+.remote-turn-actions .remote-branch-action:disabled { opacity: .4; cursor: default; }
 .remote-plugin-row { display:flex; gap:16px; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border-color, #eee); }
 .remote-plugin-row span { min-width:0; overflow-wrap:anywhere; }
 .remote-plugin-row small { color:var(--text-secondary, #777); flex-shrink:0; }
@@ -145,6 +174,7 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-computer-settings form { display: grid; gap: 20px; min-width: 0; }
 .remote-computer-setting { display: grid; gap: 8px; min-width: 0; }
 .remote-computer-setting .sheet-editor { height: 44px; min-height: 0; padding: 10px 14px; border-radius: 14px; }
+.remote-setting-meta small { font-size: 13px; }
 .remote-computer-settings > p { margin: 0; }
 .remote-computer-settings .remote-muted { color: var(--dsw-alias-label-secondary); }
 .remote-setting-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -156,10 +186,22 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-draft-saving { position: absolute; bottom: calc(100% + 4px); right: 16px; padding: 2px 6px; border-radius: 6px; font-size: 11px; color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-bg-layer-1, white); pointer-events: none; }
 .remote-offline-status { flex: none; display: grid; gap: 4px; padding: 8px 16px; color: var(--dsw-alias-label-secondary); background: var(--dsw-alias-interactive-bg-hover); font-size: 12px; line-height: 18px; }
 .remote-offline-status small { font-size: inherit; }
+.remote-running-status { min-width: 0; padding-top: 16px; color: var(--dsw-alias-label-deep-diving); font-size: 14px; }
+.remote-running-status:empty { display: none; }
+.remote-running-status [data-chat-running] { font-size: 14px; }
+/* 旧 Android WebView 会保留自定义属性，却不能把 color-mix 用作颜色。 */
+@supports not (color: color-mix(in srgb, blue, black)) {
+  .remote-running-status {
+    --dsw-alias-label-deep-diving: var(--dsw-alias-state-business-primary);
+    --dsw-alias-label-deep-diving-shimmer: var(--dsw-static-deepseek-300);
+  }
+}
 .remote-plugin-manager { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); background: var(--dsw-alias-bg-layer-1, white); color: var(--dsw-alias-label-primary); outline: none; }
 .remote-plugin-manager > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; }
 .remote-plugin-manager h2 { margin: 0; font-size: 18px; }
-.remote-plugin-manager-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.remote-plugin-manager-body { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.remote-plugin-manager-body .remote-native-panel[data-native-panel="plugins"] { flex: 1; height: auto; }
+.remote-plugin-manager-body > .remote-plugin-operations { flex: none; max-height: 30%; overflow: auto; }
 .remote-plugin-manager-body > p { margin: 16px; }
 .remote-plugin-operations { margin: 8px 16px 16px; padding: 12px; border: 1px solid var(--dsw-alias-border-main, #ddd); border-radius: 12px; font-size: 14px; }
 .remote-plugin-operations summary { cursor: pointer; }
@@ -176,12 +218,31 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-plugin-panel nav { display: flex; flex-shrink: 0; gap: 8px; padding: 8px 16px; overflow-x: auto; }
 .remote-plugin-panel nav button { flex-shrink: 0; }
 .remote-plugin-panel nav [aria-pressed="true"] { background: var(--dsw-alias-bg-layer-2, #f3f3f3); }
-.remote-plugin-panel-content { flex: 1; min-height: 0; overflow: auto; padding: 16px; }
+.remote-plugin-panel-content { flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 16px; }
 .remote-plugin-panel-content.is-document { padding: 0; overflow: hidden; }
 .remote-plugin-panel-footer { flex: none; min-width: 0; padding: 0 16px 12px; }
 .remote-cordis-notice { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; background: var(--dsw-alias-bg-layer-2, #f3f3f3); font-size: 14px; }
 .remote-cordis-notice button { flex: none; }
-.remote-document-tab { height: 100%; min-height: 0; }
+.remote-document-tab { height: 100%; min-height: 0; min-width: 0; }
+.remote-native-panel { display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; font-size: 14px; --dsh-content-font-size-secondary: 14px; --dsw-font-markdown-code-block: 14px/1.6 var(--dsw-font-mono, ui-monospace, monospace); }
+.remote-native-panel > :first-child { flex: 1; min-width: 0; min-height: 0; }
+.remote-native-panel.is-flow { display: block; height: auto; overflow: visible; }
+.remote-native-panel [data-native-font-floor] { font-size: 13px !important; }
+.remote-native-panel[data-native-panel="plan"] > [data-plan-preview] { width: 100%; }
+.remote-native-panel[data-native-panel="plan"] [data-code-block-banner] span { font-size: 13px; }
+.remote-native-panel[data-native-panel="task"] textarea { font-size: 14px; }
+.remote-native-panel[data-native-panel="task"] [role="status"], .remote-native-panel[data-native-panel="schedules"] time { font-size: 13px; }
+.remote-document-tab [data-sidebar-right-guide] { height: 100%; overflow: auto; }
+.remote-document-tab [data-sidebar-right-guide-entry] > span:nth-child(2) > span + span { font-size: 13px; }
+.remote-document-tab [data-changes-review] { min-width: 0; --dsw-font-markdown-code-block: 14px/1.6 var(--dsw-font-mono, ui-monospace, monospace); }
+.remote-document-tab [data-review-file] { font-size: 13px; }
+.remote-document-tab [data-review-file] > span { font-size: inherit; }
+.remote-document-tab [data-changes-review] > :first-child > span { font-size: 13px; }
+.remote-document-tab [data-review-view] { font-size: 14px; }
+.remote-native-panel > [data-files-state] { flex: 1; min-width: 0; min-height: 0; width: 100%; }
+.remote-native-panel [data-files-path]:not([data-files-entry]) { min-width: 0; font-size: 13px; }
+.remote-native-panel [data-files-entry] > button { min-height: 36px; font-size: 14px; }
+.remote-native-panel [data-files-row] { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 .remote-document-tab [data-sidebar-chat], .remote-embedded-conversation { height: 100%; min-height: 0; }
 /* 原旁栏是横向 flex；手机容器须允许收缩，才能按可用宽度测量内部插件。 */
 .remote-embedded-conversation { position: relative; width: 100%; min-width: 0; }
@@ -197,7 +258,18 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-hero-mode { width: max-content; max-width: 100%; min-width: 0; }
 .remote-hero-options { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .remote-conversation-body > .conversation:has(.remote-bound-hero) { display: flex; flex-direction: column; }
-.remote-document-content { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.remote-document-content { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
+/* 只约束手机自有文档外壳；长路径、长行交给局部截断/滚动，不能反向撑宽后缩小整页。 */
+.remote-document-content > [data-textpreview-url] { min-width: 0; width: 100%; overflow: hidden; }
+.remote-document-content [data-textpreview-path] { flex: 1; min-width: 0; font-size: 13px; }
+.remote-document-content [data-textpreview-url] > :first-child button { font-size: 13px; }
+.remote-document-content [data-textpreview-body] { min-width: 0; --dsh-content-font-size-secondary: 14px; }
+.remote-document-content [data-textpreview-plain] pre { font-size: 14px; line-height: 1.6; }
+.remote-document-content [data-code-preview] { --dsw-font-markdown-code-block: 14px/1.6 var(--dsw-font-mono, ui-monospace, monospace); }
+.remote-document-content :is([data-document-markdown], [data-code-preview]) [data-code-block-banner] span { font-size: 13px; }
+.remote-document-content [data-document-markdown] :is(pre, pre code) { font-size: 14px; line-height: 1.6; }
+.remote-document-content [data-document-markdown] table code { font-size: 13px; }
+.remote-document-content [data-document-zoom-controls] :is(button, span) { font-size: 13px; }
 .remote-plugin-dependencies { margin-block: 8px; overflow-wrap: anywhere; }
 .remote-plugin-dependencies summary { cursor: pointer; }
 .remote-model-capabilities { min-width: 0; }
@@ -234,3 +306,16 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-global-panel nav button { display: flex; align-items: center; gap: 10px; }
 .remote-global-panel-icon { width: 20px; flex: 0 0 20px; }
 .remote-external-result { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: no-preference) {
+.remote-app :is(.topbar, .remote-home-actions, .composer-toolbar, .remote-file-header-actions) button,
+.remote-app :is(.remote-project-row, .remote-session-row, .connection-strip),
+.remote-plugin-panel > header button, .remote-plugin-panel > nav button,
+.remote-plugin-manager > header button, .sheet > header button, .sheet > .option {
+  transition: background-color 140ms ease-out, color 140ms ease-out, transform 140ms cubic-bezier(.22, 1, .36, 1);
+}
+.remote-app :is(.remote-project-row, .remote-session-row, .connection-strip):active:not(:disabled),
+.remote-app :is(.topbar, .remote-home-actions) button:active:not(:disabled),
+.remote-plugin-panel > header button:active:not(:disabled), .sheet > header button:active:not(:disabled) { transform: scale(.97); }
+.reply details > summary > svg:last-child { transition: transform 180ms cubic-bezier(.22, 1, .36, 1); }
+}
+.reply details[data-expanded] > summary > svg:last-child { transform: rotate(180deg); }

@@ -11,6 +11,8 @@
 .product-settings-group { border: 1px solid var(--dsw-alias-border-l2); border-radius: 14px; overflow: hidden; }
 .product-settings p { line-height: 1.6; }
 .sheet-editor { width: 100%; min-height: 90px; margin: 16px 0 0; resize: vertical; color: inherit; background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; padding: 12px; }
+/* 单行控件与多行编辑器共享外观，不共享文本域的最小高度。 */
+.sheet-editor:is(input, select) { box-sizing: border-box; height: 44px; min-height: 44px; padding: 10px 14px; resize: none; font: inherit; }
 .ordinary-app .reply { min-width: 0; }
 .ordinary-app .messages { font-size: var(--dsh-content-font-size, 14px); }
 .draft-attachments { display: flex; gap: 8px; overflow-x: auto; padding: 8px 16px 0; flex: none; }

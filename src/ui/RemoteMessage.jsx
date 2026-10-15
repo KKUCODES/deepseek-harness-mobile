@@ -2,7 +2,8 @@ import React from 'react';
 import { useTranslate } from './locale.jsx';
 import { UserMessage, AssistantMessage, MessageReasoning } from './ChatMessage.jsx';
 import { JsonBlock } from '@upstream/ui-primitives/src/markdown/JsonBlock.tsx';
-import { useSearchableHidden } from '@upstream/ui-chat/src/client/chat/searchable-hidden.ts';
+import { useChatProcessHidden } from '@dshm/chat-presentation';
+import { IconBranchOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { remoteToolRow, remoteToolCancellation, remoteToolVisibleContent } from '../remote-tool-row.mjs';
 import { attachmentFile } from '../remote-attachments.mjs';
 import { inlineImage } from '../remote-images.mjs';
@@ -10,8 +11,8 @@ import { RemoteInlineImage, RemoteLocalImage } from './RemoteImages.jsx';
 import { diffCardModel } from '@upstream/ui-tool/src/client/tool/models/diff-card-model.ts';
 import { RemoteToolDiff } from './RemoteDiff.jsx';
 import { commandDetails } from '../remote-commands.mjs';
-import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { RemoteTurnExtensions, RemoteNodeExtension, useRemoteFileMentions } from '../remote-plugin-slots.jsx';
+import { MotionDetails } from './motion.jsx';
 
 export const contentText = content => (content ?? []).filter(block => block.type === 'text').map(block => block.text).join('\n');
 export const fileSize = bytes => bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
@@ -32,7 +33,7 @@ export function RemoteFiles({ content, pending, openAttachment }) {
 }
 
 function Disclosure({ title, children, open }) {
-  return <details className="remote-tool-card" open={open}><summary>{title}</summary>{children}</details>;
+  return <MotionDetails className="remote-tool-card" open={open} title={title}>{children}</MotionDetails>;
 }
 
 export function RemoteToolResult({ tool, renderContent, openFile, openAttachment, openChanges, openCommand, expanded }) {
@@ -68,7 +69,7 @@ export const RemoteMessage = React.memo(function RemoteMessage({ node, renderCon
 });
 
 function RemoteReasoning({ text, active, hidden, reveal, renderContent }) {
-  const ref = useSearchableHidden(hidden, reveal);
+  const ref = useChatProcessHidden(hidden, reveal);
   return <div ref={ref} data-turn-process-inline={hidden || undefined}><MessageReasoning text={text} active={active} renderContent={renderContent}/></div>;
 }
 
@@ -117,12 +118,12 @@ function DefaultRemoteMessage({ node, turnProcess, renderContent, openFile, open
   if (node.kind === 'turn-max-tokens') return <p className="muted">{t('已达到本轮输出长度上限。')}</p>;
   if (node.kind === 'turn-blocked') return <p className="remote-error" role="status" data-turn-blocked={data.turn}>{t('本轮任务受阻，未继续执行。')}</p>;
   if (node.kind === 'model-retry') return <p className="muted">{t(data.current.retryState === 'scheduled' ? '模型连接失败，正在等待重试…' : data.current.retryState === 'cancelled' ? '已取消重试' : '已重新连接模型')}</p>;
-  if (node.kind === 'turn-tail') return <>
-    <RemoteTurnExtensions node={node} openFile={openFile}/>
-    {data.closing && <div className="reply-actions remote-turn-actions" data-turn-tail={data.turn}>
-      <Button disabled={forkDisabled} aria-label={t('从第 {turn} 轮分支', { turn: data.turn })} onClick={() => onFork(node.key)}>{t('在新聊天中分支')}</Button>
-    </div>}
-  </>;
+  if (node.kind === 'turn-tail') return <RemoteTurnExtensions node={node} openFile={openFile}>
+    {data.closing && <button type="button" className="remote-branch-action" disabled={forkDisabled}
+      aria-label={t('从第 {turn} 轮分支', { turn: data.turn })} title={t('在新聊天中分支')} onClick={() => onFork(node.key)}>
+      <IconBranchOutline16 size={20}/>
+    </button>}
+  </RemoteTurnExtensions>;
   if (node.kind === 'turn-process') return null;
   return <Disclosure title={t('扩展内容')}><pre>{JSON.stringify(data, null, 2)}</pre></Disclosure>;
 }

@@ -1,5 +1,19 @@
 # 手机端模块地图
 
+[Remote回复尾部](../../../src/ui/RemoteMessage.jsx)复用官方分支图标，[会话扩展](../../../src/remote-plugin-slots.jsx)将反馈与分支合在同一操作行；仅官方反馈的操作框使用[内容宽度](../../../src/ui/MobilePluginFrame.jsx)，不改变其他插件的外层缩放。维护角色手机端维护者，核验2026-10-15；[显示规则与真实入口证据](../../integration/remote-reply-actions-current.md)。
+
+Remote活动提示通过[会话插槽](../../../src/remote-plugin-slots.jsx)在[共享聊天正文](../../../src/ui/RemoteWorkspace.jsx)末尾挂载原DSH独立组件，不依赖首段消息节点；[时间来源](../../../src/remote-running-status.mjs)只取原开放轮次，连接和会话状态共同控制显示。维护角色手机端维护者，核验2026-10-15；[等待反馈及真实验证边界](../../integration/remote-running-status-current.md)。
+
+完整内置面板的手机尺寸由[面板契约](../../../src/remote-panel-layout.mjs)和[共用内置面板边界](../../../src/ui/NativePanelFrame.jsx)维护：官方注册域避免重复缩放，侧栏/全局页分配完整高度，设置使用自然高度，辅助文字最低13px，跳过第三方框。图片/PDF仅调整控件，不改媒体缩放。维护角色手机端维护者，核验2026-10-15；[全量矩阵及验证边界](../../integration/builtin-panel-layout-current.md)。
+
+[面板布局规则](../../../src/remote-panel-layout.mjs)集中声明文档、差异和文件目录的完整视口契约；共享[面板外壳](../../../src/remote-plugin-panels.jsx)使用该契约，阅读位置沿用原组件。下发目录按官方注册域识别，第三方同槽仍经通用缩放。维护角色手机端维护者，核验2026-10-15；[目录遗漏与验证边界](../../integration/file-preview-layout-current.md#2026-10-15补齐文件列表与统一面板尺寸)。
+
+[Remote 文档适配](../../../src/remote-document-previews.jsx)按组件身份声明自有外壳和内置预览器，由[插槽注册](../../../src/remote-plugin-slots.jsx)跳过桌面等比缩放，保留文件正文的局部滚动和第三方渲染器自适应。维护角色手机端维护者，核验 2026-10-15；[排版和真实验证边界](../../integration/file-preview-layout-current.md)。
+
+官方工具的手机排版由 [Remote 工具域适配](../../../src/remote-tool-typography.jsx)与共享 Remote 样式提供；只调整官方注册域的外层与行结构，第三方工具视图仍经过原自适应框。[字号、间距与验证边界](../../integration/tool-record-layout-current.md)。
+
+[共享动效](../../../src/ui/motion.jsx)负责手机页面切换、窗口保留退出与外层尺寸变换；[Surface](../../../src/ui/Surface.jsx)保留原生模态契约，[PanelSurface](../../../src/remote-plugin-panels.jsx)保留插件 portal、标签状态与返回处理。读取和恢复登记通过 `useSurfacePresent` 在逻辑关闭时即释放，不等待视觉退出。alpha.2 的执行过程使用[原节点适配](../../../src/remote-chat-presentation-alpha2.jsx)与每个手机聊天视口自己的时钟。维护角色手机端维护者，核验 2026-10-14；当前证据和边界见[动效记录](../../integration/motion-current.md)。
+
 地址保存的进程恢复由[RemoteModel](../../../src/remote-model.mjs)持有[RemoteEndpointJournal](../../../src/remote-endpoint-journal.mjs)，沿[原草稿数据库](../../../src/remote-drafts.mjs)按绑定严格持久化待核对目标/编号；不保存地址、Key或可重发请求。[地址服务](../../../src/remote-endpoint.mjs)在发请求前提交记录，明确结算或新连接实际读取后按编号清理，[共享Remote页面](../../../src/ui/RemoteWorkspace.jsx)显示重开后待核对提示。表单卸载和App进程恢复共用服务，不由具体设置卡持有唯一提示。维护角色手机端维护者，核验2026-10-10；来源：[六种实际App结束与同APK核心回归](../../../../plugin/compatibility/latest-upstream/official-alpha2.md#服务地址保存时app结束与恢复2026-10-10)。
 
 官方alpha.2组合：[SDK选择器](../../../scripts/latest-mobile-build.mjs)只解析独立根内真实路径与精确版本；[新节点接入](../../../src/remote-chat-presentation-alpha2.jsx)使用官方bottomSource与同步搜索隐藏，不安装第二个桌面滚动协调器。[外观默认值](../../../src/phone-appearance.mjs)及[本地ConfigForm](../../../src/local-settings.mjs)补齐新主题字段，保持手机原存储权威。启动探针与真实Android证据见[新版复验](../../../../plugin/compatibility/latest-upstream/official-alpha2.md)；只读官方源码不写回，派生产物只用于DSHM。

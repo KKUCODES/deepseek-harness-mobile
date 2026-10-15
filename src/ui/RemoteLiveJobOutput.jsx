@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { parseAnsiLines } from '@upstream/ui-primitives/src/ansi.ts';
@@ -7,31 +7,39 @@ import { writeClipboard } from '../ordinary-clipboard.mjs';
 import { Surface, IconButton } from './Surface.jsx';
 import { FullscreenIcon } from './FullscreenIcon.jsx';
 import { RemoteOfflineStatus } from './RemoteOfflineStatus.jsx';
+import { useSurfacePresent } from './motion.jsx';
 
 import { useTranslate } from './locale.jsx';
 
 function Output({ model, target, stream, mode, full }) {
   const t = useTranslate();
+  const present = useSurfacePresent();
   const reader = useMemo(() => {
     const resume = model.jobOutputResume;
     return new Reader(model, target, stream, mode, resume?.target === target && resume.stream === stream && resume.mode === mode ? resume.reader : undefined);
   }, [model, target, stream, mode]);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!present) return;
     model.jobOutputResume = undefined;
     const capture = () => ({ target, stream, mode, full, reader: reader.checkpoint() });
     model.captureJobOutput = capture;
     return () => { if (model.captureJobOutput === capture) delete model.captureJobOutput; };
-  }, [model, target, stream, mode, full, reader]);
+  }, [model, target, stream, mode, full, reader, present]);
   return <RemoteOutputContent reader={reader} mode={mode} label={t('独立任务输出')}/>;
 }
 
 /** 后台任务与前台命令共用显示和生命周期；调用方只提供具有准确身份的 reader。 */
 export function RemoteOutputContent({ reader, mode, label }) {
   const t = useTranslate();
+  const present = useSurfacePresent(), wasClosing = useRef(false);
   const value = useSyncExternalStore(reader.subscribe, reader.getSnapshot);
   const [copied, setCopied] = useState('');
   const lines = useMemo(() => parseAnsiLines((value.ansiPrefix ?? '') + (value.ansiText ?? value.text)), [value.text, value.ansiText, value.ansiPrefix]);
   useEffect(() => { reader.start(); return () => reader.dispose(); }, [reader]);
+  useEffect(() => {
+    if (!present) { reader.stop(); wasClosing.current = true; }
+    else if (wasClosing.current) { wasClosing.current = false; void reader.retry(); }
+  }, [reader, present]);
   useEffect(() => { setCopied(''); }, [value.text]);
   return <>
     <p className="muted" role="status">{t(['paused', 'error'].includes(value.phase) ? '读取已暂停' : value.phase === 'ended' ? '输出已读完' : value.phase === 'reading' ? '正在读取…' : mode === 'live' ? '实时读取' : '按段查看')} · {t('{offset} / {total} 字节', { offset: value.offset.toLocaleString(), total: value.total.toLocaleString() })}</p>

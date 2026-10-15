@@ -7,6 +7,7 @@ import { jobOutputRecords } from '../remote-job-output.mjs';
 import { loadRemoteHistory } from '../remote-history.mjs';
 import { Surface, IconButton } from './Surface.jsx';
 import { FullscreenIcon } from './FullscreenIcon.jsx';
+import { useSurfacePresent } from './motion.jsx';
 
 import { useLocale, useTranslate } from './locale.jsx';
 
@@ -29,10 +30,11 @@ function OutputRecord({ record }) {
 
 export function RemoteJobOutput({ model, target, onClose }) {
   const t = useTranslate();
+  const present = useSurfacePresent();
   const state = useSyncExternalStore(model.subscribeView, model.getSnapshot);
   const [full, setFull] = useState(false), [error, setError] = useState(''), [loading, setLoading] = useState(false);
   const requestRef = useRef(null);
-  useEffect(() => () => { requestRef.current = null; }, [model, target]);
+  useEffect(() => () => { requestRef.current = null; }, [model, target, present]);
   const records = useMemo(() => jobOutputRecords(state, target.sessionId, target), [state.selected, state.list, state.conversation, target]);
   const loadOlder = async () => {
     const reference = model.reference;

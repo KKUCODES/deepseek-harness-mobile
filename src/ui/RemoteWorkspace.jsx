@@ -21,7 +21,7 @@ import { RemotePluginList, RemoteComputerPlugins, RemotePluginSettings } from '.
 import { RemoteSettings } from './RemoteSettings.jsx';
 import { PanelSurface } from '../remote-plugin-panels.jsx';
 import { RemoteSettingsOnboarding } from './RemoteSettingsOnboarding.jsx';
-import { RemotePluginPanels, RemoteHeaderExtensions, RemoteHeaderTitle, RemoteHeaderAncestors, RemoteComposerExtension } from '../remote-plugin-slots.jsx';
+import { RemotePluginPanels, RemoteHeaderExtensions, RemoteHeaderTitle, RemoteHeaderAncestors, RemoteComposerExtension, RemoteRunningStatus } from '../remote-plugin-slots.jsx';
 import { RemoteSkillPicker } from './RemoteSkills.jsx';
 import { RemoteReferencePicker } from './RemoteReferences.jsx';
 import { referenceSources } from '../remote-references.mjs';
@@ -45,6 +45,8 @@ import { loadEarlierHistory } from '../remote-history-position.mjs';
 import { loadRemoteHistory } from '../remote-history.mjs';
 import { observeRemoteReadingContext } from '../remote-reading-context.mjs';
 import { RemoteMainConversationBody, RemoteMainConversationFrame } from '../remote-sidebar-chat.jsx';
+import { SurfacePresence, useSceneMotion, RemoteFlowMotion } from './motion.jsx';
+import { createChatFlowMotion } from '@dshm/chat-presentation';
 
 export function RemoteWorkspace({ model, onBack, onConnection, embedded = false, renderConversation }) {
   const t = useTranslate();
@@ -82,6 +84,12 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [command, setCommand] = useState(() => model.commandResume?.target ?? null);
   const [jobOutput, setJobOutput] = useState(() => model.jobOutputResume?.target ?? null);
   const scroll = useRef(null), bottom = useRef(true);
+  const scene = useRef(null);
+  useSceneMotion(scene, state.selected ?? `workspace:${workspace ?? ''}`, state.selected ? 2 : workspace ? 1 : 0);
+  const [flowMotion] = useState(() => createChatFlowMotion?.(() => {}, active => {
+    if (scroll.current) scroll.current.style.overflowAnchor = active ? 'none' : '';
+  }));
+  useEffect(() => () => flowMotion?.clear(), [flowMotion]);
   const scrollPosition = useRef(0);
   const scrollRestoreFrame = useRef(null);
   const scrollFollowFrame = useRef(null), scrollResizeObserver = useRef(null);
@@ -291,12 +299,13 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
           onFork={forkTurn} forkDisabled={!connected || busy || turnForkAnchor(state.conversation, key) === null}/>)}
         {state.inbox?.['next-step']?.map(item => <UserMessage key={item.id} attachments={<RemoteFiles content={item.content} openAttachment={openAttachment}/>}>{contentText(item.content)}<small className="muted">{t("等待引导…")}</small></UserMessage>)}
         {state.session?.pendingSubmissions.filter(item => item.placement !== 'queued').map(item => <UserMessage key={item.requestId} attachments={<RemoteFiles pending={item.attachments} openAttachment={openAttachment}/>}>{item.text}<small className="muted">{t("正在发送…")}</small></UserMessage>)}
+        <RemoteRunningStatus/>
       </div>
     </section>
   </>;
-  return <>{!embedded && <RemoteSettingsOnboarding model={model} openSection={id => {
+  return <RemoteFlowMotion.Provider value={flowMotion}>{!embedded && <RemoteSettingsOnboarding model={model} openSection={id => {
     setSettingsTarget(before => ({ id, revision: before.revision + 1 })); setSheet('settings');
-  }}/>}<RemoteImages key={selected ?? 'home'} model={model} sessionId={selected}><main className={`app remote-app${embedded ? ' remote-embedded-app' : ''}`} data-testid={embedded ? 'remote-sidebar-conversation' : 'remote-workspace'}>
+  }}/>}<RemoteImages key={selected ?? 'home'} model={model} sessionId={selected}><main ref={scene} data-chat-motion="" className={`app remote-app${embedded ? ' remote-embedded-app' : ''}`} data-testid={embedded ? 'remote-sidebar-conversation' : 'remote-workspace'}>
     {selected && !embedded && <RemotePluginPanels/>}
     {!selected ? <>
       {header}
@@ -338,13 +347,13 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         disabled={!connected || busy || !childAccess.canSend || attachmentsPending || !state.session || state.session.openState !== 'open'} onAttach={() => setSheet('attachments')} keepExpanded={!!sheet}
         toolbar={focused => <Button className="model" aria-label={t(modelReadOnly ? '查看模型，当前 {model}' : '选择模型，当前 {model}', { model: modelName })} tabIndex={focused ? 0 : -1} aria-hidden={!focused} onClick={() => { setSheet('models'); void model.modelCatalog.load().catch(() => {}); }}><span>{modelName}</span><IconChevronDownOutline14/></Button>}/>}</RemoteComposerExtension>}
     </RemoteMainConversationFrame>}
-    {sheet === 'pluginManager' && <RemoteComputerPlugins model={model} onClose={() => setSheet('plugins')}/>}
-    {sheet === 'settings' && <PanelSurface open title={t('电脑设置')} model={model} role="dialog" priority={80}
+    <SurfacePresence>{sheet === 'pluginManager' && <RemoteComputerPlugins model={model} onClose={() => setSheet('plugins')}/>}</SurfacePresence>
+    <SurfacePresence>{sheet === 'settings' && <PanelSurface open title={t('电脑设置')} model={model} role="dialog" priority={80}
       backKey="pluginSettingsBack" className="remote-settings-panel" onClose={() => setSheet(null)}>
       <header><h2>{t('电脑设置')}</h2><IconButton label={t('关闭窗口')} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
       <div className="remote-settings-body"><RemoteSettings model={model} navigation={settingsTarget} onClose={() => setSheet(null)}/></div>
-    </PanelSurface>}
-    {sheet && sheet !== 'pluginManager' && sheet !== 'settings' && <Surface title={t(sheet === 'pending' ? '待处理' : sheetTitle)} onClose={() => setSheet(null)}>
+    </PanelSurface>}</SurfacePresence>
+    <SurfacePresence>{sheet && sheet !== 'pluginManager' && sheet !== 'settings' && <Surface title={t(sheet === 'pending' ? '待处理' : sheetTitle)} onClose={() => setSheet(null)}>
       <header><h2>{t(sheet === 'pending' ? '待处理' : sheet === 'settings' ? '电脑设置' : sheetTitle)}</h2><IconButton label={t("关闭窗口")} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
       {sheet === 'pending' && <>
         {!model.transport.capabilities?.taskPendingNotifications ? <p role="status">{t("当前电脑不支持汇总待处理事项，请在对应聊天中处理请求。")}</p>
@@ -408,16 +417,16 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         <Button className="option" onClick={() => void act(() => model.sessions.refresh())}>{t("刷新会话")}</Button></>}
       {sheet === 'rename' && <><input className="sheet-editor" aria-label={t("聊天名称")} value={title} onChange={event => setTitle(event.target.value)}/><Button variant="primary" disabled={busy || !title.trim()} onClick={() => void act(async () => { await model.rename(title); setSheet(null); })}>{t("保存名称")}</Button></>}
       {sheet === 'attachments' && <><Button className="option" onClick={() => pick(imagePicker)}>{t("从相册选择")}</Button>{!childAccess.address && <Button className="option" onClick={() => pick(filePicker)}>{t("选择文件")}</Button>}{!childAccess.address && Object.values(referenceSources(model)).some(Boolean) && <Button className="option" onClick={() => setSheet('references')}>{t('引用文件或聊天')}</Button>}{model.skills.available && <Button className="option" onClick={() => setSheet('skills')}>{t("选择技能")}</Button>}</>}
-    </Surface>}
-    {file && (file.seq !== undefined ? <RemoteChangesPreview file={file} model={model} onClose={() => setFile(null)} onCurrent={(path, index) => setFile({ sessionId: file.sessionId, path, desktopSource: { source: 'changes', seq: file.seq, index } })}/>
-      : <RemoteFilePreview file={file} model={model} onClose={() => setFile(null)}/>)}
+    </Surface>}</SurfacePresence>
+    <SurfacePresence key={`file:${selected}`}>{file && (file.seq !== undefined ? <RemoteChangesPreview file={file} model={model} onClose={() => setFile(null)} onCurrent={(path, index) => setFile({ sessionId: file.sessionId, path, desktopSource: { source: 'changes', seq: file.seq, index } })}/>
+      : <RemoteFilePreview file={file} model={model} onClose={() => setFile(null)}/>)}</SurfacePresence>
     {childAccess.address?.mode === 'one-shot' && <RemoteInputExtensions key={selected}/>}
-    {command && command.sessionId === selected && (commandDetails(commandAt(state, command))
+    <SurfacePresence key={`command:${selected}`}>{command && command.sessionId === selected && (commandDetails(commandAt(state, command))
       ? <RemoteCommand model={model} target={command} tool={commandAt(state, command)} sessionCwd={state.workspaces?.items.find(item => item.sessionIds.includes(selected))?.path} onClose={() => setCommand(null)}/>
       : <RemoteToolDetail tool={commandAt(state, command)} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment} openChanges={openChanges}
-        openCommand={callId => openCommand(command.nodeId, callId)} onClose={() => setCommand(null)}/>)}
-    {jobOutput && jobOutput.sessionId === selected && (jobOutput.independent
+        openCommand={callId => openCommand(command.nodeId, callId)} onClose={() => setCommand(null)}/>)}</SurfacePresence>
+    <SurfacePresence key={`job:${selected}`}>{jobOutput && jobOutput.sessionId === selected && (jobOutput.independent
       ? <RemoteLiveJobOutput key={`${jobOutput.sessionId}:${jobOutput.id}:${jobOutput.startedAt}`} model={model} target={jobOutput} onClose={() => { setJobOutput(null); setSheet('jobs'); }}/>
-      : <RemoteJobOutput key={`${jobOutput.sessionId}:${jobOutput.id}:${jobOutput.startedAt}`} model={model} target={jobOutput} onClose={() => { setJobOutput(null); setSheet('jobs'); }}/>) }
-  </main></RemoteImages></>;
+      : <RemoteJobOutput key={`${jobOutput.sessionId}:${jobOutput.id}:${jobOutput.startedAt}`} model={model} target={jobOutput} onClose={() => { setJobOutput(null); setSheet('jobs'); }}/>) }</SurfacePresence>
+  </main></RemoteImages></RemoteFlowMotion.Provider>;
 }

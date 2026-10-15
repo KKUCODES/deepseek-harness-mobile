@@ -7,6 +7,8 @@ import { workflowPluginId } from '../remote-workflows.mjs';
 import { RemotePluginOperationHistory } from './RemotePluginOperations.jsx';
 import { RemoteConnectionNotice } from './RemoteConnectionNotice.jsx';
 import { retainRemoteSurface } from '../remote-surface-inert.mjs';
+import { useSurfaceMotion } from './motion.jsx';
+import { NativePanelFrame } from './NativePanelFrame.jsx';
 
 const labels = { active: '运行中', waiting: '暂不可用', failed: '加载失败', mobile: '由手机提供' };
 const statusHelp = {
@@ -19,11 +21,14 @@ export function RemoteComputerPlugins({ model, onClose }) {
   const t = useTranslate();
   const state = useSyncExternalStore(model.subscribeView, model.getSnapshot);
   const panel = useRef(null);
+  const { mounted, present } = useSurfaceMotion(panel, true, 'panel');
   useEffect(() => {
+    if (!present) return;
     return retainRemoteSurface(panel.current, 90);
-  }, []);
+  }, [present]);
   const capabilities = model.transport.capabilities;
   const fallback = <p role="status">{t('电脑插件管理界面尚未就绪，请检查插件连接。')}</p>;
+  if (!mounted) return null;
   return createPortal(<section ref={panel} tabIndex={-1} className="remote-plugin-manager" role="region" aria-label={t('管理电脑插件')}>
     <header><h2>{t('管理电脑插件')}</h2><Button onClick={onClose}>{t('返回')}</Button></header>
     <div className="remote-plugin-manager-body">
@@ -45,7 +50,7 @@ export function RemotePluginSettings({ model }) {
     {endpointNotice && <p role="status">{t(endpointNotice)}</p>}
   </>;
   if (!model.transport.capabilities?.management) return <p role="status">{t('请在电脑 DSH Mobile 插件中，为此设备授予管理权限。')}</p>;
-  return <RemotePluginSettingsExtension/>;
+  return <NativePanelFrame view="settings-content" flow><RemotePluginSettingsExtension/></NativePanelFrame>;
 }
 
 export function RemotePluginList({ plugins, layout }) {

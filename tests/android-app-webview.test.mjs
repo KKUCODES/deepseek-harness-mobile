@@ -41,10 +41,12 @@ test('新增并发测试包仍按自己的 PID 选择，拒绝任意其他包名
   await assert.rejects(androidAppWebView(device, 'dev.dshmobile.validation.other'), /match/);
 });
 
-test('纯官方独立测试包只选择自己的进程，不连接原凭据 App', async () => {
+test('纯官方与排版独立测试包只选择自己的进程，不连接原凭据 App', async () => {
   const own = { pid: () => 120 }, original = { pid: () => 1200 };
-  const device = { shell: async command => {
-    assert.equal(command, 'pidof dev.dshmobile.validation.officialtest'); return Buffer.from('120');
-  }, webViews: () => [original, own] };
-  assert.equal(await androidAppWebView(device, 'dev.dshmobile.validation.officialtest'), own);
+  for (const name of ['officialtest', 'toolstyletest']) {
+    const device = { shell: async command => {
+      assert.equal(command, `pidof dev.dshmobile.validation.${name}`); return Buffer.from('120');
+    }, webViews: () => [original, own] };
+    assert.equal(await androidAppWebView(device, `dev.dshmobile.validation.${name}`), own);
+  }
 });

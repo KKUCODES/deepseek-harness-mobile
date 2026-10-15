@@ -19,7 +19,7 @@ export async function checkTurnProcess(page) {
     const answer = [...document.querySelectorAll('[data-chat-flow-kind="assistant-step"]')].find(item => item.textContent.includes('Answer two 1'));
     return answer.getBoundingClientRect().top - control.getBoundingClientRect().bottom;
   });
-  assert.ok(gap >= 23 && gap <= 25, `折叠内容不留下额外空白: ${gap}`);
+  assert.ok(gap >= 15 && gap <= 17, `折叠内容采用 DSH 的 16px 间距: ${gap}`);
   await toggle.click();
   await page.waitForFunction(() => !document.querySelector('[data-turn-process-member]')?.hasAttribute('hidden'));
   assert.equal(await toggle.getAttribute('aria-expanded'), 'true');

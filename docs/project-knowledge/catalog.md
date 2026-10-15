@@ -1,5 +1,17 @@
 # 手机端知识总目录
 
+Remote 回复操作：[分支图标、反馈同行、触摸区域与真实显示验证](../integration/remote-reply-actions-current.md)。
+
+Remote 等待反馈：[独立思考提示、原开轮计时、旧WebView颜色及真实同一轮验证](../integration/remote-running-status-current.md)。
+
+Remote 内置面板全面检查：[统一尺寸、字号、表单高度及各入口验收矩阵](../integration/builtin-panel-layout-current.md)。
+
+Remote 文件预览与列表：[统一面板尺寸、正文字号、路径收纳、局部滚动与第三方渲染器边界](../integration/file-preview-layout-current.md)。
+
+Remote 工具记录：[官方工具的手机字号、间距与第三方自适应边界](../integration/tool-record-layout-current.md)。
+
+Remote 动效：[页面进退、共享窗口与执行过程](../integration/motion-current.md)，记录时钟、模态交接、读取/恢复登记的关闭边界与真实验证范围。
+
 [市场基线双版本兼容](../integration/market-baseline.md)：alpha.2 SDK 接受已核验的 rc.2 宿主，聊天与原生通知同时调整；同一独立 MuMu APK 的两版核心路径通过，公开旧 APK 的范围保持。
 
 自动构建与下载：[GitHub Actions、固定 SDK、独立签名与公开 APK](../releases.md)。用户已授权将签名凭据保存到指定仓库 Secrets；PR 仍只生成无签名包，签名与发布使用受信任入口。原本地与历史候选入口保持，CI 构建不代替手机功能兼容验收。

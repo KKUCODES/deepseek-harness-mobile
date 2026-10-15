@@ -193,13 +193,6 @@ jobs:
             echo 'This version already exists. Increase ci/release.json version and versionCode.' >&2
             exit 1
           fi
-          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          DSHM Android development preview / Android 开发预览版
-
-          - Download the .apk asset to install; Android 9 or newer.
-          - 下载 APK 即可安装，最低 Android 9；普通聊天使用你自己的 DeepSeek Key。
-          - Remote supports official DSH 0.2.0-rc.2 and 0.2.1-alpha.2 with the DSHM plugin and a relay. Keep the computer running.
-          - Uses the existing preview app identity and certificate for compatible updates; no DSH core patches.
-          - SHA-256, certificate report and compatibility metadata are included. This is not an app-store release or full physical-device/public-network certification.
-          NOTES
+          gh api "repos/$GH_REPO/contents/ci/release-notes/$APP_VERSION.md?ref=$GITHUB_SHA" --header 'Accept: application/vnd.github.raw+json' > "$RUNNER_TEMP/release-notes.md"
+          test -s "$RUNNER_TEMP/release-notes.md"
           gh release create "$tag" "signed/DSHM-$APP_VERSION.apk" signed/SHA256SUMS.txt signed/compatibility.json signed/signature.txt --target "$GITHUB_SHA" --prerelease --title "DSHM $APP_VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"

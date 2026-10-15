@@ -1,10 +1,12 @@
-import React, { useCallback, useSyncExternalStore } from 'react';
+import React, { useCallback, useRef, useSyncExternalStore } from 'react';
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots';
 import { LayoutController } from '@upstream/ui-layout/src/client/service.ts';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { PanelSurface } from './remote-plugin-panels.jsx';
 import { useTranslate } from './ui/locale.jsx';
+import { useSceneMotion } from './ui/motion.jsx';
+import { mainPanelFillsViewport } from './remote-panel-layout.mjs';
 
 /** 保留原导航契约，几何报告留在手机环境，不安装桌面 AppFrame。 */
 export function installRemoteGlobalPanels(model) {
@@ -44,10 +46,13 @@ export function RemoteGlobalPanels({ model, renderSlot, SessionProvider }) {
   const selected = panelInfo.activePanelId;
   const close = useCallback(() => controller.selectPanel(null), [controller]);
   const open = sidebarOpen || selected !== null;
+  const content = useRef(null);
+  useSceneMotion(content, sidebarOpen ? 'menu' : selected, sidebarOpen ? 0 : 1);
   const title = sidebarOpen ? t('插件页面') : panels.find(panel => panel.id === selected)?.label ?? t('插件页面');
+  const fill = !sidebarOpen && mainPanelFillsViewport(selected);
   return <PanelSurface open={open} title={title} onClose={close} model={model} backKey="pluginGlobalBack" global>
     <header><h2>{title}</h2><Button onClick={close}>{t('返回聊天')}</Button></header>
-    <div className="remote-plugin-panel-content">
+    <div ref={content} className={`remote-plugin-panel-content${fill ? ' is-document' : ''}`}>
       {sidebarOpen && <nav aria-label={t('插件页面')}>
         {panels.length === 0 && <p role="status">{t('暂无可用的插件页面')}</p>}
         {panels.map(panel => <Button key={panel.id} aria-label={panel.label} aria-pressed={selected === panel.id} onClick={() => controller.selectPanel(panel.id)}>
@@ -55,7 +60,7 @@ export function RemoteGlobalPanels({ model, renderSlot, SessionProvider }) {
         </Button>)}
       </nav>}
       {/* 全局页面保留电脑原 root 作用域，不能误领用当前聊天的 Session。 */}
-      {selected !== null && <div hidden={sidebarOpen}>
+      {selected !== null && <div className={mainPanelFillsViewport(selected) ? 'remote-document-tab' : undefined} hidden={sidebarOpen}>
         <SessionProvider session={undefined} empty={() => renderSlot('main', {}, { entryKey: selected })}/>
       </div>}
     </div>

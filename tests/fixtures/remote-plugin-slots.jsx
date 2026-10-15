@@ -16,6 +16,8 @@ import { captureRemoteResume } from '../../src/remote-resume.mjs';
 import { draftBinding } from './remote-draft-storage.mjs';
 import { chatNode } from '../../../deepseek-harness/packages/client/ui-chat/src/client/conversation-nodes/common.ts';
 import { RemoteFilePreview } from '../../src/ui/RemoteFilePreview.jsx';
+import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path';
+import { resolveDocumentAddress } from '../../src/remote-document-address.mjs';
 import { RemoteChangesPreview } from '../../src/ui/RemoteDiff.jsx';
 import { RemoteToolResult } from '../../src/ui/RemoteMessage.jsx';
 import { LocaleProvider } from '../../src/ui/locale.jsx';
@@ -25,6 +27,7 @@ import * as originalPlan from '../../../deepseek-harness/packages/client/ui-plan
 import * as originalTools from '../../../deepseek-harness/packages/client/ui-tool/src/client/index.ts';
 import { OrdinaryMarkdown } from '../../src/ordinary-rendering.jsx';
 import * as originalResources from '../../../deepseek-harness/packages/client/resources/src/client/index.ts';
+import * as originalFiles from '../../../deepseek-harness/packages/client/ui-sidebar-files/src/client/index.ts';
 import { Modal } from '../../../deepseek-harness/packages/client/ui-primitives/src/Modal.tsx';
 import { Menu } from '../../../deepseek-harness/packages/client/ui-primitives/src/Menu.tsx';
 import { checkRemoteInput, checkViewInputs } from './remote-input-checks.mjs';
@@ -35,11 +38,15 @@ import { factoryChecks } from './remote-factory-checks.jsx';
 import { desktopAppsReplay } from './desktop-apps-replay.mjs';
 import { enableCordisPanel } from './remote-cordis-panel.jsx';
 import { enableCordisCards } from './remote-cordis-cards.jsx';
+import { mountMotionProbe } from './motion-probe.jsx';
+window.mountMotionProbe = mountMotionProbe;
 import { renderFailureProbe } from './remote-render-failure.jsx';
 
 // 独立测试协议回放，不进入 APK；消息仍经过原 ClientSessions/UiConversation。
 const channels = new Map();
 const documentMode = new URL(location.href).searchParams.has('documents');
+const fileListMode = new URL(location.href).searchParams.has('files');
+const fileListRoot = 'Q:/Tanxian/LToys/dsh-mobile/plugin/artifacts/official-dsh-alpha2/home/official-remote-test-project/2ea87817';
 const documentReads = [];
 const reviewCalls = [];
 const deliveryOpens = [];
@@ -49,6 +56,7 @@ let reviewFailure = true;
 let deliverySummaryFailure = false;
 const eventResults = [];
 const sidebarPrompts = [];
+const forkActionRequests = [];
 const readingContexts = [];
 const feedbackItems = new Map(), feedbackWrites = [], feedbackReads = [];
 const feedbackWatchers = new Map();
@@ -94,11 +102,16 @@ let historyReply, historyTesting = false;
 let listRefreshGate, releaseListRefresh;
 let createProbe;
 let lineageTesting = false;
+let fileLayoutText;
 const historyRequests = [];
 const transport = {
-  capabilities: { feedbackNotifications: true, jobControlGeneration: 'fixture-generation', endpoints: { calls: ['skills/list', 'commands/list', 'permissionPresets/catalog', 'commands/execute', 'agentPresets/list', 'agentPresets/select', ...['get', 'create', 'edit', 'pause', 'resume', 'complete', 'clear'].map(name => `goals/${name}`)] } },
+  capabilities: { ...(location.search.includes('builtin') ? { dshVersion: DSHM_MOBILE_SDK_VERSION } : {}), feedbackNotifications: true, jobControlGeneration: 'fixture-generation', endpoints: { calls: ['skills/list', 'commands/list', 'permissionPresets/catalog', 'commands/execute', 'agentPresets/list', 'agentPresets/select', ...['get', 'create', 'edit', 'pause', 'resume', 'complete', 'clear'].map(name => `goals/${name}`)] } },
   async negotiate() { this.capabilities.planModeControl = true; this.capabilities.endpoints.calls.push('subagents/list', 'subagents/prompt', 'subagents/interruptByParent'); }, dispose() {},
   async call(_channel, endpoint, payload) {
+    if (endpoint === 'session/fork') {
+      forkActionRequests.push(payload.args.request);
+      return { ok: false, error: { code: 'fixture/fork', message: '隔离分支请求已记录' } };
+    }
     if (endpoint === 'fileReferences/list') return { ok: true, value: [{ path: 'menu file.txt', kind: 'file' }] };
     if (endpoint === 'sessionReferenceResolver/candidates') return { ok: true, value: [{ sessionId: 'two', displayTitle: '菜单聊天', mention: '@dsh-session:two' }] };
     if (endpoint === 'session/create' && createProbe) {
@@ -113,8 +126,11 @@ const transport = {
     if (documentMode && endpoint === 'workspaceFiles/read') {
       documentReads.push(payload.args.path);
       return { ok: true, value: { absolutePath: payload.args.path, version: 'current-v3', bytes: 20,
-        text: `CURRENT ${payload.args.path}`, offset: 1, lines: 1, eof: true } };
+        text: fileLayoutText ?? `CURRENT ${payload.args.path}`, offset: 1, lines: fileLayoutText?.split('\n').length ?? 1, eof: true } };
     }
+    if (fileListMode && endpoint === 'workspaceFiles/list') return { ok: true, value: { path: '.', absolutePath: payload.args.path,
+      entries: payload.args.path.endsWith('/folder') ? [{ name: 'nested.txt', type: 'file' }]
+        : [{ name: 'folder', type: 'directory' }, ...Array.from({ length: 90 }, (_, index) => ({ name: `approval-${String(index).padStart(3, '0')}.txt`, type: 'file' }))], truncated: false } };
     if (endpoint === 'session/page' && historyTesting && payload.args.request.address.sessionId === 'one') {
       historyRequests.push(payload.args.request);
       return new Promise(resolve => { historyReply = resolve; });
@@ -174,7 +190,7 @@ const transport = {
     ] : lineageTesting && payload.args.parentSessionId === 'child-chat' ? [
       { kind: 'child', id: 'grandchild', mode: 'one-shot', label: '孙会话', activity: 'inactive', hasChildren: false },
     ] : [] } };
-    if (endpoint === 'session/list') return { ok: true, value: { items: ['one', 'two', 'agent-blank', ...(workspaceDraftTest ? ['draft-from', 'draft-to'] : []), ...(feedbackSyncSession ? ['feedback-sync'] : [])].map(sessionId => ({ sessionId, ...(sessionId.startsWith('draft-') ? { cwd: `/fixture/${sessionId}` } : {}), updatedAt: 10, running: false, blank: sessionId === 'agent-blank' || sessionId.startsWith('draft-'), projections: { asOfSeq: -1, values: { title: sessionId } } })) } };
+    if (endpoint === 'session/list') return { ok: true, value: { items: ['one', 'two', 'agent-blank', ...(workspaceDraftTest ? ['draft-from', 'draft-to'] : []), ...(feedbackSyncSession ? ['feedback-sync'] : [])].map(sessionId => ({ sessionId, ...(sessionId.startsWith('draft-') ? { cwd: `/fixture/${sessionId}` } : fileListMode ? { cwd: fileListRoot } : {}), updatedAt: 10, running: false, blank: sessionId === 'agent-blank' || sessionId.startsWith('draft-'), projections: { kind: 'sequenced', asOfSeq: -1, values: { title: sessionId } } })) } };
     if (endpoint === 'agentPresets/list') return presetFailure ? { ok: false, error: { code: 'fixture/presets', message: '模式暂时不可用' } }
       : { ok: true, value: { modeSelectionEnabled: true, authorable: false, presets: ['standard', 'minimal'].map(id => ({ id, trust: 'system', isDefault: id === 'standard' })) } };
     if (endpoint === 'agentPresets/select') {
@@ -209,6 +225,7 @@ const transport = {
     const frames = []; let wake;
     const key = endpoint === 'session/follow' ? payload.args.request.address.sessionId ?? payload.args.request.address.childSessionId : endpoint;
     channels.set(key, frame => { frames.push(frame); wake?.(); });
+    if (endpoint === 'workspaceFiles/changes') yield { kind: 'ready' };
     if (endpoint === 'workspace/follow') yield { type: 'baseline', value: { items: [], archivedSessionIds: [] } };
     if (endpoint === 'session/control') yield { type: 'baseline', value: { jobs: {}, projections: {} } };
     if (endpoint === '$events') yield { type: 'ready', clientId: 'fixture', host: { home: '/fixture' } };
@@ -369,14 +386,22 @@ if (coldStore) {
   const write = coldStore.write.bind(coldStore);
   coldStore.write = (...args) => { coldWrites.push({ id: args[0], text: args[1] }); return write(...args); };
 }
-const model = new RemoteModel(client, { transport, loadRemotes: loadTestRemotes, draftStore: coldStore });
+// 正式页面会提供本地存储；地址写入的核对日志也依赖它。普通回放每次重置自己的
+// 隔离数据库，冷启动专项仍保留原绑定，不能绕过生产写入前的持久化保护。
+const viewStore = coldStore ?? await RemoteDraftStore.open({ ...draftBinding, deviceId: 'ui-replay' }, indexedDB, null);
+if (!coldDraft) await viewStore.clear();
+const model = new RemoteModel(client, { transport, loadRemotes: loadTestRemotes, draftStore: viewStore });
+export { model };
 await model.start();
 if (documentMode) {
   transport.capabilities.endpoints.calls.push('workspaceFiles/read');
   transport.capabilities.channels = ['changes'];
   transport.capabilities.desktopOpen = true;
   transport.capabilities.desktopReveal = true;
-  await model.ctx.remote.$mount(workspaceFilesRemote);
+  // 新版目录观察与 list 一样接收 scope/path；旧生成夹具缺少 changes 的 path 参数。
+  const filesRemote = fileListMode ? { ...workspaceFilesRemote, descriptors: workspaceFilesRemote.descriptors.map(item => item.method === 'changes'
+    ? { ...item, parameters: workspaceFilesRemote.descriptors.find(entry => entry.method === 'list').parameters } : item) } : workspaceFilesRemote;
+  await model.ctx.remote.$mount(filesRemote);
 }
 model.pluginSlots = installRemotePluginSlots(model);
 await model.pluginSlots.ready;
@@ -385,6 +410,7 @@ let plugin;
 let nodePlugin;
 let builtinNodePlugin;
 let toolsPlugin;
+let wideToolPlugin;
 let toolFixtureCursor = 0;
 let lineFileText = Array.from({ length: 100 }, (_, index) => `source line ${index + 1}`).join('\r\n');
 async function enableBuiltinNode() {
@@ -708,7 +734,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     }
     root.render(<RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={() => {}} onConnection={() => {}}/><Request key={id}/></RemotePluginScope>);
   },
-  attachmentRenderers: async () => {
+  attachmentRenderers: async (wide = false) => {
     const plugin = model.ctx.plugin({ name: '@fixture/attachment-renderer', inject: ['slots', 'documentPreviews', 'dshmDocuments'], apply(ctx) {
       for (const mode of ['text-pages', 'bytes-complete', 'renderer']) {
         const id = `@fixture/attachment-${mode}`;
@@ -724,7 +750,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
             });
             return () => controller.abort();
           }, [content.kind, content.revision, resourceAddress, tab.signal]);
-          return <output data-testid="attachment-renderer">{JSON.stringify({ kind: content.kind, address: resourceAddress, tab: tab.contentId,
+          return <output data-testid="attachment-renderer" style={wide ? { display: 'block', width: 720 } : undefined}>{JSON.stringify({ kind: content.kind, address: resourceAddress, tab: tab.contentId,
             source: meta.value?.source, text: content.kind === 'bytes' ? new TextDecoder().decode(content.data) : content.text ?? read })}</output>;
         }));
       }
@@ -764,6 +790,35 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
           : <RemoteFilePreview file={file} model={model} onClose={() => setFile(null)}/>)}</>;
     }
     root.render(<RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={() => {}} onConnection={() => {}}/><ToolPreview/></RemotePluginScope>);
+  },
+  fileLayout: async (path, text) => {
+    if (!model.ctx.get('resources')) await model.ctx.plugin({ ...originalResources, name: 'fixture-file-layout-resources' }).await();
+    if (!window.fixture.fileLayoutResources) {
+      await model.ctx.plugin({ name: '@fixture/file-layout', inject: ['resources'], apply(ctx) {
+        ctx.effect(() => ctx.resources.register({ protocol: 'file', async *open(address) {
+          yield { ok: true, value: { absolutePath: resolveDocumentAddress(address).path, version: 'current-v3', bytes: 1000 } };
+        } }));
+      } }).await();
+      window.fixture.fileLayoutResources = true;
+    }
+    fileLayoutText = text;
+    model.pluginPanels.openResource(sessionFileAddress('two', path));
+  },
+  fileLayoutFit: value => model.pluginSlots.layout.setUser('@fixture/attachment-renderer', value),
+  fileList: async () => {
+    await window.fixture.fileLayout('warmup.txt', 'DSHM_FILE_LIST_CONTENT');
+    await model.ctx.plugin({ ...originalFiles, name: '@deepseek-ai/dsh-client-ui-sidebar-files' }).await();
+    model.pluginPanels.openTab('files');
+  },
+  fileListReopen: () => model.pluginPanels.openTab('files'),
+  fileListReplacement: async () => {
+    const replacement = model.ctx.plugin({ name: '@fixture/files-replacement', inject: ['slots'], apply(ctx) {
+      ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register({ name: 'sidebar.right.pane.tab', key: '@deepseek-ai/dsh-client-ui-sidebar-files', priority: -100 }, () =>
+        <button data-testid="files-replacement" style={{ width: 720, height: 80 }} onClick={event => { event.currentTarget.dataset.clicked = 'yes'; }}>第三方文件面板</button>));
+    } });
+    await replacement.await();
+    window.fixture.fileListReplacementFit = value => model.pluginSlots.layout.setUser('@fixture/files-replacement', value);
+    window.fixture.fileListReplacementOff = () => replacement.dispose();
   },
   ...conversationChecks(model, transport),
   holdSelection: () => {
@@ -914,6 +969,22 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
       emit(offset + 2, 'step/end', { turn, step });
     }
   },
+  waitingTurn: (id, phase, time) => {
+    const emit = (seq, type, data, extra = {}) => channels.get(id)({ type: 'event', event: { seq, time, type, data, ...extra } });
+    if (phase === 'start') {
+      emit(0, 'turn/start', { turn: 1 }); emit(1, 'step/start', { turn: 1, step: 1 });
+      window.fixture.status(id, true);
+    } else if (phase === 'text') emit(2, 'assistant/message', { turn: 1, step: 1, stream: [], message: {
+      id: `waiting-${id}`, role: 'assistant', content: [{ type: 'text', text: '首段真实投影回放' }],
+      source: { kind: 'model', provider: 'fixture', model: 'fixture' },
+    } }, { surfaceOp: 'append' });
+    else {
+      const reason = phase === 'error' ? { kind: 'error', error: { message: '隔离状态回放失败', code: 'UNKNOWN' } }
+        : phase === 'stop' ? { kind: 'aborted', reason: { kind: 'legacy' } } : { kind: 'completed' };
+      emit(3, 'step/end', { turn: 1, step: 1 }); emit(4, 'turn/end', { turn: 1, reason });
+      window.fixture.status(id, false);
+    }
+  },
   enableBuiltinNode, disableBuiltinNode: () => builtinNodePlugin.dispose(),
   shortenLineFile: () => { lineFileText = 'shortened file'; },
   emptyLineFile: () => { lineFileText = ''; },
@@ -971,6 +1042,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     await model.sessions.refresh();
   },
   enableFeedback: async () => { feedbackPlugin = model.ctx.plugin({ ...originalFeedback, name: '@deepseek-ai/dsh-client-ui-message-feedback' }); await feedbackPlugin.await(); },
+  forkActionRequests: () => forkActionRequests,
   disableFeedback: () => feedbackPlugin.dispose(),
   feedbackWrites: () => feedbackWrites,
   feedbackReads: id => feedbackReads.filter(sessionId => sessionId === id).length,
@@ -1059,6 +1131,28 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     toolFixtureCursor = start + 8;
   },
   enableOriginalTools: async () => { toolsPlugin = model.ctx.plugin({ ...originalTools, name: '@deepseek-ai/dsh-client-ui-tool' }); await toolsPlugin.await(); },
+  toolLayoutCases: (target = model.snapshot.selected) => {
+    const start = target === model.snapshot.selected ? (model.snapshot.session?.cursor ?? -1) + 1 : 0;
+    let offset = 0;
+    const emit = (type, data) => channels.get(target)({ type: 'event', event: { seq: start + offset++, time: 1000 + offset * 500, type, data,
+      ...(type === 'tool/result' || type === 'assistant/message' ? { surfaceOp: 'append' } : {}) } });
+    emit('turn/start', { turn: 1 }); emit('step/start', { turn: 1, step: 1 });
+    for (const [callId, name, text, isError] of [
+      ['layout-read', 'read', 'File contents', false],
+      ['layout-short', 'write', 'Error: [sandbox: file access denied under read-only mode]', true],
+      ['layout-long', 'write', 'Error: the user rejected escalating this operation to "workspace-write"; it stays denied, so stop and explain instead of working around it', true],
+    ]) {
+      emit('tool/call', { turn: 1, step: 1, callId, name, arguments: JSON.stringify({ file_path: 'approval-reject.txt', content: 'layout check' }) });
+      emit('tool/result', { turn: 1, step: 1, message: { id: callId + '-result', role: 'tool', source: { kind: 'tool', callId },
+        ...(typeof DSHM_MOBILE_SDK_VERSION === 'string' && DSHM_MOBILE_SDK_VERSION === '0.2.1-alpha.2'
+          ? { isError, content: [{ type: 'text', text }] }
+          : { content: [{ type: 'tool-result', isError, content: [{ type: 'text', text }] }] }) } });
+    }
+    emit('step/end', { turn: 1, step: 1 }); emit('step/start', { turn: 1, step: 2 });
+    emit('assistant/message', { turn: 1, step: 2, stream: [], message: { id: 'layout-answer', role: 'assistant',
+      source: { kind: 'model', provider: 'fixture', model: 'fixture' }, content: [{ type: 'text', text: '文件没有被修改。请确认所需权限后再继续。' }] } });
+    emit('step/end', { turn: 1, step: 2 }); emit('turn/end', { turn: 1, reason: { kind: 'completed' } });
+  },
   disableOriginalTools: () => toolsPlugin.dispose(),
   workspaceErrors: ({ error, draftError, attachmentError }) => model.publish({ error,
     draftErrors: { [model.snapshot.selected]: draftError }, attachmentDraftErrors: { [model.snapshot.selected]: attachmentError } }),
@@ -1066,6 +1160,21 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     model.pluginSlots.locale.setLocale(id);
     root.render(<LocaleProvider locale={id}><RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={() => {}} onConnection={() => {}}/></RemotePluginScope></LocaleProvider>);
   },
+  toolLayoutEmbedded: () => {
+    model.conversationFocus.set(model);
+    root.render(<div style={{ height: '100dvh' }}><LocaleProvider locale="zh"><RemotePluginScope model={model}>
+      <RemoteWorkspace model={model} embedded onBack={() => {}} onConnection={() => {}}/>
+    </RemotePluginScope></LocaleProvider></div>);
+  },
+  toolLayoutWide: async () => {
+    wideToolPlugin = model.ctx.plugin({ name: '@fixture/wide-tool', inject: ['slots'], apply(ctx) {
+      ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key: 'write', priority: -10 }, () =>
+        <button data-testid="wide-tool" style={{ width: 720, height: 80 }} onClick={event => { event.currentTarget.dataset.clicked = 'yes'; }}>第三方工具界面</button>));
+    } });
+    await wideToolPlugin.await();
+  },
+  toolLayoutFit: value => model.pluginSlots.layout.setUser('@fixture/wide-tool', value),
+  toolLayoutWideOff: () => wideToolPlugin.dispose(),
   cancellationCases: () => {
     const id = model.snapshot.selected, start = Math.max(toolFixtureCursor, (model.snapshot.session?.cursor ?? -1) + 1);
     let offset = 0;

@@ -19,6 +19,7 @@ import { RemoteDesktopOpen } from './RemoteDesktopOpen.jsx';
 import { canOpenDesktopFile } from '../remote-desktop.mjs';
 import { fileLine } from '../remote-file-position.mjs';
 import { RemoteFileSource } from './RemoteFileSource.jsx';
+import { useSurfacePresent } from './motion.jsx';
 
 import { useLocale, useTranslate } from './locale.jsx';
 
@@ -59,6 +60,7 @@ function LegacyFilePreview({ file, model, onClose }) {
 
 function RemoteFileContent({ file, model, onClose, selector }) {
   const t = useTranslate(), locale = useLocale();
+  const present = useSurfacePresent();
   const imageTranslate = useMemo(() => {
     const labels = locale?.startsWith('en') ? imageEn : imageZh;
     return (key, values = {}) => labels[key].replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
@@ -75,6 +77,7 @@ function RemoteFileContent({ file, model, onClose, selector }) {
   const html = /\.html?$/i.test(file.path) && sourceLine === undefined;
   const office = /\.(docx?|xlsx?|pptx?)$/i.test(file.path);
   useEffect(() => {
+    if (!present) return;
     const controller = new AbortController();
     setResult(null); setError('');
     if (file.diffs && !latest) return () => controller.abort();
@@ -86,7 +89,7 @@ function RemoteFileContent({ file, model, onClose, selector }) {
       if (!signal.aborted) setResult(value);
     }).catch(reason => { if (!signal.aborted) setError(office ? officeError(reason) : fileError(reason)); });
     return () => controller.abort();
-  }, [file, model, files, revision, image, pdf, html, office, latest]);
+  }, [file, model, files, revision, image, pdf, html, office, latest, present]);
   const markdown = /\.(md|markdown)$/i.test(file.path);
   return <Surface title={t('文件预览')} onClose={onClose} className={`remote-file-preview${full ? ' is-fullscreen' : ''}`}>
     <header><h2 title={file.path}>{file.path.split(/[\\/]/).at(-1)}</h2><div className="remote-file-header-actions"><IconButton label={t(full ? '缩小窗口' : '放大窗口')} onClick={() => setFull(value => !value)}><FullscreenIcon expanded={full}/></IconButton><IconButton label={t('关闭文件预览')} onClick={onClose}><IconCloseOutline16/></IconButton></div></header>

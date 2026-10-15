@@ -9,11 +9,13 @@ val latestCordisPeerTest = providers.gradleProperty("latestCordisPeerTest").orNu
 val latestNoticeLifecycleTest = providers.gradleProperty("latestNoticeLifecycleTest").orNull == "true"
 val latestFinalTest = providers.gradleProperty("latestFinalTest").orNull == "true"
 val officialPluginOnlyTest = providers.gradleProperty("officialPluginOnlyTest").orNull == "true"
+val remoteToolLayoutTest = providers.gradleProperty("remoteToolLayoutTest").orNull == "true"
 val officialDshVersion = providers.gradleProperty("officialDshVersion").orNull ?: "0.2.1-alpha.1"
 check(officialDshVersion in listOf("0.2.1-alpha.1", "0.2.1-alpha.2")) { "Unreviewed official DSH version" }
 val officialAlpha2 = officialDshVersion == "0.2.1-alpha.2"
 val ciBuild = providers.gradleProperty("ciBuild").orNull == "true"
 check(!ciBuild || (officialPluginOnlyTest && latestCompatibilityTest && officialAlpha2)) { "CI requires official alpha.2 assets" }
+check(!remoteToolLayoutTest || (officialPluginOnlyTest && officialAlpha2 && !ciBuild)) { "Tool layout validation requires an isolated official alpha.2 debug build" }
 check(!officialAlpha2 || (officialPluginOnlyTest && latestCompatibilityTest)) { "Alpha.2 requires the isolated official candidate" }
 val latestNoticeBaselineAssets = providers.gradleProperty("latestNoticeBaselineAssets").orNull == "true"
 check(!latestOfficeLifetimeTest || latestCompatibilityTest) { "Office lifetime validation requires the latest SDK" }
@@ -25,6 +27,7 @@ check(!latestNoticeBaselineAssets || latestCompatibilityTest) { "Notice baseline
 check(listOf(latestOfficeLifetimeTest, latestCordisPeerTest, latestNoticeLifecycleTest, latestFinalTest, officialPluginOnlyTest).count { it } <= 1) { "Choose only one latest test package" }
 if (ciBuild) layout.buildDirectory.set(file("../../artifacts/ci/android"))
 else if (latestCompatibilityTest) layout.buildDirectory.set(file(when {
+    remoteToolLayoutTest -> "../../artifacts/remote-tool-layout-android-build"
     latestOfficeLifetimeTest -> "../../artifacts/latest-office-android-build"
     latestCordisPeerTest -> "../../artifacts/latest-cordis-peer-android-build"
     latestNoticeLifecycleTest -> "../../artifacts/latest-notice-android-build"
@@ -59,6 +62,7 @@ android {
     // 独立配对验收包使用另一个 UID/存储，不能为了测未绑定入口清除用户数据。
     buildTypes.getByName("debug") {
         if (latestCompatibilityTest) applicationIdSuffix = when {
+            remoteToolLayoutTest -> ".toolstyletest"
             latestOfficeLifetimeTest -> ".latestofficetest"
             latestCordisPeerTest -> ".latestcordispeer"
             latestNoticeLifecycleTest -> ".latestnoticetest"

@@ -4,7 +4,7 @@ import { schedulePluginFrameMeasurement } from '../plugin-frame-measurement.mjs'
 const ParentPlugin = createContext(null);
 
 /** 仅变换最外层；不重写插件内部 CSS，同插件嵌套插槽不重复缩放。 */
-export function MobilePluginFrame({ id, layout, children, floating = false, fill = false, viewportOverlay = false, shellOverlay = false }) {
+export function MobilePluginFrame({ id, layout, children, floating = false, fill = false, viewportOverlay = false, shellOverlay = false, inline = false }) {
   const parent = useContext(ParentPlugin);
   useSyncExternalStore(layout.subscribe, layout.getSnapshot);
   const enabled = layout.effective(id) && parent !== id;
@@ -34,7 +34,8 @@ export function MobilePluginFrame({ id, layout, children, floating = false, fill
   if (parent === id) return children;
   return <ParentPlugin.Provider value={id}>
     {/* 缩放前的宽度仍参与焦点滚动；clip 避免浏览器把已缩放的内容再次横向滚走。 */}
-    <div ref={outer} data-plugin-frame={id} data-auto-fit={enabled} style={{ width: '100%', minWidth: 0,
+    <div ref={outer} data-plugin-frame={id} data-auto-fit={enabled} style={{ width: inline ? 'max-content' : '100%', minWidth: 0,
+      maxWidth: inline ? '100%' : undefined, flex: inline ? 'none' : undefined,
       overflow: floating || shellOverlay ? 'visible' : enabled ? 'clip' : 'auto', height: floating ? 0 : fill ? '100%' : enabled ? size.height : undefined,
       minHeight: fill ? 0 : undefined,
       ...(floating ? { position: 'absolute', top: 0, left: 0, zIndex: 100 } : {}) }}>
