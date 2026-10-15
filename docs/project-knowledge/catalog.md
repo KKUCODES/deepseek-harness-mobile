@@ -1,8 +1,8 @@
 # 手机端知识总目录
 
-启动交接：[普通聊天与 Remote 共用 Logo 封面、首帧淡出与失败重试](../integration/startup-transition-current.md)。两入口已接入，本地修复尚未发布。
+启动交接：[普通聊天与 Remote 共用 Logo 封面、首帧淡出与失败重试](../integration/startup-transition-current.md)。两入口已接入并随 preview.4 公开预发布。
 
-Remote 缓存：[插件资源持久缓存、工作区/聊天差量、实时更新与实际流量](../integration/remote-cache-current.md)。本地候选通过，尚未公开发布；需要配套插件，不要求升级中转或修改 DSH。
+Remote 缓存：[插件资源持久缓存、工作区/聊天差量、实时更新与实际流量](../integration/remote-cache-current.md)。preview.4 与插件 0.1.85 已公开预发布；两端需配套更新，不要求升级中转或修改 DSH。
 
 Remote 回复操作：[分支图标、反馈同行、触摸区域与真实显示验证](../integration/remote-reply-actions-current.md)。
 
@@ -20,7 +20,7 @@ Remote 动效：[页面进退、共享窗口与执行过程](../integration/moti
 
 自动构建与下载：[GitHub Actions、固定 SDK、独立签名与公开 APK](../releases.md)。用户已授权将签名凭据保存到指定仓库 Secrets；PR 仍只生成无签名包，签名与发布使用受信任入口。原本地与历史候选入口保持，CI 构建不代替手机功能兼容验收。
 
-公开下载：`0.1.0-preview.3` 已发布，包含上述界面改进，保留原应用身份、签名及官方 rc.2 / alpha.2 连接范围；[发行页及匿名下载核验](../releases.md#已核验范围)。
+公开下载：`0.1.0-preview.4` 已发布，加入缓存与统一启动修复，保留原应用身份、签名及官方 rc.2 / alpha.2 连接范围；[发行页及匿名下载核验](../releases.md#已核验范围)。
 
 阅读入口：[项目首页](../../README.md) · [English](../../README.en.md) · [使用指南](../usage.md) · [开发指南](../development.md) · [截图来源](../images/README.md)。本总目录负责查找技术依据；日常使用和构建步骤从前述指南进入。
 

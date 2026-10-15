@@ -1,6 +1,6 @@
 # 普通聊天与 Remote 启动 Logo 交接
 
-- 状态：本地修复，尚未发布。
+- 状态：已随 `0.1.0-preview.4` 公开预发布，原签名 APK 已匿名下载核验；[发行记录](../releases.md#已核验范围)。
 - 维护角色：DSHM 手机端维护者。
 - 最近核验：2026-10-15。
 - 任务：[KKC-61](https://linear.app/kkcodes/issue/KKC-61)。

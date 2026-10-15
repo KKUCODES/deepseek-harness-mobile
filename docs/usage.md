@@ -6,7 +6,7 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 
 ## 安装与准备
 
-从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。当前是开发预览；配套电脑插件使用前先核对版本。本地功能验收使用官方 DSH `0.2.1-alpha.2` 和插件 `0.1.80-latest.0`，不能直接把任意新版 DSH 与旧手机包混用。构建、签名和下载说明见[安装包指南](./releases.md)。
+从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。当前 `0.1.0-preview.4` 与电脑插件 `0.1.85-latest.0` 配套提供缓存优化，Remote 支持官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`；不要直接混用任意新版 DSH 与旧手机包。各功能的实际验证范围保留在对应记录，构建、签名和下载说明见[安装包指南](./releases.md)。
 
 普通聊天只需要 DSHM 和自己的 DeepSeek Key。Remote 另需电脑上的官方 DSH、DSHM 插件及手机和电脑都能连接的中转地址。候选安装与版本核对见[配套安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)；从源码构建见[开发指南](./development.md)。
 
