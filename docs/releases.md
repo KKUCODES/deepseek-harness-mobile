@@ -4,7 +4,7 @@
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.2 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.2/DSHM-0.1.0-preview.2.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.2)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
+直接下载 [DSHM 0.1.0-preview.3 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.3/DSHM-0.1.0-preview.3.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.3)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
@@ -12,13 +12,14 @@
 
 ## 自动构建与发布
 
-`0.1.0-preview.2`（versionCode 4）已公开发布，在原 alpha.2 SDK 中增加经过核验的 rc.2 宿主兼容。preview.1 的下载和历史验收保持原范围，连接 rc.2 需安装新版 APK。[双版本验证](./integration/market-baseline.md)
+`0.1.0-preview.3`（versionCode 5）改善 Remote 动效、工具/文件/内置面板的手机排版、等待回复提示与回复操作图标，保留 preview.2 的双版本连接范围。preview.1 / preview.2 的历史下载保持，不覆盖旧附件；[双版本验证](./integration/market-baseline.md)。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。
 - 手动选择 `main` → Run workflow 可生成签名包；勾选 `publish_release` 发布公开开发预览。
 - 推送对应 `v<version>` 标签时，版本校验、构建、签名成功后发布预览。
-- 发新版本前同步修改 [ci/release.json](../ci/release.json) 中的版本并递增 `versionCode`，更新两份 README 的直接下载链接。已存在的 Release 不覆盖，重新发版应使用新版本号。
+- 发新版本前同步修改 [ci/release.json](../ci/release.json) 中的版本并递增 `versionCode`，提供 `ci/release-notes/<version>.md` 中英文发行说明，更新两份 README 的直接下载链接。发行作业按固定提交读取该文件；已存在的 Release 不覆盖，重新发版应使用新版本号。
+- 修改工作流的发版提交须先进入 `main`，再发布版本标签。目标提交相对默认分支仍有工作流差异时，GitHub 会要求额外的工作流写权限，原 `GITHUB_TOKEN` 无法取得；此时同步主分支后仅重跑失败的发行作业，复用已有签名产物。[GitHub 发行权限说明](https://docs.github.com/en/rest/releases/releases#create-a-release)
 
 ## 签名凭据
 
