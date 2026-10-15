@@ -46,6 +46,8 @@ Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地�
 
 ## 已核验范围
 
+2026-10-15 的[版本发布 Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38687975185)已完成 `0.1.0-preview.3` 构建、lint、签名和公开发布，固定源码提交为 `2124df87cb625a4a83d7afcfa3956419d85570e0`。首次发行因工作流改动尚未进入默认分支返回403；同步 `main` 后仅重跑失败的发行作业，复用原签名附件，没有重新打包。APK与三个校验附件已匿名下载，APK为10,979,098字节，SHA-256 `b168715c79ebdfcea7369cff607f7c8c302b5c7f3c4fbed124266de3aab310b8`，与GitHub资产摘要及校验文件一致。本机 `apksigner` 复核原证书，`aapt` 核对原包名、versionCode5、Android9和非调试包。此轮核验发布与下载，界面运行证据沿用对应浏览器/MuMu专项，不扩大真机或公网验收范围。
+
 2026-10-14 的[版本发布 Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38529805782)已通过构建、lint、签名、证书/身份/版本检查及公开发布。APK 和三个校验附件均已匿名下载，SHA-256 与公开发行元数据及校验文件一致；本机 `apksigner` 和 `aapt` 复核原证书、versionCode 4 与最低 Android 9。发布下载专项不扩大[两版核心聊天验证](./integration/market-baseline.md)的设备与功能范围。
 
 2026-10-13 的[实际签名与发布构建](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38375720876)已通过 Web、Android 构建、lint、签名及证书/版本核对，并发布 [0.1.0-preview.1](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.1)。APK 与三个校验附件均已实际匿名下载并核对摘要。

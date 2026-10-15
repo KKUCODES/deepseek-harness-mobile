@@ -1,6 +1,6 @@
 # Remote 内置面板的统一尺寸
 
-- 状态：代码、浏览器与独立 MuMu 验证通过，正常本地 APK 已覆盖安装；未提交或发布。
+- 状态：代码、浏览器与独立 MuMu 验证通过；已随[公开preview.3](../releases.md#已核验范围)提交发布，以下保留阶段候选与本地验证范围。
 - 维护角色：DSHM 手机端维护者。
 - 最近核验：2026-10-15。
 - 任务：[KKC-56](https://linear.app/kkcodes/issue/KKC-56)，接续[文件和目录排版](./file-preview-layout-current.md)。

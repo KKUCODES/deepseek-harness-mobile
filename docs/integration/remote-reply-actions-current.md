@@ -1,6 +1,6 @@
 # Remote 回复操作图标
 
-状态：2026-10-15手机端维护者核验；任务 [KKC-58](https://linear.app/kkcodes/issue/KKC-58)。只修改DSHM，保留官方DSH、插件和中转服务。
+状态：2026-10-15手机端维护者核验；任务 [KKC-58](https://linear.app/kkcodes/issue/KKC-58)。已随[公开preview.3](../releases.md#已核验范围)提交发布，下方保留阶段候选证据。只修改DSHM，保留官方DSH、插件和中转服务。
 
 ## 原因与规则
 

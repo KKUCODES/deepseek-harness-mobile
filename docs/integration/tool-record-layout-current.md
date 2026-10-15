@@ -1,6 +1,6 @@
 # Remote 工具记录排版
 
-- 状态：手机适配、浏览器专项、完整页面回归与 MuMu 真实记录复验通过；本地 APK 已安装，尚未提交或发布。
+- 状态：手机适配、浏览器专项、完整页面回归与 MuMu 真实记录复验通过；已随[公开preview.3](../releases.md#已核验范围)提交发布，以下保留本地候选证据。
 - 维护角色：DSHM 手机端维护者。
 - 最近核验：2026-10-14。
 - 任务：[KKC-54](https://linear.app/kkcodes/issue/KKC-54)。
@@ -29,7 +29,7 @@
 
 正常包候选 `artifacts/releases/DSHM-2026-10-14-remote-tool-layout.apk` 为 12,708,849 字节，SHA-256 `a657bfcc77b79391cb1d7e1ed39396a6f0451af1d472e05ff2ca9b0c2e2c0d8f`；168 个 Web 文件与已验资源逐字节一致，源码摘要见 `artifacts/remote-tool-layout-apk.json`。已覆盖安装到 MuMu 的 `.officialtest`，实际安装包 SHA 与候选一致并从正常入口启动；没有清空原 App 数据或绑定。独立验收包因 UID 不同具有另一个 APK 摘要，不冒充正常包的相同二进制验证。
 
-本次没有提交或发布，公开 APK 不包含这些本地变更。
+前述本地验收完成时尚未提交发布；当前公开preview.3已包含这些变更，签名APK的来源和摘要见发行记录。
 
 ## 实现来源
 

@@ -1,6 +1,6 @@
 # Remote 文件预览与列表排版
 
-- 状态：排版修正、浏览器专项、完整页面回归与独立 MuMu 真实文件验证通过；正常本地 APK 已覆盖安装，尚未提交或发布。
+- 状态：排版修正、浏览器专项、完整页面回归与独立 MuMu 真实文件验证通过；已随[公开preview.3](../releases.md#已核验范围)提交发布，以下保留本地候选证据。
 - 维护角色：DSHM 手机端维护者。
 - 最近核验：2026-10-15。
 - 任务：[KKC-55](https://linear.app/kkcodes/issue/KKC-55)。
@@ -25,7 +25,7 @@ DSHM 自有文档容器和复用的内置正文也经过了通用插件等比缩
 
 正常本地候选：`artifacts/releases/DSHM-2026-10-15-remote-file-layout.apk`，12,709,141 字节，SHA-256 `d1268e4e5676dab84c307d8658e7b9276ce146a4cab11482ce0b1405e0380d45`。168 个 Web 文件与 APK 完全一致，源码摘要见 `artifacts/remote-file-layout-apk.json`。已覆盖安装到正常 `.officialtest`，设备上 APK 摘要与候选一致，正常 Activity 启动成功，未清空数据或绑定；独立测试 UID 已卸载，安装核对在 `artifacts/remote-file-layout-installed.json`。
 
-这次专门增加实际字号、祖先缩放和滚动范围断言，避免再次把“DOM 中有正文”误作“手机能读清”。公开 Release 仍为此前版本，本地修复没有提交、推送或发布。README 的功能和用法未改变，无需添加迭代流水账。
+这次专门增加实际字号、祖先缩放和滚动范围断言，避免再次把“DOM 中有正文”误作“手机能读清”。当时仅完成本地修复，现已随公开preview.3提交发布。README仅更新下载入口与版本概述，详细证据留在本记录。
 
 ## 2026-10-15：补齐文件列表与统一面板尺寸
 

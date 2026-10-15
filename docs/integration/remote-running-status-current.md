@@ -1,6 +1,6 @@
 # Remote 等待首段输出时的思考提示
 
-2026-10-15，手机端维护者核验；任务 [KKC-57](https://linear.app/kkcodes/issue/KKC-57)。只修改 DSHM，不修改、重打包 DSH 本体、SDK、电脑插件或中转后端。
+2026-10-15，手机端维护者核验；任务 [KKC-57](https://linear.app/kkcodes/issue/KKC-57)。改动已随[公开preview.3](../releases.md#已核验范围)提交发布，下方保留本地候选记录。只修改 DSHM，不修改、重打包 DSH 本体、SDK、电脑插件或中转后端。
 
 ## 原因与接入
 
@@ -41,4 +41,4 @@
 - APK：`artifacts/releases/DSHM-2026-10-15-running-status.apk`，13,486,919字节。
 - SHA-256：`fbdc4b838e3a03fe36ac8cadc1b8c46a63315a36aa47fc0e6ae1f43ff6c5a5fe`。
 - 正常包 `dev.dshmobile.validation.officialtest` 已覆盖安装，168份Web资源与构建目录一致，设备上已安装APK哈希相同。
-- 原聊天和连接保留，Host未重启；本次没有提交、推送、修改公开Release。
+- 原聊天和连接保留，Host未重启；该阶段仅本地验收，公开发行结果另见上方链接。
