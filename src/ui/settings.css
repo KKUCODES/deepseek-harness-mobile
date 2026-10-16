@@ -44,3 +44,13 @@
 .settings-notification { margin-top: 18px; border: 1px solid var(--settings-line); padding: 16px; border-radius: 16px; background: var(--settings-surface); }
 .settings-notification small { color: var(--settings-muted); }
 .settings-row:focus-visible { outline-offset: -3px; }
+.provider-address { display: block; margin-top: 6px; font-size: 13px; color: var(--settings-muted); overflow-wrap: anywhere; }
+.provider-settings { font-size: 14px; line-height: 1.6; }
+.provider-model { min-width: 0; margin: 20px 0; padding: 14px; border: 1px solid var(--settings-line); border-radius: 14px; }
+.provider-model legend { padding: 0 6px; }
+.provider-model details { margin: 16px 0; }
+.provider-model summary { cursor: pointer; min-height: 32px; }
+.provider-check { display: flex; gap: 10px; align-items: center; min-height: 44px; }
+.provider-check input { width: 18px; height: 18px; flex: none; }
+.ordinary-models h3 { margin: 18px 0 8px; font-size: 14px; }
+.ordinary-models h3 small { font-size: 13px; font-weight: 400; opacity: .7; }

@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0-preview.4",
-  "versionCode": 6,
+  "version": "0.1.0-preview.5",
+  "versionCode": 7,
   "dshVersion": "0.2.1-alpha.2",
   "remoteDshVersions": ["0.2.0-rc.2", "0.2.1-alpha.2"],
   "upstreamCommit": "d743267388641bc76f17c45ce8b4c231aed1d32c",

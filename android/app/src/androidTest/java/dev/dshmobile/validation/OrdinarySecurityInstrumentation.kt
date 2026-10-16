@@ -20,13 +20,21 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
     private var saveDeathOnly = false
     private var shareDeathOnly = false
     private var shareOnly = false
+    private var providersOnly = false
     override fun onCreate(arguments: Bundle?) {
+        providersOnly = arguments?.getString("providersOnly") == "true"
         noticeEpochRevoke = arguments?.getString("noticeEpochRevoke") == "true"
         noticeQueueOverflow = arguments?.getString("noticeQueueOverflow") == "true"
         offlineSpeechProbe = arguments?.getString("offlineSpeechProbe") == "true"
         super.onCreate(arguments); noticeEpochSession = arguments?.getString("noticeEpochSession"); notificationsOnly = arguments?.getString("notificationsOnly") == "true"; appearanceOnly = arguments?.getString("appearanceOnly") == "true"; computerKeyOnly = arguments?.getString("computerKeyOnly") == "true"; resourcesOnly = arguments?.getString("resourcesOnly") == "true"; saveOnly = arguments?.getString("saveOnly") == "true"; saveWriteOnly = arguments?.getString("saveWriteOnly") == "true"; saveDeathOnly = arguments?.getString("saveDeathOnly") == "true"; shareDeathOnly = arguments?.getString("shareDeathOnly") == "true"; shareOnly = arguments?.getString("shareOnly") == "true"; start()
     }
     override fun onStart() {
+        if (providersOnly) {
+            val result = Bundle()
+            try { OrdinaryProviderChecks.run(this); result.putString("result", "PASS: provider persistence, original credential preservation, encrypted isolation, endpoint lock, request codec, defaults, stale rejection and cleanup"); finish(Activity.RESULT_OK, result) }
+            catch (error: Exception) { result.putString("result", "FAIL: ordinary providers"); result.putString("location", error.stackTrace.firstOrNull { it.className.contains("OrdinaryProviderChecks") }?.toString()); finish(Activity.RESULT_CANCELED, result) }
+            return
+        }
         if (offlineSpeechProbe) {
             try { finish(Activity.RESULT_OK, OfflineSpeechProbe.run(this)) }
             catch (error: Exception) { finish(Activity.RESULT_CANCELED, Bundle().apply { putString("error", error.javaClass.simpleName) }) }

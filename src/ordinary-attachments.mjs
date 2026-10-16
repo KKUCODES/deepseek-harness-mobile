@@ -39,7 +39,7 @@ export function cleanAttachments(values = []) {
 export function userContent(prompt, attachments = [], model) {
   const clean = cleanAttachments(attachments);
   const images = clean.filter(value => value.kind === 'image');
-  if (images.length && model !== 'deepseek-flash') fail('model_no_vision');
+  if (images.length && !(typeof model === 'object' ? model?.vision === true : model === 'deepseek-flash')) fail('model_no_vision');
   const text = [prompt, ...clean.filter(value => value.kind === 'text').map(value => `附件：${value.name}\n${value.text}`)].filter(Boolean).join('\n\n');
   if (text.length > 100000) fail('context_limit');
   if (!images.length) return text;

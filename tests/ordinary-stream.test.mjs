@@ -10,6 +10,15 @@ const response = text => new Response(text, { headers: { 'content-type': 'text/e
 const run = async text => turn().run(() => response(text));
 const complete = event(chunk({ content: '正文' }, 'stop')) + event('[DONE]');
 
+test('OpenAI standalone usage chunk after finish preserves content and still requires DONE', async () => {
+  const first = chunk({ content: '正文' }, 'stop');
+  const usage = { id: JSON.parse(first).id, object: 'chat.completion.chunk', choices: [], usage: { prompt_tokens: 2, completion_tokens: 3, total_tokens: 5 } };
+  const result = await run(event(first) + event(JSON.stringify(usage)) + event('[DONE]'));
+  assert.equal(result.status, 'completed'); assert.equal(result.content, '正文');
+  assert.deepEqual(result.usage, usage.usage);
+  assert.equal((await run(event(JSON.stringify(usage)) + event('[DONE]'))).error, 'invalid_chunk');
+});
+
 test('UTF-8 逐字节分片，推理与正文分开，收到结束原因和 DONE 才完成', async () => {
   const request = turn();
   const states = [];

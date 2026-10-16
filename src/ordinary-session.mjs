@@ -4,6 +4,7 @@ import { OrdinaryTurn } from './ordinary-stream.mjs';
 import { DEFAULT_MODEL, chatPreferences, isModel } from './ordinary-models.mjs';
 import { cleanAttachments } from './ordinary-attachments.mjs';
 import { requestOptions } from './ordinary-options.mjs';
+import { deepseekProvider, providerOf, selectedModel, providerDraft } from './ordinary-providers.mjs';
 
 /** 页面只订阅会话；请求归属在创建时固定，切页与继续输入不会改写正在生成的轮次。 */
 export class OrdinarySession {
@@ -20,7 +21,7 @@ export class OrdinarySession {
   #defaultModel = DEFAULT_MODEL;
   #draftRevision = 0;
   #state = Object.freeze({ ready: false, configured: false, chat: null, draft: '', items: [], next: null,
-    busy: false, owner: null, error: null, homePreferences: { model: DEFAULT_MODEL, thinking: false } });
+    busy: false, owner: null, error: null, providers: [deepseekProvider(false)], defaultSelection: { model: DEFAULT_MODEL }, homePreferences: { model: DEFAULT_MODEL, thinking: false } });
 
   constructor({ history = new OrdinaryHistory(), native = ordinaryNative() } = {}) {
     this.#history = history;
@@ -30,7 +31,11 @@ export class OrdinarySession {
   subscribe = listener => { this.#listeners.add(listener); return () => this.#listeners.delete(listener); };
   #publish(patch) {
     if (this.#disposed) return;
-    this.#state = Object.freeze({ ...this.#state, ...patch });
+    const next = { ...this.#state, ...patch };
+    if (['providers', 'chat', 'homePreferences'].some(key => Object.hasOwn(patch, key))) {
+      next.configured = selectedModel(next.providers, next.chat ? chatPreferences(next.chat) : next.homePreferences).provider?.configured === true;
+    }
+    this.#state = Object.freeze(next);
     this.#listeners.forEach(listener => listener());
   }
   #serial(task) {
@@ -43,8 +48,8 @@ export class OrdinarySession {
       await this.#history.open();
       await this.#history.recover();
       await this.#refresh();
-      const { configured } = await this.#native.status();
-      this.#publish({ configured, ready: true });
+      await this.refreshProviders();
+      this.#publish({ ready: true });
     } catch (error) { this.#publish({ ready: true, error: error.code ?? error.message }); }
   }
   async #refresh() {
@@ -62,11 +67,32 @@ export class OrdinarySession {
   setDefaultModel(model) {
     if (!isModel(model)) throw new Error('unsupported_model');
     this.#defaultModel = model;
-    if (!this.#state.chat && !this.#state.draft) this.#publish({ homePreferences: { ...this.#state.homePreferences, model } });
+    this.#publish({ defaultSelection: { model }, ...(!this.#state.chat && !this.#state.draft ? { homePreferences: { model, thinking: false } } : {}) });
   }
-  configure = async () => {
-    const result = await this.#native.configure();
-    this.#publish({ configured: result.configured });
+  async refreshProviders(catalog) {
+    if (!catalog) catalog = this.#native.providers ? await this.#native.providers() : { providers: [deepseekProvider((await this.#native.status()).configured)] };
+    const fallback = { model: this.#defaultModel };
+    const selection = catalog.default && selectedModel(catalog.providers, catalog.default).model ? catalog.default : fallback;
+    this.#publish({ providers: catalog.providers, defaultSelection: selection,
+      ...(!this.#state.chat && !this.#state.draft ? { homePreferences: { ...selection, thinking: false } } : {}) });
+  }
+  saveProvider = async value => {
+    if (this.#state.busy) throw new Error('request_busy');
+    await this.refreshProviders(await this.#native.call('providers.save', providerDraft(value)));
+  };
+  removeProvider = async provider => {
+    if (this.#state.busy) throw new Error('request_busy');
+    await this.refreshProviders(await this.#native.call('providers.remove', { provider: provider.id, revision: provider.revision }));
+  };
+  setDefaultSelection = async selection => {
+    if (this.#state.busy) throw new Error('request_busy');
+    if (!selectedModel(this.#state.providers, selection).model) throw new Error('unsupported_model');
+    await this.refreshProviders(await this.#native.call('providers.default', { provider: providerOf(selection), model: selection.model }));
+  };
+  configure = async (provider = providerOf(this.#state.chat ?? this.#state.homePreferences)) => {
+    const result = await this.#native.configure(provider);
+    if (this.#native.providers) await this.refreshProviders();
+    else this.#publish({ providers: [deepseekProvider(result.configured)] });
     return result;
   };
   openRemote = () => this.#native.call('remote.open');
@@ -95,7 +121,7 @@ export class OrdinarySession {
   copyText = text => this.#native.call('clipboard.write', { text });
   stats = () => this.#history.stats();
   newChat = () => this.#serial(() => {
-    this.#publish({ chat: null, draft: '', error: null, homePreferences: { model: this.#defaultModel, thinking: false } });
+    this.#publish({ chat: null, draft: '', error: null, homePreferences: { ...this.#state.defaultSelection, thinking: false } });
   });
   select = id => this.#serial(async () => { this.#show(await this.#history.get(id)); this.clearError(); });
   search = options => this.#history.page(options);
@@ -127,11 +153,15 @@ export class OrdinarySession {
     }).catch(error => { this.#publish({ error: 'history_write_failed' }); throw error; });
   };
   preferences = patch => this.#serial(async () => {
-    if (Object.keys(patch).some(key => !['model', 'thinking', 'requestOptions'].includes(key))) throw new Error('invalid_preferences');
+    if (Object.keys(patch).some(key => !['provider', 'model', 'thinking', 'requestOptions'].includes(key))) throw new Error('invalid_preferences');
     if (patch.requestOptions !== undefined) patch = { ...patch, requestOptions: requestOptions(patch.requestOptions) };
-    if (patch.model !== undefined && !isModel(patch.model) || patch.thinking !== undefined && typeof patch.thinking !== 'boolean') {
+    const current = this.#state.chat ? chatPreferences(this.#state.chat) : this.#state.homePreferences;
+    const selection = { ...current, ...patch };
+    const available = selectedModel(this.#state.providers, selection).model;
+    if ((patch.model !== undefined || patch.provider !== undefined) && !available || patch.thinking !== undefined && typeof patch.thinking !== 'boolean') {
       throw new Error('invalid_preferences');
     }
+    if (available?.thinking === 'none') patch = { ...patch, thinking: false };
     if (!this.#state.chat) { this.#publish({ homePreferences: { ...this.#state.homePreferences, ...patch } }); return; }
     const chat = await this.#ensureChat();
     await this.#history.update(chat.id, value => Object.assign(value, chatPreferences(value), patch));
@@ -153,6 +183,8 @@ export class OrdinarySession {
   send() {
     if (this.#closing) return Promise.reject(new Error('session_closed'));
     if (this.#state.busy) return Promise.reject(new Error('request_busy'));
+    const selection = this.#state.chat ? chatPreferences(this.#state.chat) : this.#state.homePreferences;
+    if (!selectedModel(this.#state.providers, selection).model) return Promise.reject(new Error('provider_model_missing'));
     if (!this.#state.configured) return Promise.reject(new Error('key_missing'));
     this.#stopRequested = false;
     this.#publish({ busy: true, error: null });
@@ -193,8 +225,11 @@ export class OrdinarySession {
         const prompt = (this.#drafts.get(chat.id) ?? current.draft).trim();
         const attachments = cleanAttachments(current.attachments);
         if (!prompt && !attachments.length) throw new Error('empty_message');
-        const preferences = chatPreferences(current);
-        const messages = completionMessages(current, prompt, attachments, preferences.model);
+        let preferences = chatPreferences(current);
+        const selected = selectedModel(this.#state.providers, preferences);
+        if (!selected.model) throw new Error('provider_model_missing');
+        if (selected.model.thinking === 'none') preferences = { ...preferences, thinking: false };
+        const messages = completionMessages(current, prompt, attachments, selected.model);
         const draftRevision = this.#draftRevision;
         owner = chat.id;
         const requestId = crypto.randomUUID();
@@ -207,7 +242,7 @@ export class OrdinarySession {
         if (this.#draftRevision === draftRevision) this.#drafts.set(owner, '');
         this.#publish({ owner });
         await this.#changed(owner);
-        return { requestId, messages, ...preferences };
+        return { requestId, messages, ...preferences, ...(selected.provider.builtin ? {} : { providerRevision: selected.provider.revision }) };
       });
       turn = this.#turn = new OrdinaryTurn({ mode: 'ordinary', chatId: owner, requestId: prepared.requestId });
       unsubscribe = turn.subscribe(() => {

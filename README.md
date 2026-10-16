@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.4/DSHM-0.1.0-preview.4.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.5/DSHM-0.1.0-preview.5.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -35,7 +35,7 @@
 
 | 能力 | 内容 |
 | --- | --- |
-| 普通聊天 | 手机直连 DeepSeek；流式回复、深度思考、附件、本地历史与备份。 |
+| 普通聊天 | 手机直连 DeepSeek 或自定义 OpenAI Chat Completions 兼容供应商；独立 Key 与模型、流式回复、思考、附件、本地历史与备份。 |
 | Remote | 打开已有工作区和会话，在已有工作区新建聊天；发送消息、切换模型、停止任务、回答提问与审批。 |
 | 结果查看 | 工具、命令、文件与改动预览；保存或分享完整文件。 |
 | 插件界面 | 显示兼容插件；默认等比例缩放，作者声明与用户开关可调整。 |
@@ -52,7 +52,7 @@ flowchart LR
 
 公开开发预览提供已签名 APK，最低 Android 9。可直接从 Release 下载 `.apk` 安装，无需登录 GitHub；Actions 中的 `dshm-signed-apk` 下载需要登录。签名与更新说明见[APK 构建与下载指南](./docs/releases.md)。
 
-安装 App 后，配置自己的 DeepSeek Key 即可开始普通聊天。手机直连 DeepSeek，聊天历史保存在本地，无需电脑或中转服务。
+安装 App 后，配置自己的 DeepSeek Key 即可开始普通聊天；也可在「设置 → 普通聊天 → 管理供应商与模型」添加兼容服务。手机直连所选供应商，聊天历史保存在本地，无需电脑或 Remote 中转服务。
 
 ### 连接电脑上的 DeepSeek Harness
 
@@ -68,7 +68,7 @@ flowchart LR
 
 开发预览，尚未进入应用商店。核心 Remote 已在 **官方 DSH `0.2.1-alpha.2`＋插件 `0.1.80-latest.0`＋配套 Android** 上完成 Web + MuMu 本地验收；扩展范围见[兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
 
-[0.1.0-preview.4](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.4) 新增 Remote 资源缓存与工作区/聊天差量同步，并统一普通聊天、Remote 的 Logo 启动交接。配套电脑插件 `0.1.85-latest.0`，继续支持官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`；[版本验证范围](./docs/integration/market-baseline.md)。沿用原身份和签名，可覆盖 preview.1 / preview.2 / preview.3，保留本地数据。
+[0.1.0-preview.5](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.5) 新增普通聊天自定义供应商和模型，保留原 DeepSeek 配置与聊天；[模型服务说明](./docs/integration/ordinary-providers-current.md)。Remote 继续使用电脑插件 `0.1.85-latest.0`，支持官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`；[版本验证范围](./docs/integration/market-baseline.md)。沿用原身份和签名，可覆盖 preview.1–preview.4，保留本地数据。
 
 - 首版仅 Android。真机、完整公网链路及其他版本、插件、模型仍需验证。
 - 电脑和 DSH 保持运行，只安装独立插件，不修改 DSH 本体。
@@ -83,7 +83,7 @@ Remote 使用随 App 打包的 DSHM 聊天界面，通过中转同步电脑会�
 
 ### 连接 Remote 需要在手机填写 DeepSeek Key 吗？
 
-不需要填写手机普通聊天的 Key。Remote 使用电脑 DSH 配置的模型与凭据，手机需要配对并获得电脑批准。普通聊天则使用你在手机配置的 DeepSeek API Key，两种模式分别管理。
+不需要填写手机普通聊天的 Key。Remote 使用电脑 DSH 配置的模型与凭据，手机需要配对并获得电脑批准。普通聊天则使用你在手机配置的供应商 API Key，两种模式分别管理。
 
 ### 普通聊天与 Remote 的历史保存在哪里？
 

@@ -113,6 +113,7 @@ npm test
 | 需要检查的内容 | 入口与边界 |
 | --- | --- |
 | 普通聊天真实 API | `node scripts/verify-product-android.mjs` 需要 `DSHM_ANDROID_SERIAL` 和 `DSHM_RUN_LIVE=1`；使用设备内 Key 发送专用消息，会产生模型费用并重启目标 App，不属于默认测试。 |
+| 自定义供应商（源码候选） | `tests/ordinary-providers.test.mjs` 覆盖数据兼容；`OrdinarySecurityInstrumentation` 的 `providersOnly=true` 覆盖原生目录和凭据；`scripts/verify-ordinary-providers-android.mjs` 操作隔离 `.toolstyletest` 的实际页面，范围见[模型服务验收](./integration/ordinary-providers-current.md)。 |
 | 普通聊天页面性能 | `node scripts/measure-page.mjs --product` 使用隔离 Edge；`node scripts/measure-product-android.mjs` 使用指定 Android 设备。串行运行，页面耗时与模型网络耗时分别记录。 |
 | 诊断页对照测量 | `npm run measure:page` 和 `node scripts/measure-android-page.mjs`；属于诊断页，不能替代产品页面结果。 |
 | 旧基线软键盘诊断 | `node scripts/diagnose-ime.mjs` 对比 WebView 与原生输入框，会重启目标 App；历史环境问题见[诊断记录](./plugin-validation/results.md#真实软键盘环境诊断)。 |
@@ -120,6 +121,8 @@ npm test
 | 文档链接 | 在相邻 `../backend/` 运行 `node scripts/check-docs.mjs`，检查整个项目集合的 Markdown 本地链接。 |
 
 性能结果需要注明浏览器、模拟器或物理手机环境，不能把 MuMu 结果写成真机结果。既有测量和未覆盖范围见[普通聊天记录](./integration/ordinary-current.md)与[Remote 性能记录](./integration/performance-current.md)。
+
+供应商专项使用 `'-PremoteToolLayoutTest=true'` 及上面的官方候选参数构建独立 `.toolstyletest`，另构建 `:app:assembleDebugAndroidTest`；不安装到日常 App。实际页面脚本当前锁定本机 MuMu serial `127.0.0.1:16384`，执行前须核对设备、包名与隔离范围。需设置 `DSHM_ANDROID_SERIAL`、`DSHM_ADB_PATH`；可选 `DSHM_DEEPSEEK_TEST_KEY_FILE` / `DSHM_GLM_TEST_KEY_FILE` 指向本人授权的外部测试凭据文件，分别只发送到 DeepSeek / 智谱官方地址，产生 API 费用。DeepSeek 文件可只含 Key；包含标签时分别使用 `deepseek: <Key>` / `glm: <Key>`，两者可以共用一个含两行标签的文件，不要纳入仓库。未提供真实凭据时只用一次性无效 Key 验证官方 401，不宣称真实模型通过；`--check-glm-form` 可额外用假 Key 检查通用表单的智谱配置，不发 GLM 请求。脚本结束移除专用供应商、Key 和聊天，并核对原记录及原 Key 配置状态。
 
 ## 仓库与依赖
 

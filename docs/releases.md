@@ -4,15 +4,15 @@
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.4 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.4/DSHM-0.1.0-preview.4.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.4)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
+直接下载 [DSHM 0.1.0-preview.5 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.5/DSHM-0.1.0-preview.5.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.5)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1 / preview.2 / preview.3。不要卸载旧版来更新，以免删除本地数据。普通聊天使用你自己的 DeepSeek Key；Remote 适配官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`，完整缓存优化需配套电脑插件 `0.1.85-latest.0`，现有中转服务无需升级。
+当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1–preview.4。不要卸载旧版来更新，以免删除本地数据。普通聊天使用你自己的供应商 API Key；Remote 适配官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`，配套电脑插件 `0.1.85-latest.0`，现有插件和中转服务无需因本次更新而升级。
 
 ## 自动构建与发布
 
-`0.1.0-preview.4`（versionCode 6）加入 [Remote 缓存与差量同步](./integration/remote-cache-current.md)，并[统一普通聊天与 Remote 的 Logo 启动交接](./integration/startup-transition-current.md)。保留已有双版本连接范围、身份与签名，历史发行及附件不覆盖；[双版本验证](./integration/market-baseline.md)。
+`0.1.0-preview.5`（versionCode 7）加入[自定义供应商与模型](./integration/ordinary-providers-current.md)，沿用已有 Remote 缓存、启动交接与双版本连接范围。保留身份与签名，历史发行及附件不覆盖；[双版本验证](./integration/market-baseline.md)。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。

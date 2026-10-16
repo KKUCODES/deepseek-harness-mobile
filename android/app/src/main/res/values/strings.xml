@@ -54,8 +54,8 @@
     <string name="notice_system_settings">系统通知设置</string>
     <string name="notice_system_allow">允许系统通知</string>
     <string name="key_title">普通聊天 · DeepSeek Key</string>
-    <string name="key_hint">在设备内粘贴 DeepSeek API Key</string>
-    <string name="key_note">Key 由 Android Keystore 加密保存，只供手机直连 DeepSeek 使用，不返回网页。</string>
+    <string name="key_hint">在设备内输入此供应商的 API Key</string>
+    <string name="key_note">Key 由 Android Keystore 加密保存，仅用于此供应商的手机直连请求，不返回网页。旧 Key 不会显示。</string>
     <string name="key_save">保存</string>
     <string name="key_cancel">取消</string>
     <string name="key_remove">移除 Key</string>

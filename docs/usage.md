@@ -6,17 +6,17 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 
 ## 安装与准备
 
-从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。当前 `0.1.0-preview.4` 与电脑插件 `0.1.85-latest.0` 配套提供缓存优化，Remote 支持官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`；不要直接混用任意新版 DSH 与旧手机包。各功能的实际验证范围保留在对应记录，构建、签名和下载说明见[安装包指南](./releases.md)。
+从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。`0.1.0-preview.5` 加入普通聊天自定义供应商与模型；Remote 继续配套电脑插件 `0.1.85-latest.0`，支持官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`；不要直接混用任意新版 DSH 与旧手机包。各功能的实际验证范围保留在对应记录，构建、签名和下载说明见[安装包指南](./releases.md)。
 
-普通聊天只需要 DSHM 和自己的 DeepSeek Key。Remote 另需电脑上的官方 DSH、DSHM 插件及手机和电脑都能连接的中转地址。候选安装与版本核对见[配套安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)；从源码构建见[开发指南](./development.md)。
+普通聊天只需要 DSHM 和所选模型服务的 API Key，默认可使用 DeepSeek。Remote 另需电脑上的官方 DSH、DSHM 插件及手机和电脑都能连接的中转地址。候选安装与版本核对见[配套安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)；从源码构建见[开发指南](./development.md)。
 
 ## 普通聊天
 
-1. 打开 App，点击「配置 DeepSeek Key」，在原生窗口中填写并保存。之后可在「设置 → 普通聊天」修改。
+1. 打开 App，点击「配置 DeepSeek Key」，在原生窗口中填写并保存。之后可在「设置 → 普通聊天 → 管理供应商与模型」管理 Key 或添加其他服务。
 2. 在输入框选择模型和思考选项，输入消息后发送。生成期间可以停止。
 3. 从侧边栏打开历史聊天，也可以搜索、改名或从已有回复创建分支。
 
-普通聊天直连 DeepSeek，模型调用使用你的 API 额度。Key 保存在原生层，不放进聊天正文，也不会传给 Remote。
+普通聊天直连所选供应商，模型调用使用你的 API 额度。Key 保存在原生层，不放进聊天正文，也不会传给 Remote。
 
 附件从手机系统选择；图片理解取决于所选模型。普通聊天不执行电脑上的 Agent 任务。已接入的输入插件可提供提示词等扩展，具体范围见[普通聊天说明](./integration/ordinary-current.md)。
 
@@ -25,6 +25,21 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 聊天记录和草稿保存在手机。在「设置 → 本地数据」导出或导入备份；备份不包含模型凭据。卸载 App 或清除应用数据前，请先备份需要保留的聊天。
 
 普通聊天历史与电脑 Remote 历史分别管理，切换入口不会把手机的 Key 或聊天混入电脑会话。
+
+### 自定义供应商与模型
+
+从 `0.1.0-preview.5` 起支持；旧版用户先覆盖安装新版，再按下面配置：
+
+1. 进入「设置 → 普通聊天 → 管理供应商与模型」，点击「添加供应商」。所有自定义服务使用同一入口。
+2. 填写供应商名称、HTTPS API 基础地址和模型 ID，例如 `https://example.com/v1`。不要填写完整的 `/chat/completions` 路径，也不要把 Key 放进地址。
+3. 保存后打开该供应商，在「配置 Key」原生密码窗口中填写这个服务自己的 Key。
+4. 在输入框的模型菜单选择供应商与模型。「设置 → 普通聊天 → 默认模型」只影响新聊天，已有聊天保持原来的选择。
+
+服务需兼容 OpenAI Chat Completions 的文本与 SSE 流格式。图片、思考字段、输出上限字段和随机性参数按服务文档设置。默认省略这些扩展参数；始终思考的模型不要使用会发送关闭思考参数的设置。普通聊天不提供工具执行或 Responses、Anthropic 等其他协议。
+
+内置 DeepSeek 沿用原 Key 和聊天。使用 DeepSeek 中转站时添加独立供应商和对应 Key；更换地址前先在「管理 Key」移除该供应商旧 Key。删除供应商会移除配置和 Key，保留聊天、回复与草稿，相关聊天需要重新选择模型才能继续。
+
+新版备份格式为 v2，仍可导入旧 v1；旧 App 不支持导入新版备份。备份只包含聊天及供应商/模型标识，不包含服务地址、配置或 Key。在其他设备恢复自定义聊天后，先配置服务并手动重新选择模型。详细规则见[模型服务说明](./integration/ordinary-providers-current.md)。
 
 ## 连接电脑
 

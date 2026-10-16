@@ -3,9 +3,10 @@ import { OrdinaryHistory, completionMessages } from './ordinary-history.mjs';
 import { ordinaryNative } from './ordinary-native.mjs';
 import { OrdinaryTurn } from './ordinary-stream.mjs';
 import { OrdinaryComposer } from './ordinary-composer.jsx';
+import { deepseekProvider } from './ordinary-providers.mjs';
 
 const statusLabels = { sending: '等待回复', streaming: '正在回复', completed: '已完成', failed: '失败', interrupted: '已中断' };
-const errorLabels = { key_missing: '请先配置 DeepSeek Key', http_401: 'Key 无效，请重新配置', http_402: '账户余额不足',
+const errorLabels = { key_missing: '请先配置当前供应商 Key', http_401: 'Key 无效，请重新配置', http_402: '账户余额不足',
   http_429: '请求过于频繁，请稍后手动重试', context_limit: '当前对话超出验证版上下文限制，请新建聊天',
   credential_unavailable: '本机凭据无法解密，请重新配置 Key', request_timeout: '连接超时，未自动重试',
   history_write_failed: '历史保存失败，已停止请求', app_restarted: 'App 重启，未自动重发', stopped: '已手动停止',
@@ -18,6 +19,8 @@ export function OrdinaryChat({ inputRuntime, renderSlot, SessionProvider }) {
   const [selected, setSelected] = useState('');
   const [draft, setDraft] = useState('');
   const [model, setModel] = useState('deepseek-flash');
+  const [providers, setProviders] = useState([deepseekProvider(false)]);
+  const [providerId, setProviderId] = useState('deepseek');
   const [ready, setReady] = useState(false);
   const [configured, setConfigured] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -29,6 +32,7 @@ export function OrdinaryChat({ inputRuntime, renderSlot, SessionProvider }) {
   const alive = useRef(true);
   const draftWrites = useRef(Promise.resolve());
   const selectedChat = chats.find(chat => chat.id === selected);
+  const provider = providers.find(value => value.id === providerId);
   const report = failure => { if (alive.current) setError(errorLabels[failure.code ?? failure.message] ?? '操作失败，请重试'); };
   const refresh = async () => { const items = await history.list(); if (alive.current) setChats(items); return items; };
 
@@ -41,7 +45,7 @@ export function OrdinaryChat({ inputRuntime, renderSlot, SessionProvider }) {
       if (!items.length) { await history.create(); items = await refresh(); }
       if (!alive.current) return;
       setSelected(items[0].id); setDraft(items[0].draft); setReady(true);
-      if (client.available) setConfigured((await client.status()).configured);
+      if (client.available) { const catalog = await client.providers(); setProviders(catalog.providers); setConfigured(catalog.providers[0].configured); }
     })().catch(report);
     return () => { alive.current = false; current.current?.dispose(); };
   }, [history, client]);
@@ -76,7 +80,7 @@ export function OrdinaryChat({ inputRuntime, renderSlot, SessionProvider }) {
     } catch (failure) { report(failure); }
   };
   const configure = async () => {
-    try { setConfigured((await client.configure()).configured); setError(''); } catch (failure) { report(failure); }
+    try { setConfigured((await client.configure(providerId)).configured); setProviders((await client.providers()).providers); setError(''); } catch (failure) { report(failure); }
   };
   const send = async () => {
     if (busyRef.current || !draft.trim() || !selectedChat || !configured) return;
@@ -94,7 +98,7 @@ export function OrdinaryChat({ inputRuntime, renderSlot, SessionProvider }) {
       await history.update(id, item => {
         item.draft = '';
         if (!item.turns.length) item.title = prompt.slice(0, 40);
-        item.turns.push({ requestId, prompt, model, status: 'sending', content: '', reasoning: '', error: null });
+        item.turns.push({ requestId, prompt, model, ...(providerId === 'deepseek' ? {} : { provider: providerId }), status: 'sending', content: '', reasoning: '', error: null });
       });
       setDraft(''); await refresh();
       const turn = new OrdinaryTurn({ mode: 'ordinary', chatId: id, requestId });
@@ -109,7 +113,7 @@ export function OrdinaryChat({ inputRuntime, renderSlot, SessionProvider }) {
           Object.assign(stored, snapshot);
         })).catch(failure => { writeFailure = failure; turn.stop(); report(failure); });
       });
-      await turn.run(signal => client.open({ requestId, model, messages }, signal));
+      await turn.run(signal => client.open({ requestId, provider: providerId, providerRevision: provider.revision, model, messages }, signal));
       await writes;
       if (writeFailure) report(writeFailure);
     } catch (failure) { report(failure); }
@@ -121,7 +125,7 @@ export function OrdinaryChat({ inputRuntime, renderSlot, SessionProvider }) {
   };
 
   return <section data-testid="ordinary-chat"><h2>普通聊天</h2>
-    <p>手机直连 DeepSeek，历史只保存在本机。此处发送会调用真实 API。</p>
+    <p>手机直连所选模型服务，历史只保存在本机。此处发送会调用真实 API。供应商在正式普通聊天设置中管理。</p>
     <p data-testid="ordinary-key-state">{client.available ? (configured ? 'Key 已配置' : '尚未配置 Key') : '请在安卓验证 App 中配置 Key；浏览器仅可查看本地历史。'}</p>
     <button onClick={configure} disabled={!client.available || busy} data-testid="ordinary-key">配置 / 移除 Key</button>
     <button onClick={() => void client.call('remote.open').catch(report)} disabled={!client.available || busy} data-testid="remote-open">进入 Remote 验证</button>
@@ -139,15 +143,16 @@ export function OrdinaryChat({ inputRuntime, renderSlot, SessionProvider }) {
         {selectedChat?.turns.map(stored => {
           const turn = live?.requestId === stored.requestId ? { ...stored, ...live } : stored;
           return <article key={turn.requestId}><h3>你</h3><p className="ordinary-text">{turn.prompt}</p>
-            <h3>DeepSeek <small>{statusLabels[turn.status]}</small></h3>
+            <h3>{turn.model} <small>{statusLabels[turn.status]}</small></h3>
             {turn.reasoning && <details><summary>思考过程</summary><p className="ordinary-text">{turn.reasoning}</p></details>}
             <p className="ordinary-text">{turn.content}</p>
             {turn.error && <p role="status">{errorLabels[turn.error] ?? `请求状态：${turn.error}`}</p>}
           </article>;
         })}
       </div>
+      <label>供应商 <select value={providerId} disabled={busy} onChange={event => { const selectedProvider = providers.find(value => value.id === event.target.value); setProviderId(selectedProvider.id); setModel(selectedProvider.models[0].id); setConfigured(selectedProvider.configured); }}>{providers.map(value => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label>
       <label>模型 <select value={model} onChange={event => setModel(event.target.value)} disabled={busy}>
-        <option value="deepseek-flash">deepseek-flash</option><option value="deepseek-v4-pro">deepseek-v4-pro</option>
+        {provider?.models.map(value => <option key={value.id} value={value.id}>{value.label}</option>)}
       </select></label>
       <OrdinaryComposer key={selected} chatId={selected} draft={draft} editDraft={editDraft} busy={busy}
         runtime={inputRuntime} renderSlot={renderSlot} SessionProvider={SessionProvider} />

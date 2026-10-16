@@ -22,9 +22,9 @@ import java.net.SocketTimeoutException
 import java.util.concurrent.Executors
 import javax.net.ssl.HttpsURLConnection
 
-/** 仅主框架的本地普通聊天 origin 能调用；不接受 URL、Authorization、工具或任意原生方法。 */
+/** 仅本地普通聊天主框架可调用；请求只引用原生供应商，不接受临时 URL、Authorization 或工具。 */
 class OrdinaryBridge(private val activity: Activity, private val webView: WebView) {
-    private val credentials = OrdinaryCredentials(activity)
+    private val providers = OrdinaryProviders(activity)
     private val files = OrdinaryFiles(activity)
     private val worker = Executors.newSingleThreadExecutor()
     private val closer = Executors.newSingleThreadExecutor()
@@ -33,7 +33,7 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
     private var dialog: AlertDialog? = null
     private var pending = 0
     private class Failure(val code: String) : Exception()
-    private class Request(val id: String) {
+    private class Request(val id: String, val provider: JSONObject) {
         @Volatile var canceled = false
         @Volatile var connection: HttpsURLConnection? = null
         var body: InputStream? = null
@@ -114,18 +114,45 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
                         respond(reply, id, JSONObject())
                         ModeNavigation.remote(activity)
                     }
-                    "key.status" -> respond(reply, id, JSONObject().put("configured", credentials.configured()))
-                    "key.configure" -> configure(reply, id)
+                    "providers.list" -> {
+                        if (data.length() != 0) throw Failure("invalid_request")
+                        respond(reply, id, providers.catalog())
+                    }
+                    "providers.save", "providers.remove", "providers.default" -> {
+                        if (webView.url != ORIGIN + "/assets/web/mobile.html") throw Failure("unsupported_operation")
+                        if (active != null || dialog != null) throw Failure("request_busy")
+                        when (request.getString("op")) {
+                            "providers.save" -> providers.save(data)
+                            "providers.remove" -> {
+                                if (data.keys().asSequence().toSet() != setOf("provider", "revision")) throw Failure("invalid_request")
+                                providers.remove(data.getString("provider"), data.getString("revision"))
+                            }
+                            else -> {
+                                if (data.keys().asSequence().toSet() != setOf("provider", "model")) throw Failure("invalid_request")
+                                providers.defaultSelection(data.getString("provider"), data.getString("model"))
+                            }
+                        }
+                        respond(reply, id, providers.catalog())
+                    }
+                    "key.status", "key.configure" -> {
+                        if (!setOf("provider").containsAll(data.keys().asSequence().toSet())) throw Failure("invalid_request")
+                        val provider = providers.get(data.optString("provider", "deepseek"))
+                        if (request.getString("op") == "key.status") respond(reply, id, JSONObject().put("configured", providers.credentials(provider.getString("id")).configured()))
+                        else configure(reply, id, provider)
+                    }
                     "request.cancel" -> {
                         active?.takeIf { it.id == data.optString("requestId") }?.let { cancel(it) }
                         respond(reply, id, JSONObject())
                     }
                     "request.open" -> {
                         if (active != null) throw Failure("request_busy")
-                        val body = payload(data)
+                        val provider = providers.get(data.optString("provider", "deepseek"))
+                        if (data.has("providerRevision") && data.getString("providerRevision") != provider.getString("revision")) throw Failure("provider_stale")
+                        if (provider.getString("id") != "deepseek" && !data.has("providerRevision")) throw Failure("provider_stale")
+                        val body = payload(data, provider)
                         val owner = data.getString("requestId")
                         if (!owner.matches(Regex("[a-zA-Z0-9-]{1,80}"))) throw Failure("invalid_request")
-                        val job = Request(owner)
+                        val job = Request(owner, provider)
                         active = job
                         execute(reply, id) { open(job, body) }
                     }
@@ -146,6 +173,7 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
 
     private fun code(error: Exception) = when (error) {
         is Failure -> error.code
+        is OrdinaryProviders.Failure -> error.code
         is SocketTimeoutException -> "request_timeout"
         else -> "native_operation_failed" // 不将异常、请求头或上游错误正文传给插件/日志。
     }
@@ -167,14 +195,16 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
         }
     }
 
-    private fun payload(data: JSONObject): String {
+    private fun payload(data: JSONObject, provider: JSONObject): String {
         val fields = data.keys().asSequence().toSet()
         val required = setOf("requestId", "model", "messages")
-        if (!fields.containsAll(required) || !required.plus(setOf("thinking", "requestOptions")).containsAll(fields)) throw Failure("invalid_request")
+        if (!fields.containsAll(required) || !required.plus(setOf("provider", "providerRevision", "thinking", "requestOptions")).containsAll(fields)) throw Failure("invalid_request")
         if (data.has("thinking") && data.get("thinking") !is Boolean) throw Failure("invalid_request")
         val thinking = data.optBoolean("thinking", false)
         val model = data.getString("model")
-        if (model !in setOf("deepseek-flash", "deepseek-v4-pro")) throw Failure("unsupported_model")
+        val modelConfig = OrdinaryProviders.model(provider, model)
+        val thinkingProtocol = modelConfig.getString("thinking")
+        if (thinking && thinkingProtocol == "none") throw Failure("model_no_thinking")
         val messages = data.getJSONArray("messages")
         if (data.toString().length > 12 * 1024 * 1024) throw Failure("context_limit")
         if (messages.length() !in 1..200) throw Failure("context_limit")
@@ -201,7 +231,7 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
                             blocks.put(JSONObject().put("type", "text").put("text", value))
                         }
                         "image_url" -> {
-                            if (model != "deepseek-flash") throw Failure("model_no_vision")
+                            if (!modelConfig.getBoolean("vision")) throw Failure("model_no_vision")
                             if (block.keys().asSequence().toSet() != setOf("type", "image_url")) throw Failure("invalid_message")
                             val image = block.getJSONObject("image_url")
                             if (image.keys().asSequence().toSet() != setOf("url")) throw Failure("invalid_message")
@@ -238,18 +268,26 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
         val temperature = number("temperature", 1.0, 0.0, 2.0)
         val topP = number("topP", 1.0, 0.95, 1.0)
         val body = JSONObject().put("model", model).put("messages", clean).put("stream", true)
-            .put("thinking", JSONObject().put("type", if (thinking) "enabled" else "disabled"))
-            .put("max_tokens", maxTokens)
-        if (thinking) body.put("reasoning_effort", effort).put("top_p", topP) else body.put("temperature", temperature)
+        if (thinkingProtocol == "deepseek") {
+            body.put("thinking", JSONObject().put("type", if (thinking) "enabled" else "disabled")).put("max_tokens", maxTokens)
+            if (thinking) body.put("reasoning_effort", effort).put("top_p", topP) else body.put("temperature", temperature)
+        } else {
+            if (thinkingProtocol == "thinking") body.put("thinking", JSONObject().put("type", if (thinking) "enabled" else "disabled"))
+            if (thinkingProtocol == "reasoning_effort" && thinking) body.put("reasoning_effort", if (effort == "max") "high" else effort)
+            // 自定义服务默认沿用服务端参数；仅显式设置的通用参数进入请求。
+            if (!options.isNull("maxTokens")) body.put(modelConfig.getString("tokenField"), maxTokens)
+            if (data.has("requestOptions") && modelConfig.getBoolean("sampling") && !thinking) body.put("temperature", temperature)
+        }
         return body.toString()
     }
 
     private fun open(job: Request, body: String): JSONObject {
         try {
             if (job.canceled) throw Failure("request_closed")
+            val credentials = providers.credentials(job.provider.getString("id"))
             if (!credentials.configured()) throw Failure("key_missing")
             val secret = try { credentials.read() } catch (_: Exception) { throw Failure("credential_unavailable") }
-            val connection = URL("https://api.deepseek.com/chat/completions").openConnection() as HttpsURLConnection
+            val connection = URL(OrdinaryProviders.baseURL(job.provider.getString("baseURL")) + "/chat/completions").openConnection() as HttpsURLConnection
             job.connection = connection
             connection.requestMethod = "POST"
             connection.instanceFollowRedirects = false
@@ -297,8 +335,9 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
         closer.execute { job.connection?.disconnect() }
     }
 
-    private fun configure(reply: JavaScriptReplyProxy, id: String) {
+    private fun configure(reply: JavaScriptReplyProxy, id: String, provider: JSONObject) {
         if (dialog != null || active != null) throw Failure("request_busy")
+        val credentials = providers.credentials(provider.getString("id"))
         val dialogContext = (activity.application as DshmApplication).appearance.dialogContext(activity)
         val input = EditText(dialogContext).apply {
             isSingleLine = true
@@ -308,7 +347,7 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
             setSaveEnabled(false)
             hint = dialogContext.getString(R.string.key_hint)
         }
-        val note = TextView(dialogContext).apply { setText(R.string.key_note) }
+        val note = TextView(dialogContext).apply { text = "${provider.getString("name")}\n${provider.getString("baseURL")}\n\n${dialogContext.getString(R.string.key_note)}" }
         val layout = LinearLayout(dialogContext).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 16, 32, 16)
@@ -318,7 +357,7 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
         fun finish(error: String? = null) {
             if (!answered) { answered = true; respond(reply, id, JSONObject().put("configured", credentials.configured()), error) }
         }
-        dialog = AlertDialog.Builder(dialogContext).setTitle(R.string.key_title).setView(layout)
+        dialog = AlertDialog.Builder(dialogContext).setTitle("${provider.getString("name")} · API Key").setView(layout)
             .setPositiveButton(R.string.key_save, null).setNegativeButton(R.string.key_cancel) { _, _ -> finish() }
             .setNeutralButton(R.string.key_remove) { _, _ ->
                 try { credentials.clear(); finish() } catch (_: Exception) { finish("credential_save_failed") }

@@ -139,8 +139,16 @@ export class OrdinaryTurn {
     if (!chunk || typeof chunk !== 'object') fail('invalid_chunk');
     if (chunk.error) fail('provider_error');
     if (chunk.object !== 'chat.completion.chunk' || typeof chunk.id !== 'string' || !chunk.id ||
-        !Array.isArray(chunk.choices) || chunk.choices.length !== 1) fail('invalid_chunk');
+        !Array.isArray(chunk.choices) || chunk.choices.length > 1) fail('invalid_chunk');
     if (this.#state.responseId !== null && this.#state.responseId !== chunk.id) fail('response_id_changed');
+    // OpenAI 兼容流可在 finish_reason 后独立发送 usage，choices 此时为空。
+    if (chunk.choices.length === 0) {
+      if (!this.#state.finishReason || !chunk.usage) fail('invalid_chunk');
+      const fields = ['prompt_tokens', 'completion_tokens', 'total_tokens'];
+      if (!fields.every(field => Number.isSafeInteger(chunk.usage[field]) && chunk.usage[field] >= 0)) fail('invalid_usage');
+      this.#publish({ usage: Object.freeze(Object.fromEntries(fields.map(field => [field, chunk.usage[field]]))) });
+      return;
+    }
     const choice = chunk.choices[0];
     const delta = choice?.delta;
     if (choice?.index !== 0 || !delta || typeof delta !== 'object' || Array.isArray(delta)) fail('invalid_chunk');

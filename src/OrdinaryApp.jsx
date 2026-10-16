@@ -9,7 +9,9 @@ import { UserMessage, AssistantMessage } from './ui/ChatMessage.jsx';
 import sidebarStyle from '@upstream/ui-sidebar/src/client/SidebarRoot.module.css';
 import { OrdinarySession } from './ordinary-session.mjs';
 import { OrdinaryComposer } from './ordinary-composer.jsx';
-import { ORDINARY_MODELS, chatPreferences, isActiveTurn } from './ordinary-models.mjs';
+import { chatPreferences, isActiveTurn } from './ordinary-models.mjs';
+import { selectedModel, providerOf } from './ordinary-providers.mjs';
+import { OrdinaryModels } from './ui/OrdinaryModels.jsx';
 import { ordinaryError } from './ordinary-errors.mjs';
 import { Surface, IconButton } from './ui/Surface.jsx';
 import { ChatSearch } from './ui/ChatSearch.jsx';
@@ -39,7 +41,8 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
   const chat = state.chat;
   const turns = chat?.turns ?? [];
   const preferences = chat ? chatPreferences(chat) : state.homePreferences;
-  const model = ORDINARY_MODELS.find(value => value.id === preferences.model);
+  const selected = selectedModel(state.providers, preferences);
+  const model = selected.model;
   const ownBusy = state.busy && state.owner === chat?.id;
   const renderMessage = (text, streaming) => plugins.record.rendering.enabled && plugins.record.rendering.installed
     ? renderSlot('ordinary.message.content', { text, streaming, onOpenLink: url => act(() => session.openLink(url)) }) : <div className="reply-text">{text}</div>;
@@ -96,7 +99,7 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
   });
 
   if (page === 'plugins') return <PhonePluginsPage host={host} onBack={() => setPage('chat')} onRemote={() => act(session.openRemote)} renderSlot={renderSlot} registerBack={registerBack}/>;
-  if (page === 'settings' || page === 'appearance') return <OrdinarySettings key={appearanceRequest} initialPage={page === 'appearance' ? 'appearance' : 'home'} host={host} session={session} state={state} onBack={() => setPage('chat')} renderSlot={renderSlot} registerBack={registerBack}/>;
+  if (['settings', 'appearance', 'providers'].includes(page)) return <OrdinarySettings key={`${page}-${appearanceRequest}`} initialPage={page === 'appearance' ? 'appearance' : page === 'providers' ? 'providers' : 'home'} host={host} session={session} state={state} onBack={() => setPage('chat')} renderSlot={renderSlot} registerBack={registerBack}/>;
   if (page === 'search') return <ChatSearch search={session.search} onClose={() => { setPage('chat'); setDrawer(true); }} onSelect={choose}/>;
   return <main className="app ordinary-app" data-testid="ordinary-product">
     <header className="topbar">
@@ -127,7 +130,8 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
           })}
         </div>}
       </section>
-      {!state.configured && <div className="key-prompt"><Button onClick={() => act(session.configure)}>{t("配置 DeepSeek Key")}</Button></div>}
+      {!model && <div className="key-prompt" role="status">{t('原供应商或模型已移除，请重新选择模型。')}<Button onClick={() => setSheet({ kind: 'models' })}>{t('选择模型')}</Button></div>}
+      {!state.configured && model && <div className="key-prompt"><Button onClick={() => act(() => session.configure(providerOf(preferences)))}>{t('配置 {provider} Key', { provider: selected.provider.name })}</Button><Button onClick={() => setPage('providers')}>{t('管理模型服务')}</Button></div>}
       {!!chat?.attachments?.length && <div className="draft-attachments" aria-label={t("待发送附件")}>{chat.attachments.map(item => <div key={item.id}><button onClick={() => setAttachmentView(item)}>{item.name}</button><IconButton label={t('移除附件 {name}', { name: item.name })} onClick={() => act(() => session.removeAttachment(item.id))}><IconCloseOutline16/></IconButton></div>)}</div>}
       <OrdinaryComposer chatId={chat?.id ?? 'new'} draft={state.draft} editDraft={value => { void act(() => session.editDraft(value)); }} busy={false}
         runtime={host.ordinaryInput} renderSlot={renderSlot} SessionProvider={SessionProvider} mobile={{ IconButton, label: t('消息'), placeholder: t('发消息，聊聊你的想法'), attachLabel: t('添加附件'),
@@ -135,8 +139,8 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
           stopping: ownBusy, sendLabel: ownBusy ? t('停止生成') : t('发送消息'), disabled: state.busy && !ownBusy,
           hasAttachments: !!chat?.attachments?.length,
           onAttach: () => setSheet({ kind: 'attachments' }), keepExpanded: !!sheet, companionRef: scroll,
-          toolbar: focused => <><Button className="model" tabIndex={focused ? 0 : -1} aria-hidden={!focused} onClick={() => setSheet({ kind: 'models' })} aria-label={t('选择模型，当前 {model}', { model: model.label })}><span>{model.label}</span><IconChevronDownOutline14/></Button>
-            <IconButton label={preferences.thinking ? t('关闭深度思考') : t('开启深度思考')} tabIndex={focused ? 0 : -1} aria-hidden={!focused} aria-pressed={preferences.thinking} className={`icon-button thinking ${preferences.thinking ? 'thinking-on' : ''}`} onClick={() => act(() => session.preferences({ thinking: !preferences.thinking }))}><IconThinkOutline14 size={18}/></IconButton></>,
+          toolbar: focused => <><Button className="model" tabIndex={focused ? 0 : -1} aria-hidden={!focused} onClick={() => setSheet({ kind: 'models' })} aria-label={t('选择模型，当前 {model}', { model: selected.label })}><span>{selected.label}</span><IconChevronDownOutline14/></Button>
+            {model && model.thinking !== 'none' && <IconButton label={model.thinking === 'reasoning_effort' ? t(preferences.thinking ? '使用服务端默认思考' : '使用自定义思考强度') : preferences.thinking ? t('关闭深度思考') : t('开启深度思考')} tabIndex={focused ? 0 : -1} aria-hidden={!focused} aria-pressed={preferences.thinking} className={`icon-button thinking ${preferences.thinking ? 'thinking-on' : ''}`} onClick={() => act(() => session.preferences({ thinking: !preferences.thinking }))}><IconThinkOutline14 size={18}/></IconButton>}</>,
         }}/>
     </> : null}
     <SurfacePresence>{drawer && <Surface kind="drawer" title={t("侧边导航")} onClose={() => setDrawer(false)}><nav className={`${sidebarStyle.root} drawer-content`} aria-label={t("侧边导航")}>
@@ -151,13 +155,13 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
     </nav></Surface>}</SurfacePresence>
     <SurfacePresence>{sheet && <Surface title={{ models: t('选择模型'), options: t('回复设置'), chat: t('聊天选项'), rename: t('重命名'), edit: t('编辑消息'), clear: t('清空本地聊天'), delete: t('删除聊天'), attachments: t('附件'), import: t('导入聊天') }[sheet.kind]} onClose={() => setSheet(null)}>
       <div className="sheet-handle"/><header><h2>{{ models: t('选择模型'), options: t('回复设置'), chat: chat?.title, rename: t('重命名'), edit: t('编辑消息'), clear: t('清空本地聊天'), delete: t('删除聊天'), attachments: t('附件'), import: t('导入聊天') }[sheet.kind]}</h2><IconButton label={t("关闭窗口")} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
-      {sheet.kind === 'models' && ORDINARY_MODELS.map(value => <Button key={value.id} className="option" aria-pressed={value.id === model.id} onClick={() => act(async () => { await session.preferences({ model: value.id }); setSheet(null); })}>{value.label}<span>{value.id === model.id ? t('已选') : ''}</span></Button>)}
+      {sheet.kind === 'models' && <OrdinaryModels providers={state.providers} selection={preferences} busy={state.busy} onSelect={value => act(async () => { await session.preferences({ ...value, thinking: false }); setSheet(null); })} onManage={() => { setSheet(null); setPage('providers'); }}/>}
       {sheet.kind === 'chat' && <><Button className="option" onClick={() => manage('rename')}>{t("重命名")}</Button><Button className="option" disabled={ownBusy} onClick={() => setSheet({ kind: 'delete' })}>{t("删除聊天")}</Button></>}
       {['rename', 'edit'].includes(sheet.kind) && <><textarea className="sheet-editor" aria-label={sheet.kind === 'rename' ? t('聊天名称') : t('编辑消息')} value={edit} maxLength={sheet.kind === 'rename' ? 200 : 100000} onChange={event => setEdit(event.target.value)}/><p className="muted">{sheet.kind === 'edit' ? t('发送后会开启分支，原聊天保留。') : ''}</p><Button variant="primary" disabled={!edit.trim() || state.busy} onClick={() => sheet.kind === 'rename' ? act(async () => { await session.rename(chat.id, edit); setSheet(null); }) : fork(sheet.index, edit, true, turns[sheet.index].attachments)}>{sheet.kind === 'rename' ? t('保存') : t('发送')}</Button></>}
       {['delete', 'clear'].includes(sheet.kind) && <><p>{sheet.kind === 'clear' ? t('将删除这台手机上的全部普通聊天与草稿。') : t('这条聊天及草稿将从手机删除。')}{t('此操作无法撤销。')}</p><Button variant="primary" disabled={state.busy} onClick={() => act(async () => { if (sheet.kind === 'clear') await session.clearHistory(); else await session.remove(chat.id); setSheet(null); })}>{t("确认删除")}</Button></>}
       {sheet.kind === 'models' && <Button className="option" onClick={() => setSheet({ kind: 'options' })}>{t('回复设置')}</Button>}
-      {sheet.kind === 'options' && <RequestOptions value={preferences.requestOptions} thinking={preferences.thinking} onSave={async requestOptions => { await session.preferences({ requestOptions }); setSheet(null); }}/>}
-      {sheet.kind === 'attachments' && <><p>{t("支持 JPEG、PNG、GIF、WebP 图片和 UTF-8 文本文件。图片最多 4 MB，每条消息最多 4 个附件；图片理解需使用 DeepSeek Flash。")}</p><div className="attachment-options"><Button variant="outline" onClick={() => act(async () => { await session.pickAttachment('photo'); setSheet(null); })}>{t("从相册选择")}</Button><Button variant="outline" onClick={() => act(async () => { await session.pickAttachment('file'); setSheet(null); })}>{t("选择文件")}</Button></div></>}
+      {sheet.kind === 'options' && <RequestOptions value={preferences.requestOptions} thinking={preferences.thinking} model={model} onSave={async requestOptions => { await session.preferences({ requestOptions }); setSheet(null); }}/>}
+      {sheet.kind === 'attachments' && <><p>{t('支持 JPEG、PNG、GIF、WebP 图片和 UTF-8 文本文件。图片最多 4 MB，每条消息最多 4 个附件；图片理解需选择支持图片输入的模型。')}</p><div className="attachment-options"><Button variant="outline" onClick={() => act(async () => { await session.pickAttachment('photo'); setSheet(null); })}>{t("从相册选择")}</Button><Button variant="outline" onClick={() => act(async () => { await session.pickAttachment('file'); setSheet(null); })}>{t("选择文件")}</Button></div></>}
     </Surface>}</SurfacePresence>
     <SurfacePresence>{attachmentView && <Surface title={attachmentView.name} onClose={() => setAttachmentView(null)}><header><h2>{attachmentView.name}</h2><IconButton label={t("关闭附件")} onClick={() => setAttachmentView(null)}><IconCloseOutline16/></IconButton></header><p className="muted">{attachmentView.mime} · {Math.ceil(attachmentView.size / 1024)} KB</p>{attachmentView.kind === 'image' ? <img className="attachment-image" src={attachmentView.data} alt={attachmentView.name}/> : <pre className="attachment-text">{attachmentView.text}</pre>}</Surface>}</SurfacePresence>
     {notice && <div role="status" className="toast">{notice}</div>}

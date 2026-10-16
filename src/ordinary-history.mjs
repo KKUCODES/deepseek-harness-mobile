@@ -75,10 +75,10 @@ export class OrdinaryHistory {
       };
     });
   }
-  create({ model = DEFAULT_MODEL, thinking = false, requestOptions } = {}) {
-    if (!isModel(model) || typeof thinking !== 'boolean') return Promise.reject(new Error('invalid_preferences'));
+  create({ model = DEFAULT_MODEL, provider, thinking = false, requestOptions } = {}) {
+    if (!isModel(model, provider) || typeof thinking !== 'boolean') return Promise.reject(new Error('invalid_preferences'));
     const chat = { id: crypto.randomUUID(), mode: 'ordinary', title: '新聊天', draft: '', model, thinking, turns: [], updatedAt: Date.now(),
-      ...(requestOptions === undefined ? {} : { requestOptions: cleanOptions(requestOptions) }) };
+      ...(provider && provider !== 'deepseek' ? { provider } : {}), ...(requestOptions === undefined ? {} : { requestOptions: cleanOptions(requestOptions) }) };
     return this.#transaction('readwrite', (store, done) => { store.add(chat); done(chat); });
   }
   update(id, change) {

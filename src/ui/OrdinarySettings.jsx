@@ -4,7 +4,9 @@ import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconChevronLeftOutline14, IconChevronRightOutline14, IconCloseOutline16, IconDataOutline16, IconPersonalizationOutline16, IconBrowseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { IconButton, Surface } from './Surface.jsx';
 import { SurfacePresence } from './motion.jsx';
-import { ORDINARY_MODELS } from '../ordinary-models.mjs';
+import { selectedModel } from '../ordinary-providers.mjs';
+import { OrdinaryModels } from './OrdinaryModels.jsx';
+import { OrdinaryProviders } from './OrdinaryProviders.jsx';
 import { decodeBackup } from '../ordinary-backup.mjs';
 import { ordinaryError } from '../ordinary-errors.mjs';
 import './settings.css';
@@ -23,16 +25,14 @@ export function OrdinarySettings({ host, session, state, onBack, registerBack, r
   const [busy, setBusy] = useState(false);
   const [stats, setStats] = useState(null);
   const [importData, setImportData] = useState(null);
-  const preferences = host.settings.bind({ namespace: 'ordinary-chat' });
-  const defaults = useSyncExternalStore(preferences.subscribe, preferences.getSnapshot);
   const themeScope = host.settings.bind({ namespace: 'ui-theme' });
   const theme = useSyncExternalStore(themeScope.subscribe, themeScope.getSnapshot);
   const appearance = useSyncExternalStore(host.appearance.subscribe, host.appearance.getSnapshot);
   const localeScope = host.settings.bind({ namespace: 'locale' });
   const locale = useSyncExternalStore(localeScope.subscribe, localeScope.getSnapshot);
-  const defaultModel = ORDINARY_MODELS.find(model => model.id === defaults.value.model);
+  const defaultModel = selectedModel(state.providers, state.defaultSelection);
   const titles = { home: t('设置'), chat: t('普通聊天'), appearance: t('外观与语言'), data: t('本地数据') };
-  useEffect(() => registerBack(() => { if (page !== 'home') { setPage('home'); return true; } return false; }), [page, registerBack]);
+  useEffect(() => { if (page === 'providers') return; return registerBack(() => { if (page !== 'home') { setPage('home'); return true; } return false; }); }, [page, registerBack]);
   useEffect(() => { void session.stats().then(setStats, () => setNotice(t('无法读取存储信息'))); }, [page, session]);
   async function perform(action) {
     if (busy) return;
@@ -41,6 +41,7 @@ export function OrdinarySettings({ host, session, state, onBack, registerBack, r
     catch (error) { setNotice(t(ordinaryError(error))); }
     finally { setBusy(false); }
   }
+  if (page === 'providers') return <OrdinaryProviders session={session} state={state} onBack={() => setPage('chat')} registerBack={registerBack}/>;
   return <main className="app settings-app ordinary-settings">
     <header className="topbar"><IconButton label={page === 'home' ? t('退出设置') : t('返回设置首页')} onClick={() => page === 'home' ? onBack() : setPage('home')}><IconChevronLeftOutline14 size={22}/></IconButton><strong>{titles[page]}</strong><span className="header-spacer"/></header>
     <section className="settings-scroll" aria-label={t("设置内容")}>
@@ -54,8 +55,8 @@ export function OrdinarySettings({ host, session, state, onBack, registerBack, r
           <Row title={t('问题诊断')} onClick={() => setDiagnostics(true)}/>
         </div><h2 className="settings-group-title">Remote</h2><div className="settings-group"><Row icon={<IconBrowseOutline16/>} title={t("电脑连接")} onClick={() => perform(session.openRemote)}/><Row title={t("Remote 提醒")} disabled={busy} onClick={() => perform(session.notificationSettings)}/></div>
       </> : page === 'chat' ? <>
-        <h2 className="settings-group-title">{t("模型服务")}</h2><div className="settings-group"><Row title="DeepSeek Key" value={state.configured ? t('已配置') : t('未配置')} disabled={busy || state.busy} onClick={() => perform(session.configure)}/><Row title={t("默认模型")} value={defaultModel.label} onClick={() => setSheet('model')}/>{state.configured && <Row title={t("移除 Key")} danger disabled={busy || state.busy} onClick={() => perform(session.configure)}/>}</div>
-        <p className="settings-help">{t("使用你自己的 Key，由手机直接连接 DeepSeek。默认模型用于新聊天，已有聊天的模型保持不变。")}</p>
+        <h2 className="settings-group-title">{t("模型服务")}</h2><div className="settings-group"><Row title={t('管理供应商与模型')} value={t('{count} 个供应商', { count: state.providers.length })} onClick={() => setPage('providers')}/><Row title={t("默认模型")} value={defaultModel.label} onClick={() => setSheet('model')}/></div>
+        <p className="settings-help">{t('使用自己的 Key，由手机直接连接所选服务。默认模型用于新聊天，已有聊天的模型保持不变。')}</p>
       </> : page === 'appearance' ? <>
         <div className="settings-group"><Row title={t("主题")} value={{ system: t('跟随系统'), light: t('浅色'), dark: t('深色') }[theme.value.preference]} disabled={!host.phonePlugins.enabled('theme')} onClick={() => setSheet('theme')}/><Row title={t("语言")} value={locale.value.preference === 'en' ? 'English' : t('简体中文')} onClick={() => setSheet('language')}/></div>
         <h2 className="settings-group-title">{t("显示效果")}</h2><div className="settings-appearance-sample"><strong>{t("探索未至之境")}</strong><p>{t("有什么想聊的？")}</p><div>{t("发送消息，聊聊你的想法")}</div></div>
@@ -68,7 +69,7 @@ export function OrdinarySettings({ host, session, state, onBack, registerBack, r
     </section>
     {diagnostics && <SupportDiagnostics read={async () => ({ info: await session.appInfo(), mode: 'ordinary' })} copy={session.copyText} onClose={() => setDiagnostics(false)}/>}
     <SurfacePresence>{sheet && <Surface title={{ model: t('默认模型'), theme: t('主题'), language: t('语言'), import: t('导入聊天'), cache: t('清理临时缓存'), clear: t('清空本地聊天') }[sheet]} onClose={() => { if (!busy) setSheet(null); }}><header><h2>{{ model: t('默认模型'), theme: t('主题'), language: t('语言'), import: t('导入聊天'), cache: t('清理临时缓存'), clear: t('清空本地聊天') }[sheet]}</h2><IconButton label={t("关闭窗口")} disabled={busy} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
-      {sheet === 'model' ? ORDINARY_MODELS.map(model => <Button className="option" key={model.id} aria-pressed={model.id === defaultModel.id} disabled={busy} onClick={() => perform(async () => { await preferences.set('model', model.id); session.setDefaultModel(model.id); setSheet(null); })}>{model.label}<span>{model.id === defaultModel.id ? t('已选') : ''}</span></Button>)
+      {sheet === 'model' ? <OrdinaryModels providers={state.providers} selection={state.defaultSelection} busy={busy || state.busy} onSelect={value => perform(async () => { await session.setDefaultSelection(value); setSheet(null); })}/>
         : sheet === 'theme' ? [['system', t('跟随系统')], ['light', t('浅色')], ['dark', t('深色')]].map(([id, title]) => <Button className="option" key={id} disabled={busy} aria-pressed={theme.value.preference === id} onClick={() => perform(async () => { await themeScope.set('preference', id); setSheet(null); })}>{title}</Button>)
         : sheet === 'language' ? [['zh', t('简体中文')], ['en', 'English']].map(([id, title]) => <Button className="option" key={id} disabled={busy} aria-pressed={(locale.value.preference ?? 'zh') === id} onClick={() => perform(async () => { await localeScope.set('preference', id); setSheet(null); })}>{title}</Button>)
         : <><p>{sheet === 'import' ? t('备份包含 {count} 条聊天，相同记录会跳过，冲突时不会导入任何记录。', { count: importData?.count }) : sheet === 'clear' ? t('将删除这台手机上的全部普通聊天和草稿，无法撤销。建议先导出备份。') : t('仅清理临时缓存，保留聊天、草稿、Key 和电脑绑定。')}</p><div className="settings-actions"><Button variant="outline" disabled={busy} onClick={() => setSheet(null)}>{t("取消")}</Button><Button variant="primary" disabled={busy || (sheet !== 'cache' && state.busy)} onClick={() => perform(async () => {

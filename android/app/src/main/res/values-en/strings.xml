@@ -29,8 +29,8 @@
     <string name="remote_key_invalid">Enter a valid Key without spaces or line breaks</string>
     <string name="remote_key_saving">Saving to computer…</string>
     <string name="key_title">Ordinary chat · DeepSeek Key</string>
-    <string name="key_hint">Paste your DeepSeek API Key on this device</string>
-    <string name="key_note">Encrypted with Android Keystore and used only for direct DeepSeek requests from this phone. Never returned to the webpage.</string>
+    <string name="key_hint">Enter this provider’s API Key on this device</string>
+    <string name="key_note">Encrypted with Android Keystore and used only for direct requests to this provider from this phone. Never returned to the webpage. The old Key is not shown.</string>
     <string name="key_save">Save</string>
     <string name="key_cancel">Cancel</string>
     <string name="key_remove">Remove Key</string>

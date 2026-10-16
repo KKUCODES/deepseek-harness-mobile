@@ -35,9 +35,10 @@ export class OrdinaryNative {
     });
   }
   status() { return this.call('key.status'); }
-  configure() { return this.call('key.configure'); }
+  configure(provider) { return this.call('key.configure', provider ? { provider } : {}); }
+  providers() { return this.call('providers.list'); }
 
-  async open({ requestId, model, messages, thinking, requestOptions }, signal) {
+  async open({ requestId, model, messages, thinking, requestOptions, provider, providerRevision }, signal) {
     let ended = false;
     const finish = () => {
       if (ended) return;
@@ -49,6 +50,7 @@ export class OrdinaryNative {
     signal.addEventListener('abort', finish, { once: true });
     try {
       const head = await this.call('request.open', { requestId, model, messages,
+        ...(provider ? { provider } : {}), ...(providerRevision ? { providerRevision } : {}),
         ...(thinking === undefined ? {} : { thinking }), ...(requestOptions === undefined ? {} : { requestOptions }) });
       if (ended) throw new DOMException('Stopped', 'AbortError');
       if (head.status < 200 || head.status >= 300 || head.contentType?.split(';')[0].trim().toLowerCase() !== 'text/event-stream') {

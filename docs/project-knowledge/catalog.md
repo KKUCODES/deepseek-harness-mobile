@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+普通聊天模型服务：[自定义供应商、OpenAI Chat Completions、独立 Key 与旧数据兼容](../integration/ordinary-providers-current.md)。preview.5 发行准备中；DeepSeek 与 GLM 的真实 Android 验证范围单独记录。
+
 启动交接：[普通聊天与 Remote 共用 Logo 封面、首帧淡出与失败重试](../integration/startup-transition-current.md)。两入口已接入并随 preview.4 公开预发布。
 
 Remote 缓存：[插件资源持久缓存、工作区/聊天差量、实时更新与实际流量](../integration/remote-cache-current.md)。preview.4 与插件 0.1.85 已公开预发布；两端需配套更新，不要求升级中转或修改 DSH。

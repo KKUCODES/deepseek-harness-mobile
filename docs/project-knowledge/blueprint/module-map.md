@@ -1,5 +1,7 @@
 # 手机端模块地图
 
+普通聊天通过[供应商目录](../../../src/ordinary-providers.mjs)、[共享模型选择](../../../src/ui/OrdinaryModels.jsx)与[供应商设置](../../../src/ui/OrdinaryProviders.jsx)管理服务和模型；[原生配置](../../../android/app/src/main/java/dev/dshmobile/validation/OrdinaryProviders.kt)保存目标与独立凭据引用，[原生请求桥](../../../android/app/src/main/java/dev/dshmobile/validation/OrdinaryBridge.kt)按目录快照发送。沿用原 DeepSeek 别名与 IndexedDB v2；聊天备份升为 v2 并接受旧 v1。维护角色手机端维护者，核验2026-10-15；[规则与实际入口证据](../../integration/ordinary-providers-current.md)。
+
 [Remote回复尾部](../../../src/ui/RemoteMessage.jsx)复用官方分支图标，[会话扩展](../../../src/remote-plugin-slots.jsx)将反馈与分支合在同一操作行；仅官方反馈的操作框使用[内容宽度](../../../src/ui/MobilePluginFrame.jsx)，不改变其他插件的外层缩放。维护角色手机端维护者，核验2026-10-15；[显示规则与真实入口证据](../../integration/remote-reply-actions-current.md)。
 
 Remote活动提示通过[会话插槽](../../../src/remote-plugin-slots.jsx)在[共享聊天正文](../../../src/ui/RemoteWorkspace.jsx)末尾挂载原DSH独立组件，不依赖首段消息节点；[时间来源](../../../src/remote-running-status.mjs)只取原开放轮次，连接和会话状态共同控制显示。维护角色手机端维护者，核验2026-10-15；[等待反馈及真实验证边界](../../integration/remote-running-status-current.md)。
