@@ -46,6 +46,8 @@ Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地�
 
 ## 已核验范围
 
+2026-10-16 的[版本发布 Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38859168543)已完成 `0.1.0-preview.5` 构建、lint、签名和公开发布，固定源码为 `a1dc8a0878dfe0f61efdc39e27b6e4dac1ca4b6e`，共享协议固定提交保持。APK 与三个校验附件均已匿名下载，APK 为 11,057,186 字节，SHA-256 `60b005439111df6e238857f0c07876d9a629e7250a88ba284a61e0b8819f64e4`，与 GitHub 资产摘要和校验文件一致。本机 `apksigner` 复核原证书，`aapt` 核对原包名、versionCode7、最低Android9和非调试包。512项Node回归及[自定义供应商的本地真实入口验证](./integration/ordinary-providers-current.md)通过，GLM 后续限流失败保持；此次公开 APK 只做下载、身份、签名核验，没有覆盖安装日常 App 或外推真机、任意模型与完整 Remote 复验。证据在本地 `artifacts/public-release/0.1.0-preview.5/verification.json`。
+
 2026-10-15 的[版本发布 Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38718066086)已完成 `0.1.0-preview.4` 构建、lint、签名与公开发布，固定源码为 `00f2de5887655ac456de758610dd1ad7a0b6d687`、共享协议为 `056bf6f19527c58f456ee5f7eec55e715f401ab5`。APK 与三个校验附件均已匿名下载，APK 为 11,040,802 字节，SHA-256 `af10da7aef516299c61bbdf0840d9c0ff743801717c4649f57e17ceb6a653b53`，与 GitHub 资产摘要及校验文件一致。本机 `apksigner` 验证原证书，`aapt` 核对原包名、versionCode 6、Android 9 与非调试包。505 项手机 Node 回归及缓存/启动的浏览器、MuMu 专项已通过；此次公开 APK 只做下载、身份和签名核验，不将本地候选运行证据扩大为真机或完整公网验收。
 
 2026-10-15 的[版本发布 Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38687975185)已完成 `0.1.0-preview.3` 构建、lint、签名和公开发布，固定源码提交为 `2124df87cb625a4a83d7afcfa3956419d85570e0`。首次发行因工作流改动尚未进入默认分支返回403；同步 `main` 后仅重跑失败的发行作业，复用原签名附件，没有重新打包。APK与三个校验附件已匿名下载，APK为10,979,098字节，SHA-256 `b168715c79ebdfcea7369cff607f7c8c302b5c7f3c4fbed124266de3aab310b8`，与GitHub资产摘要及校验文件一致。本机 `apksigner` 复核原证书，`aapt` 核对原包名、versionCode5、Android9和非调试包。此轮核验发布与下载，界面运行证据沿用对应浏览器/MuMu专项，不扩大真机或公网验收范围。

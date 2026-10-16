@@ -1,6 +1,6 @@
 # 普通聊天：自定义供应商与模型
 
-- 状态：已接入并完成本地验收；正在准备 `0.1.0-preview.5` 签名发行，preview.4 不含该功能。
+- 状态：已接入并完成本地验收，随 `0.1.0-preview.5` 公开预发布；preview.4 不含该功能。
 - 维护角色：DSHM 手机端维护者。
 - 最近核验：2026-10-15。
 - 需求与验收：[KKC-63](https://linear.app/kkcodes/issue/KKC-63)。只修改手机端，不修改 DSH、电脑插件或中转。
@@ -73,3 +73,7 @@
 早期驱动曾因原生输入定位、覆盖原生消息分发回调、模型控件的精确标签、历史名称重叠及提示包含子按钮而失败；已修正测试驱动，不向产品添加测试后门。首轮残留的专用供应商/记录已按原报告标识单独清理。`2c881bd6-c11e-4868-b494-f01a5b61124d` 的后续 GLM 回复等待超时没有保留足以归因的上游状态，不能反推它与另一次 429 原因相同；失败报告保留。
 
 尚未验证任意第三方中转站、真实 OpenAI 模型、所有图片模型、Android 9–11/15 或物理手机。模型能力以各服务文档为准，不因某两家官方接口通过而宣称所有“兼容”服务都可用。公开 preview.4 包不含本次功能；[preview.5 发行工作](https://linear.app/kkcodes/issue/KKC-64)单独记录构建、签名和下载结果，不扩大运行验收范围。
+
+### 公开发行核验（2026-10-16）
+
+[Actions 38859168543](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/38859168543)完成构建、lint、独立签名与公开发行，源码为 `a1dc8a0878dfe0f61efdc39e27b6e4dac1ca4b6e`。[preview.5](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.5) 的 APK 及三个校验附件均已匿名下载；本机复核原包名、原证书、versionCode7、最低Android9与非调试包。证据在本地 `artifacts/public-release/0.1.0-preview.5/verification.json`，详细摘要见[发行记录](../releases.md#已核验范围)。公开包没有安装覆盖日常 App，不将此下载核验扩大为真机或全量 Remote 复验。

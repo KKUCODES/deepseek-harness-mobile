@@ -113,7 +113,7 @@ npm test
 | 需要检查的内容 | 入口与边界 |
 | --- | --- |
 | 普通聊天真实 API | `node scripts/verify-product-android.mjs` 需要 `DSHM_ANDROID_SERIAL` 和 `DSHM_RUN_LIVE=1`；使用设备内 Key 发送专用消息，会产生模型费用并重启目标 App，不属于默认测试。 |
-| 自定义供应商（源码候选） | `tests/ordinary-providers.test.mjs` 覆盖数据兼容；`OrdinarySecurityInstrumentation` 的 `providersOnly=true` 覆盖原生目录和凭据；`scripts/verify-ordinary-providers-android.mjs` 操作隔离 `.toolstyletest` 的实际页面，范围见[模型服务验收](./integration/ordinary-providers-current.md)。 |
+| 自定义供应商（preview.5 起） | `tests/ordinary-providers.test.mjs` 覆盖数据兼容；`OrdinarySecurityInstrumentation` 的 `providersOnly=true` 覆盖原生目录和凭据；`scripts/verify-ordinary-providers-android.mjs` 操作隔离 `.toolstyletest` 的实际页面，范围见[模型服务验收](./integration/ordinary-providers-current.md)。 |
 | 普通聊天页面性能 | `node scripts/measure-page.mjs --product` 使用隔离 Edge；`node scripts/measure-product-android.mjs` 使用指定 Android 设备。串行运行，页面耗时与模型网络耗时分别记录。 |
 | 诊断页对照测量 | `npm run measure:page` 和 `node scripts/measure-android-page.mjs`；属于诊断页，不能替代产品页面结果。 |
 | 旧基线软键盘诊断 | `node scripts/diagnose-ime.mjs` 对比 WebView 与原生输入框，会重启目标 App；历史环境问题见[诊断记录](./plugin-validation/results.md#真实软键盘环境诊断)。 |

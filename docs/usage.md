@@ -100,4 +100,4 @@ DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可�
 
 ## 维护依据
 
-本页按 2026-10-10 的本地候选整理，由 DSHM 手机端维护者维护。使用流程来自[官方组合安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)、[普通聊天实现](./integration/ordinary-current.md)和[当前支持清单](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。本次只整理文档，没有重新执行 App 功能验收；历史报告各自保留原版本与测试环境。
+本页由 DSHM 手机端维护者维护，2026-10-16 更新到 preview.5。使用流程来自[官方组合安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)、[普通聊天实现](./integration/ordinary-current.md)、[自定义供应商](./integration/ordinary-providers-current.md)和[当前支持清单](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。供应商功能和公开包下载分别核验，不将文档更新视为完整 Remote、真机或公网复验；历史报告各自保留原版本与测试环境。
