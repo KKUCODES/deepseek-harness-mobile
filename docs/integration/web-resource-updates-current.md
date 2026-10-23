@@ -1,6 +1,6 @@
 # 完整页面资源热更新
 
-- 状态：从干净main独立实现，本地页面、Android专项和两入口验收通过；正在发布preview.10/code12。preview.9及更早版本不包含加载器，需要先升级APK。[发布任务 KKC-83](https://linear.app/kkcodes/issue/KKC-83)。
+- 状态：preview.10/code12已公开预发布，本地页面、Android专项和两入口验收通过；云端APK构建/签名与资源构建/签名通过。preview.9及更早版本不包含加载器，需要先升级APK。[发布任务 KKC-83](https://linear.app/kkcodes/issue/KKC-83)。
 - 维护：DSHM手机端维护者；最近核验：2026-10-24。
 - [实现任务 KKC-82](https://linear.app/kkcodes/issue/KKC-82)；[已确认方案 KKC-81](https://linear.app/kkcodes/issue/KKC-81)。DSH、电脑插件、中转与旧插件适配分支不修改。
 
@@ -41,6 +41,10 @@ APK内置[资源信任公钥](../../android/app/src/main/assets/web-update-trust
 资源使用同仓库固定 `web-preview` Release及 `web-update.json`，压缩包为 `dshm-web-r<序号>.zip`。它不符合旧APK更新器的 `v<版本>` 格式，也不会每次创建新Release挤占旧端20条列表窗口。替换GitHub清单附件的短暂间隙可能检查失败，保留旧包并可重试。本次先发布加载器APK，并验证资源云端构建与签名，不创建公开资源Release或投放重复资源包。
 
 本地打包命令参数：`node scripts/web-update-package.mjs pack --source <Web输出目录> --output <新输出目录> --private <本地私钥文件> --revision <递增序号> --min-apk <最小versionCode> --max-apk <最大versionCode> --application-id <目标包名> --notes <更新说明>`。目录不得已有同名输出。生产用公开包名，实际兼容范围必须以包含加载器且已验收的APK为准；测试包名不能投放给公开App。`pack-unsigned`用于无私钥构建。
+
+2026-10-24公开发行：[APK Actions40009039704](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40009039704)构建/lint/原证书签名通过，源码8d8d152。发行步骤两次返回403；已用获授权账号创建对应标签并将同一CI签名产物上传[preview.10](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.10)，未二次构建。APK和三个附件匿名下载、摘要、原证书、包名、code12、Android9、非调试及内置资源公钥核验通过，详见[发行核验](../releases.md#已核验范围)。
+
+[资源Actions40009515878](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40009515878)基于18e1140构建及独立Secret签名通过，publish=false。下载签名产物并用APK公钥验签，ZIP与167个文件摘要全匹配；与APK对照166个文件逐字节一致，sdk-versions.json只有键顺序差异、版本映射相同。云端首次全量测试因依赖本地多版上游目录失败，工作流改为13项自包含更新测试；本地545项通过记录保持。一次因推送网络失败误选旧提交的调度已取消，不计通过。证据在忽略目录 `artifacts/web-resource-release/`；未创建公开web-preview资源Release，不冒充真实公网资源下载/安装验收。
 
 ## 验证结果
 

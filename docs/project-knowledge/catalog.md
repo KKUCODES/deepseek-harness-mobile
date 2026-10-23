@@ -1,6 +1,6 @@
 # 手机端知识总目录
 
-页面资源热更新：[完整签名包、兼容检查、下次进程启用及失败回退](../integration/web-resource-updates-current.md)。独立分支实现，545项Node、双入口页面与API36签名互通/真实加载和恢复通过；聊天/草稿、测试Key及设备身份存储保持。preview.10/code12正在发布，旧APK需先升级；独立资源签名Secret已获授权并配置，公开资源包暂不投放。[实现 KKC-82](https://linear.app/kkcodes/issue/KKC-82) · [发布 KKC-83](https://linear.app/kkcodes/issue/KKC-83)。
+页面资源热更新：[完整签名包、兼容检查、下次进程启用及失败回退](../integration/web-resource-updates-current.md)。545项Node、双入口页面与API36签名互通/真实加载和恢复通过；聊天/草稿、测试Key及设备身份存储保持。preview.10/code12已公开，旧APK需先升级；独立资源Secret配置及云端构建/签名通过，公开APK及附件匿名下载核验通过。APK发行作业403后通过获授权账号发布同一签名产物，未重新构建；公开资源包暂不投放。[实现 KKC-82](https://linear.app/kkcodes/issue/KKC-82) · [发布 KKC-83](https://linear.app/kkcodes/issue/KKC-83)。
 
 Remote 系统返回修复：[列表进入后的旧忙碌状态引用及回归](../integration/remote-back-diagnosis.md)。rc.2/alpha.2真实列表点击回放、弹窗/插件优先级、忙碌结束和草稿保留，以及Android16原生返回键/手势结合组件回放通过。540项Node和页面构建通过；额外全屏动效专项存在修复前也可复现的偶发失败，未计通过。preview.9/code11已公开预发布，云端构建/lint/原签名和APK及三个附件匿名下载核验通过；配套插件保持0.1.87。[实现](https://linear.app/kkcodes/issue/KKC-79) · [发布](https://linear.app/kkcodes/issue/KKC-80)。
 
