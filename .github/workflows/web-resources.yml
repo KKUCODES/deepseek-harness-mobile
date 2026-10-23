@@ -69,7 +69,8 @@ jobs:
         run: |
           npm ci --ignore-scripts --legacy-peer-deps --no-audit --no-fund
           npm run prepare:ci
-          npm test
+          # 全量本地测试依赖多版上游检出；此隔离CI验证更新协议与签名打包。
+          node --test tests/app-updates.test.mjs tests/web-updates.test.mjs
           npm run build:web:ci
       - name: Package unsigned resources
         env:
