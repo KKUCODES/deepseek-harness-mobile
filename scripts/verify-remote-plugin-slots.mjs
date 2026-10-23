@@ -21,6 +21,7 @@ import { checkSessionExportStatus } from './check-session-export-status.mjs';
 import { checkDesktopApps } from './check-desktop-apps.mjs';
 import { checkManagementStatus } from './check-management-status.mjs';
 import { checkRemoteMotion } from './check-remote-motion.mjs';
+import { checkRemoteBackNavigation } from './check-remote-back-navigation.mjs';
 import { checkRemoteToolLayout } from './check-remote-tool-layout.mjs';
 import { checkRemoteFileLayout } from './check-remote-file-layout.mjs';
 import { checkRemoteFileListLayout } from './check-remote-file-list-layout.mjs';
@@ -72,8 +73,10 @@ const fileListOnly = process.argv.includes('--file-list-layout');
 const builtinPanelsOnly = process.argv.includes('--builtin-panels');
 const runningOnly = process.argv.includes('--running-status');
 const forkActionsOnly = process.argv.includes('--fork-actions');
-const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly;
-const layoutSdk = layoutOnly && process.argv.includes('--official-alpha2')
+const backNavigationOnly = process.argv.includes('--back-navigation');
+const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly;
+const layoutSdk = backNavigationOnly && !process.argv.includes('--official-alpha2')
+  ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-rc.2' }) : layoutOnly && process.argv.includes('--official-alpha2')
   ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-alpha.2' }) : null;
 const documentOnly = process.argv.includes('--documents');
 const inputOnly = process.argv.includes('--input-contracts');
@@ -141,7 +144,13 @@ try {
     await route.fulfill({ status: 200, contentType: 'text/javascript', body });
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : builtinPanelsOnly ? '?documents&builtin' : fileListOnly ? '?documents&files' : fileLayoutOnly || documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly ? '?documents' : ''}`);
-  if (forkActionsOnly) {
+  if (backNavigationOnly) {
+    for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
+    report.backNavigation = await checkRemoteBackNavigation(page);
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, `artifacts/remote-back-navigation-${layoutSdk.version}.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (forkActionsOnly) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) {
       await page.addStyleTag({ path: resolve(root, file) });
     }

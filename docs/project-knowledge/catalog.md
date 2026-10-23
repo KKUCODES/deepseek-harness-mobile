@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+Remote 系统返回修复：[列表进入后的旧忙碌状态引用及回归](../integration/remote-back-diagnosis.md)。本地修复已通过rc.2/alpha.2真实列表点击回放、弹窗/插件优先级、忙碌结束和草稿保留；Android16原生返回键/手势结合当前组件回放通过。540项Node和页面构建通过；额外全屏动效专项存在修复前也可复现的偶发失败，未计通过。preview.9/code11准备发行，配套插件保持0.1.87。[实现](https://linear.app/kkcodes/issue/KKC-79) · [发布](https://linear.app/kkcodes/issue/KKC-80)。
+
 App内更新：[每日检查、原生下载/校验、系统覆盖安装与配套插件版本](../integration/app-updates-current.md)。preview.8/code10已公开预发布，云端签名与APK/三个附件匿名下载核验通过；两页面入口和Android原签名覆盖安装、历史/草稿保留已验，校验错误按具体原因分别提示。说明使用Markdown、下载文案按状态精简，最新状态也能查看本版说明；同版下载仍拒绝。[实现](https://linear.app/kkcodes/issue/KKC-77) · [发布](https://linear.app/kkcodes/issue/KKC-78)。
 
 长聊天修复：[通用分块、原生确认、分页/快照/实时流与重连](../integration/remote-response-chunks.md)。preview.7与插件0.1.87已公开预发布，[云端签名及匿名下载核验](../releases.md#已核验范围)通过；公共中转已升级并通过公网传输及旧端兼容，不包含插件适配分支。

@@ -100,7 +100,7 @@ DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可�
 
 ## App 更新
 
-从preview.8开始支持App内更新。preview.7及更早的公开版没有更新入口，请先从[发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases)下载preview.8 APK覆盖安装；之后可在「设置 → 软件更新」或「Remote → 连接选项 → 软件更新」手动检查，启动时每天也会检查一次。
+从preview.8开始支持App内更新。preview.7及更早的公开版没有更新入口，请先从[发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases)下载最新APK覆盖安装；之后可在「设置 → 软件更新」或「Remote → 连接选项 → 软件更新」手动检查，启动时每天也会检查一次。
 
 发现新版后查看更新内容及配套插件要求，点击下载；下载完成并验证后，点击「安装更新」。首次需在Android设置允许此来源，返回后再次点击安装，再由系统确认覆盖安装。安装会保留原应用数据，请勿先卸载。系统扫描或安装取消后，可返回App重新操作；网络失败时可重试或前往发行页下载。详情见[更新说明与验证边界](./integration/app-updates-current.md)。
 

@@ -102,6 +102,8 @@ npm run serve
 
 ## 测试和测量
 
+Remote 系统返回回归：`node scripts/verify-remote-plugin-slots.mjs --back-navigation` 默认使用固定官方rc.2 SDK；加 `--official-alpha2` 检查旧SDK。测试通过真实列表按钮进入会话，覆盖读取忙碌期、读取结束、连续返回、项目导航、弹窗与插件面板优先级和草稿保留。该入口仍需准备对应SDK材料；[结果与Android检查边界](./integration/remote-back-diagnosis.md)。
+
 在本仓库根目录执行默认测试：
 
 ```powershell

@@ -249,9 +249,10 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       if (model.pluginPanels?.isExpanded()) { model.pluginPanels.toggleExpanded(); return true; }
       if (jobOutput) { setJobOutput(null); setSheet('jobs'); } else if (command) setCommand(null); else if (file) setFile(null); else if (sheet === 'pluginManager') setSheet('plugins'); else if (sheet) setSheet(null); else if (selected) void act(() => model.back()); else if (workspace) setWorkspace(null); else return false; return true;
     };
+    // 列表进入会话会先经过忙碌态；解除后必须刷新 act，避免系统返回一直被旧状态拦住。
     window.dshmHandleBack = back;
     return () => { delete window.dshmHandleBack; };
-  }, [model, embedded, file, command, jobOutput, sheet, selected, workspace]);
+  }, [model, embedded, file, command, jobOutput, sheet, selected, workspace, act]);
   const header = <>
     <header className="topbar remote-topbar"><IconButton label={t("返回")} disabled={busy} onClick={() => selected ? void act(() => model.back()) : workspace ? setWorkspace(null) : onBack()}><IconChevronLeftOutline14/></IconButton>
       <div className="remote-heading">{selected ? <RemoteHeaderTitle model={model} title={chat?.displayTitle ?? '聊天'}/> : <strong>{workspace ? state.workspaces.items.find(item => item.workspaceId === workspace)?.title : 'Remote'}</strong>}</div>

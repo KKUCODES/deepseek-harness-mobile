@@ -479,6 +479,10 @@ let managementCapabilities;
 let releasePanelSelection, pendingPanelSelection, panelSelectionNotices;
 window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = desktopAppsReplay(model); }, ...factoryChecks(model), ...navigationChecks(model), ...composerChecks(model), checkRemoteInput, checkViewInputs: () => checkViewInputs(model), sidebarState: () => ({ selected: model.snapshot.selected, drafts: model.snapshot.drafts, prompts: sidebarPrompts }), inputDraft: () => model.getSnapshot().drafts[model.getSnapshot().selected], enable, disable: () => plugin.dispose(), select: id => model.select(id), emitTurn,
   appearanceNavigationCalls: () => appearanceNavigationCalls,
+  backNavigationProject: () => model.workspaces.replaceBaseline({ items: [
+    { workspaceId: 'back-test', title: '返回验证项目', sessionIds: ['one'], path: '/fixture/back',
+      createdAt: '2026-10-24T00:00:00.000Z', updatedAt: '2026-10-24T00:00:00.000Z' },
+  ], archivedSessionIds: [], pinnedSessionIds: [] }),
   emitBlocked: (id, turn, seq) => {
     channels.get(id)({ type: 'event', event: { type: 'turn/start', seq, time: seq + 1, data: { turn } } });
     channels.get(id)({ type: 'event', event: { type: 'turn/end', seq: seq + 1, time: seq + 2, data: { turn, reason: { kind: 'blocked' } } } });
