@@ -1,6 +1,6 @@
 # App 内更新
 
-状态：2026-10-24，本地实现与验收完成，准备发布 `0.1.0-preview.8/code10`；云端构建、签名与公开下载待验。维护：手机端维护者。实现：[KKC-77](https://linear.app/kkcodes/issue/KKC-77)；发布：[KKC-78](https://linear.app/kkcodes/issue/KKC-78)。从已发布的分块修复基线 `ea4878d` 开始，不包含独立插件适配分支，不修改DSH、插件或中转业务代码。
+状态：2026-10-24，`0.1.0-preview.8/code10` 已公开预发布，[云端构建、签名及匿名下载核验](../releases.md#已核验范围)通过。维护：手机端维护者。实现：[KKC-77](https://linear.app/kkcodes/issue/KKC-77)；发布：[KKC-78](https://linear.app/kkcodes/issue/KKC-78)。从已发布的分块修复基线 `ea4878d` 开始，不包含独立插件适配分支，不修改DSH、插件或中转业务代码。
 
 ## 使用入口
 

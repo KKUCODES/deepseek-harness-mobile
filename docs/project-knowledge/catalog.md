@@ -1,6 +1,6 @@
 # 手机端知识总目录
 
-App内更新：[每日检查、原生下载/校验、系统覆盖安装与配套插件版本](../integration/app-updates-current.md)。本地实现已验，准备发布preview.8/code10，云端签名与公开下载待验；两页面入口和Android原签名覆盖安装、历史/草稿保留已验，校验错误按具体原因分别提示。说明使用Markdown、下载文案按状态精简，最新状态也能查看本版说明；同版下载仍拒绝。[实现](https://linear.app/kkcodes/issue/KKC-77) · [发布](https://linear.app/kkcodes/issue/KKC-78)。
+App内更新：[每日检查、原生下载/校验、系统覆盖安装与配套插件版本](../integration/app-updates-current.md)。preview.8/code10已公开预发布，云端签名与APK/三个附件匿名下载核验通过；两页面入口和Android原签名覆盖安装、历史/草稿保留已验，校验错误按具体原因分别提示。说明使用Markdown、下载文案按状态精简，最新状态也能查看本版说明；同版下载仍拒绝。[实现](https://linear.app/kkcodes/issue/KKC-77) · [发布](https://linear.app/kkcodes/issue/KKC-78)。
 
 长聊天修复：[通用分块、原生确认、分页/快照/实时流与重连](../integration/remote-response-chunks.md)。preview.7与插件0.1.87已公开预发布，[云端签名及匿名下载核验](../releases.md#已核验范围)通过；公共中转已升级并通过公网传输及旧端兼容，不包含插件适配分支。
 
@@ -28,7 +28,7 @@ Remote 动效：[页面进退、共享窗口与执行过程](../integration/moti
 
 自动构建与下载：[GitHub Actions、固定 SDK、独立签名与公开 APK](../releases.md)。用户已授权将签名凭据保存到指定仓库 Secrets；PR 仍只生成无签名包，签名与发布使用受信任入口。原本地与历史候选入口保持，CI 构建不代替手机功能兼容验收。
 
-公开下载：`0.1.0-preview.6` 已发布，新增官方0.2.1-rc.2核心连接兼容，保留自定义供应商、原数据、身份、签名和旧Host支持；[发行页及匿名下载核验](../releases.md#已核验范围)。
+公开下载：`0.1.0-preview.8` 已发布，新增App内更新与精简的Markdown更新界面，保留长聊天分块、官方0.2.1-rc.2核心连接兼容、自定义供应商、原数据、身份、签名和旧Host支持；[发行页及匿名下载核验](../releases.md#已核验范围)。
 
 阅读入口：[项目首页](../../README.md) · [English](../../README.en.md) · [使用指南](../usage.md) · [开发指南](../development.md) · [截图来源](../images/README.md)。本总目录负责查找技术依据；日常使用和构建步骤从前述指南进入。
 
