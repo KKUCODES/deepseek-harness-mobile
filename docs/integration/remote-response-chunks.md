@@ -1,6 +1,6 @@
 # 长聊天大响应传输
 
-状态：2026-10-23，本地验收完成，配套preview.7/插件0.1.87已公开发布，[云端签名及匿名下载核验](../releases.md#已核验范围)通过；公共中转升级尚待登录信息。实现：[KKC-75](https://linear.app/kkcodes/issue/KKC-75)；发行与公共中转升级：[KKC-76](https://linear.app/kkcodes/issue/KKC-76)。独立分支不合并 `feature/plugin-adaptation`，不修改 DSH 本体。
+状态：2026-10-23，本地验收完成，配套preview.7/插件0.1.87已公开发布，[云端签名及匿名下载核验](../releases.md#已核验范围)通过；公共中转已升级并通过公网分块、重连及旧端兼容。实现：[KKC-75](https://linear.app/kkcodes/issue/KKC-75)；发行与公共中转升级：[KKC-76](https://linear.app/kkcodes/issue/KKC-76)。独立分支不合并 `feature/plugin-adaptation`，不修改 DSH 本体。
 
 ## 实现
 
