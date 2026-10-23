@@ -1,22 +1,11 @@
-import React from 'react';
-import * as JSXRuntime from 'react/jsx-runtime';
-import * as ReactDOM from 'react-dom';
-import * as ReactDOMClient from 'react-dom/client';
-import * as Cordis from '@deepseek-ai/cordis';
 import Loader from '@deepseek-ai/cordis-plugin-loader';
-import * as Store from '@deepseek-ai/dsh-client-store';
-import * as Slots from '@deepseek-ai/dsh-client-ui-slots';
-import * as Primitives from '@deepseek-ai/dsh-client-ui-primitives';
-import * as Dockkit from '@deepseek-ai/dsh-client-ui-dockkit';
+import { clientStaticModules as seed } from './client-static-modules.jsx';
 import { activationManifest, pluginEntries } from './remote-plugin-policy.mjs';
 import { isRemoteHostDisconnect } from './remote-transport.mjs';
 import { remoteModuleRegistration } from './remote-module-registration.mjs';
+import { assertRemoteModuleSystem } from './remote-module-capabilities.mjs';
 
 const modulesId = '@deepseek-ai/dsh-client-modules';
-const seed = { react: React, 'react/jsx-runtime': JSXRuntime, 'react-dom': ReactDOM, 'react-dom/client': ReactDOMClient,
-  '@deepseek-ai/cordis': Cordis, '@deepseek-ai/dsh-client-store': Store,
-  '@deepseek-ai/dsh-client-ui-slots': Slots, '@deepseek-ai/dsh-client-ui-primitives': Primitives,
-  '@deepseek-ai/dsh-client-ui-dockkit': Dockkit };
 
 /** 普通模块图增量同步并保留未变化的实例；核心接口更新需重新建立连接。 */
 export class RemotePlugins {
@@ -140,7 +129,9 @@ export class RemotePlugins {
     if (index < 0) throw new Error('missing_remote_modules');
     const [registration] = target.pendingQueue.splice(index, 1);
     const exports = registration.factory(id => { throw new Error(`unexpected_bootstrap_dependency:${id}`); });
+    if (typeof exports.createClientModuleSystem !== 'function') throw Error('unsupported_dsh_capabilities');
     runtime.modules = exports.createClientModuleSystem(target, { id: modulesId, exports }, { boot: graph, staticModules: seed, loadBundle });
+    assertRemoteModuleSystem(runtime.modules);
     registrationBridge.bind(runtime.modules);
   }
   async activate() {

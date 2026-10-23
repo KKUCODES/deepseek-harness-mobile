@@ -10,12 +10,16 @@ val latestNoticeLifecycleTest = providers.gradleProperty("latestNoticeLifecycleT
 val latestFinalTest = providers.gradleProperty("latestFinalTest").orNull == "true"
 val officialPluginOnlyTest = providers.gradleProperty("officialPluginOnlyTest").orNull == "true"
 val remoteToolLayoutTest = providers.gradleProperty("remoteToolLayoutTest").orNull == "true"
+val remoteCompatibilityTest = providers.gradleProperty("remoteCompatibilityTest").orNull == "true"
 val officialDshVersion = providers.gradleProperty("officialDshVersion").orNull ?: "0.2.1-alpha.1"
-check(officialDshVersion in listOf("0.2.1-alpha.1", "0.2.1-alpha.2")) { "Unreviewed official DSH version" }
+check(officialDshVersion in listOf("0.2.1-alpha.1", "0.2.1-alpha.2", "0.2.1-rc.2")) { "Unreviewed official DSH version" }
 val officialAlpha2 = officialDshVersion == "0.2.1-alpha.2"
+val officialRc21 = officialDshVersion == "0.2.1-rc.2"
+check(!officialRc21 || (officialPluginOnlyTest && latestCompatibilityTest)) { "Rc.2 requires the isolated official candidate" }
 val ciBuild = providers.gradleProperty("ciBuild").orNull == "true"
-check(!ciBuild || (officialPluginOnlyTest && latestCompatibilityTest && officialAlpha2)) { "CI requires official alpha.2 assets" }
+check(!ciBuild || (officialPluginOnlyTest && latestCompatibilityTest && officialRc21)) { "CI requires official rc.2 assets" }
 check(!remoteToolLayoutTest || (officialPluginOnlyTest && officialAlpha2 && !ciBuild)) { "Tool layout validation requires an isolated official alpha.2 debug build" }
+check(!remoteCompatibilityTest || (officialPluginOnlyTest && officialAlpha2 && !ciBuild && !remoteToolLayoutTest)) { "Compatibility validation requires isolated alpha.2 assets" }
 check(!officialAlpha2 || (officialPluginOnlyTest && latestCompatibilityTest)) { "Alpha.2 requires the isolated official candidate" }
 val latestNoticeBaselineAssets = providers.gradleProperty("latestNoticeBaselineAssets").orNull == "true"
 check(!latestOfficeLifetimeTest || latestCompatibilityTest) { "Office lifetime validation requires the latest SDK" }
@@ -27,12 +31,13 @@ check(!latestNoticeBaselineAssets || latestCompatibilityTest) { "Notice baseline
 check(listOf(latestOfficeLifetimeTest, latestCordisPeerTest, latestNoticeLifecycleTest, latestFinalTest, officialPluginOnlyTest).count { it } <= 1) { "Choose only one latest test package" }
 if (ciBuild) layout.buildDirectory.set(file("../../artifacts/ci/android"))
 else if (latestCompatibilityTest) layout.buildDirectory.set(file(when {
+    remoteCompatibilityTest -> "../../artifacts/rc21/alpha2-android"
     remoteToolLayoutTest -> "../../artifacts/remote-tool-layout-android-build"
     latestOfficeLifetimeTest -> "../../artifacts/latest-office-android-build"
     latestCordisPeerTest -> "../../artifacts/latest-cordis-peer-android-build"
     latestNoticeLifecycleTest -> "../../artifacts/latest-notice-android-build"
     latestFinalTest -> "../../artifacts/latest-final-android-build"
-    officialPluginOnlyTest -> if (officialAlpha2) "../../artifacts/official-alpha2-android-build" else "../../artifacts/official-android-build"
+    officialPluginOnlyTest -> if (officialRc21) "../../artifacts/rc21/android" else if (officialAlpha2) "../../artifacts/official-alpha2-android-build" else "../../artifacts/official-android-build"
     else -> "../../artifacts/latest-android-build"
 }))
 
@@ -62,12 +67,13 @@ android {
     // 独立配对验收包使用另一个 UID/存储，不能为了测未绑定入口清除用户数据。
     buildTypes.getByName("debug") {
         if (latestCompatibilityTest) applicationIdSuffix = when {
+            remoteCompatibilityTest -> ".compatibilitytest"
             remoteToolLayoutTest -> ".toolstyletest"
             latestOfficeLifetimeTest -> ".latestofficetest"
             latestCordisPeerTest -> ".latestcordispeer"
             latestNoticeLifecycleTest -> ".latestnoticetest"
             latestFinalTest -> ".latestfinaltest"
-            officialPluginOnlyTest -> ".officialtest"
+            officialPluginOnlyTest -> if (officialRc21) ".rc21test" else ".officialtest"
             else -> ".latesttest"
         }
         if (providers.gradleProperty("isolatedPairingTest").orNull == "true") applicationIdSuffix = ".pairingtest"
@@ -86,7 +92,7 @@ android {
 // 同一个已验证的 Web 产物进入 APK，避免另维护一套插件加载逻辑。
 val webAssets = file(when {
     ciBuild -> "../../artifacts/ci/web"
-    officialPluginOnlyTest -> if (officialAlpha2) "../../artifacts/official-alpha2-mobile-dist" else "../../artifacts/official-mobile-dist"
+    officialPluginOnlyTest -> if (officialRc21) "../../artifacts/official-rc21-mobile-dist" else if (officialAlpha2) "../../artifacts/official-alpha2-mobile-dist" else "../../artifacts/official-mobile-dist"
     latestNoticeBaselineAssets -> "../../artifacts/latest-notice-baseline-web"
     latestCompatibilityTest -> "../../artifacts/latest-mobile-dist"
     else -> "../../dist"

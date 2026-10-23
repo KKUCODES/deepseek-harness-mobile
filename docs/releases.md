@@ -4,15 +4,15 @@
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.5 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.5/DSHM-0.1.0-preview.5.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.5)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
+直接下载 [DSHM 0.1.0-preview.6 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.6/DSHM-0.1.0-preview.6.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.6)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1–preview.4。不要卸载旧版来更新，以免删除本地数据。普通聊天使用你自己的供应商 API Key；Remote 适配官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`，配套电脑插件 `0.1.85-latest.0`，现有插件和中转服务无需因本次更新而升级。
+当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1–preview.5。不要卸载旧版来更新，以免删除本地数据。普通聊天使用你自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，请配套升级电脑插件至 `0.1.86-latest.0`；中转服务无需升级。
 
 ## 自动构建与发布
 
-`0.1.0-preview.5`（versionCode 7）加入[自定义供应商与模型](./integration/ordinary-providers-current.md)，沿用已有 Remote 缓存、启动交接与双版本连接范围。保留身份与签名，历史发行及附件不覆盖；[双版本验证](./integration/market-baseline.md)。
+`0.1.0-preview.6`（versionCode 8）加入[rc.2 核心连接兼容](./integration/dsh-rc21-compatibility.md)，保留自定义供应商、Remote 缓存和启动交接。身份与签名保持，历史发行及附件不覆盖。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。
@@ -38,7 +38,7 @@
 
 ## 构建来源与边界
 
-GitHub 托管的 Ubuntu 24.04 + Node.js 24 + JDK 17 + Android SDK 35。只读官方源码固定于 `d743267388641bc76f17c45ce8b4c231aed1d32c`；官方 SDK 从本仓库锁文件安装，共享协议来自固定的中转仓库提交。不修改或构建 DSH 本体、SDK 或 Electron。
+GitHub 托管的 Ubuntu 24.04 + Node.js 24 + JDK 17 + Android SDK 35。只读官方源码固定于 `687f282e8625c6b8d11ff58211a90524be2e4317`；官方 SDK 从本仓库锁文件安装，共享协议来自固定的中转仓库提交。不修改或构建 DSH 本体、SDK 或 Electron。
 
 Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地入口保持。签名和可安装性核验不代表完整模型、真机或公网功能复验。
 

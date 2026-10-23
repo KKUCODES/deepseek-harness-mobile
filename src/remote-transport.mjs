@@ -1,4 +1,4 @@
-import { acceptsRemoteDshVersion, isProfileDshVersion } from './remote-dsh-version.mjs';
+import { acceptsRemoteDshVersion, isProfileDshVersion, assertRemoteCapabilities } from './remote-dsh-version.mjs';
 import { uploadRemote, promptRemote } from './remote-upload.mjs';
 import { RemotePluginOperations, longPluginCalls } from './remote-plugin-operations.mjs';
 
@@ -70,6 +70,7 @@ export class RemoteTransport {
     if (generation !== this.generation || this.lifetime.signal.aborted) throw new Error('remote_generation_changed');
     if (result?.transport !== 2) throw new Error('unsupported_remote_version');
     if (!acceptsRemoteDshVersion(mobileSdkVersion, result.dshVersion)) throw new Error('unsupported_dsh_version');
+    if (isProfileDshVersion(result.dshVersion)) assertRemoteCapabilities(result);
     this.capabilities = result;
     this.hostOffline = false;
     return result;

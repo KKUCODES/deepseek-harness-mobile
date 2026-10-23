@@ -1146,6 +1146,7 @@ export const english = Object.freeze({
   "查看缺少的依赖": "View missing dependencies",
   "可将以下依赖名称提供给插件作者排查。": "You can give these dependency names to the plugin author for troubleshooting.",
   "Remote 通信版本不兼容，请更新 App、电脑插件和中转服务后重试。": "The Remote protocol version is incompatible. Update the app, desktop plugin and relay service, then try again.",
+  "电脑缺少当前聊天需要的接口能力，请更新电脑插件或检查 DSH 插件状态。": "The computer is missing required chat capabilities. Update the desktop plugin or check the DSH plugin status.",
   "电脑 DSH 版本与当前手机端不兼容，请使用配套版本后重试。": "This computer's DSH version is incompatible with this app. Use a matching version and try again.",
   "提供方模型": "Provider models",
   "编辑模型清单": "Edit model list",

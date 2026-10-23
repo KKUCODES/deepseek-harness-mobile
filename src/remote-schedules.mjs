@@ -1,3 +1,5 @@
+import { isProfileDshVersion } from './remote-dsh-version.mjs';
+
 /** 新版提醒属于Host持久服务；每个打开的面板只观察其会话，不唤醒Agent。 */
 export class RemoteScheduleCatalog {
   listeners = new Set();
@@ -6,11 +8,11 @@ export class RemoteScheduleCatalog {
   stopped = true;
   constructor(model, sessionId) {
     this.model = model; this.sessionId = sessionId;
-    this.snapshot = { ...this.snapshot, modern: model.transport.capabilities?.dshVersion === '0.2.1-alpha.2' };
+    this.snapshot = { ...this.snapshot, modern: this.available };
   }
   get available() {
     const capabilities = this.model.transport.capabilities;
-    return capabilities?.dshVersion === '0.2.1-alpha.2' && capabilities.endpoints?.calls?.includes('schedule/list') === true;
+    return isProfileDshVersion(capabilities?.dshVersion) && capabilities.endpoints?.calls?.includes('schedule/list') === true;
   }
   subscribe = listener => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   getSnapshot = () => this.snapshot;
@@ -26,7 +28,7 @@ export class RemoteScheduleCatalog {
     this.observe();
   }
   observe = () => {
-    const modern = this.model.transport.capabilities?.dshVersion === '0.2.1-alpha.2';
+    const modern = this.available;
     const available = this.available;
     if (available && !this.offChanged) this.offChanged = this.model.remote.$on('schedule/changed', () => { void this.refresh(); });
     const generation = available && this.model.getSnapshot().connectionState === 'connected'

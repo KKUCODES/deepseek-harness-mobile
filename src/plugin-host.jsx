@@ -1,19 +1,14 @@
 import React from 'react';
-import * as JSXRuntime from 'react/jsx-runtime';
-import * as ReactDOM from 'react-dom';
-import * as ReactDOMClient from 'react-dom/client';
 import * as Cordis from '@deepseek-ai/cordis';
 import Loader from '@deepseek-ai/cordis-plugin-loader';
-import * as Store from '@deepseek-ai/dsh-client-store';
-import * as Slots from '@deepseek-ai/dsh-client-ui-slots';
-import * as Primitives from '@deepseek-ai/dsh-client-ui-primitives';
-import * as Dockkit from '@deepseek-ai/dsh-client-ui-dockkit';
+import { clientStaticModules as seed } from './client-static-modules.jsx';
 import { LocalSettings } from './local-settings.mjs';
 import { ThemePresenter } from '../../deepseek-harness/packages/client/ui-layout/src/client/theme-presenter.ts';
 import { OrdinaryInput } from './ordinary-input.mjs';
 import { PhonePlugins } from './phone-plugins.mjs';
 import { mirrorPhoneAppearance } from './phone-appearance.mjs';
 import { ordinaryNative } from './ordinary-native.mjs';
+import { isProfileDshVersion } from './remote-dsh-version.mjs';
 import * as OrdinaryRendering from './ordinary-rendering.jsx';
 import { zh as inputZh, en as inputEn } from '../../deepseek-harness/packages/client/ui-input-trigger/src/client/locales.ts';
 
@@ -24,7 +19,7 @@ let host;
 const ctx = new Cordis.Context();
 const settings = new LocalSettings(localStorage);
 ctx.provide('settingsScope', settings);
-ctx.provide('configForms', settings.configForms({ themeDefaults: DSHM_MOBILE_SDK_VERSION === '0.2.1-alpha.2' ? {
+ctx.provide('configForms', settings.configForms({ themeDefaults: isProfileDshVersion(DSHM_MOBILE_SDK_VERSION) ? {
   codeFontSize: 11, terminalFontSize: 13, textFontFamily: '', codeFontFamily: '', terminalFontFamily: '',
 } : {} }));
 ctx.provide('remote', settings.facade());
@@ -84,10 +79,6 @@ async function setThemeModule(enabled) {
   if (bootstrapIndex < 0) throw new Error('missing_modules_bootstrap');
   const [bootstrap] = target.pendingQueue.splice(bootstrapIndex, 1);
   const exports = bootstrap.factory(name => { throw new Error(`unexpected_bootstrap_dependency:${name}`); });
-  const seed = { react: React, 'react/jsx-runtime': JSXRuntime, 'react-dom': ReactDOM, 'react-dom/client': ReactDOMClient,
-    '@deepseek-ai/cordis': Cordis, '@deepseek-ai/dsh-client-store': Store,
-    '@deepseek-ai/dsh-client-ui-slots': Slots, '@deepseek-ai/dsh-client-ui-primitives': Primitives,
-    '@deepseek-ai/dsh-client-ui-dockkit': Dockkit };
   modules = exports.createClientModuleSystem(target, { id: moduleId, exports }, { boot: graph(), staticModules: seed });
   await ctx.plugin(Loader);
   ctx.loader.internal = modules;

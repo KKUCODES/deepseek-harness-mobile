@@ -13,9 +13,12 @@ const root = resolve(import.meta.dirname, '..');
 const officialOnly = process.argv.includes('--official-candidate');
 if (officialOnly && !process.argv.includes('--latest-candidate')) throw Error('Official candidate requires the latest SDK');
 const alpha2 = process.argv.includes('--official-alpha2');
+const rc21 = process.argv.includes('--official-rc21');
+if (rc21 && alpha2) throw Error('Select one official SDK');
+if (rc21 && !officialOnly) throw Error('Rc.2 requires the official candidate');
 if (alpha2 && !officialOnly) throw Error('Alpha.2 requires the official candidate');
 const latest = process.argv.includes('--latest-candidate') ? latestMobileBuild(root, {
-  officialOnly, officialVersion: alpha2 ? '0.2.1-alpha.2' : '0.2.1-alpha.1',
+  officialOnly, officialVersion: rc21 ? '0.2.1-rc.2' : alpha2 ? '0.2.1-alpha.2' : '0.2.1-alpha.1',
   ci: process.argv.includes('--ci-candidate'),
 }) : null;
 const dist = latest?.dist ?? resolve(root, 'dist');

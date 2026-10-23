@@ -1,0 +1,462 @@
+[
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.1.6-alpha.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.0-rc.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.0-rc.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.0-rc.10",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.0",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.1-alpha.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.1-alpha.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.1-beta.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.1-rc.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.2-rc.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.3.0-0",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.3.0-alpha.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.3.0",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "unknown",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.01",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.1-01",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.0-rc.02",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.1-rc.2+build.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "v0.2.1-rc.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.1.6-alpha.2",
+    "host": "0.2.0-rc.10000000000000000",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.1.6-alpha.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.0-rc.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.0-rc.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.0-rc.10",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.0",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.1-alpha.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.1-alpha.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.1-beta.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.1-rc.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.2-rc.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.3.0-0",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.3.0-alpha.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.3.0",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "unknown",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.01",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.1-01",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.0-rc.02",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.1-rc.2+build.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "v0.2.1-rc.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.1",
+    "host": "0.2.0-rc.10000000000000000",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.1.6-alpha.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.0-rc.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.0-rc.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.0-rc.10",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.0",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.1-alpha.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.1-alpha.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.1-beta.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.1-rc.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.2-rc.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.3.0-0",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.3.0-alpha.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.3.0",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "unknown",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.01",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.1-01",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.0-rc.02",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.1-rc.2+build.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "v0.2.1-rc.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-alpha.2",
+    "host": "0.2.0-rc.10000000000000000",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.1.6-alpha.2",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.0-rc.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.0-rc.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.0-rc.10",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.0",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.1-alpha.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.1-alpha.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.1-beta.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.1-rc.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.2-rc.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.3.0-0",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.3.0-alpha.1",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.3.0",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "unknown",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.01",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.1-01",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.0-rc.02",
+    "expected": false
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.1-rc.2+build.1",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "v0.2.1-rc.2",
+    "expected": true
+  },
+  {
+    "sdk": "0.2.1-rc.2",
+    "host": "0.2.0-rc.10000000000000000",
+    "expected": true
+  }
+]

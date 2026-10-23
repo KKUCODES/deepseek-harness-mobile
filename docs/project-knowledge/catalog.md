@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+DSH rc.2 修复分支：[范围与能力检查、平台单例、主题及原生通知](../integration/dsh-rc21-compatibility.md)。独立修复发行目标为 preview.6，配套插件 0.1.86。
+
 普通聊天模型服务：[自定义供应商、OpenAI Chat Completions、独立 Key 与旧数据兼容](../integration/ordinary-providers-current.md)。preview.5 已公开预发布；DeepSeek 与 GLM 的真实 Android 验证范围单独记录。
 
 启动交接：[普通聊天与 Remote 共用 Logo 封面、首帧淡出与失败重试](../integration/startup-transition-current.md)。两入口已接入并随 preview.4 公开预发布。

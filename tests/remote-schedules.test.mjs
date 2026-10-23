@@ -17,6 +17,14 @@ function fixture(version = '0.2.1-alpha.2') {
 }
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
+for (const version of ['0.2.1-rc.2', '0.2.2']) test(`${version}按实际接口能力读取定时目录`, () => {
+  const f = fixture(version), catalog = new RemoteScheduleCatalog(f.model, 'parent');
+  catalog.start(); assert.equal(f.reads.length, 1); catalog.dispose();
+  f.model.transport.capabilities.endpoints.calls = [];
+  const missing = new RemoteScheduleCatalog(f.model, 'parent');
+  missing.start(); assert.equal(missing.available, false); assert.equal(f.reads.length, 1); missing.dispose();
+});
+
 test('定时面板刷新绑定原会话与连接代次，重连及关闭阻止迟到结果覆盖新状态', async () => {
   const f = fixture(), catalog = new RemoteScheduleCatalog(f.model, 'parent');
   catalog.start();
@@ -39,6 +47,7 @@ test('定时面板刷新绑定原会话与连接代次，重连及关闭阻止�
 
 test('旧版继续使用投影；新读取失败不伪装为空列表，显式重试成功可清空列表', async () => {
   const old = fixture('0.2.1-alpha.1'), legacy = new RemoteScheduleCatalog(old.model, 'parent');
+  old.model.transport.capabilities.endpoints.calls = [];
   legacy.start(); assert.equal(old.reads.length, 0); assert.equal(old.events.size, 0); legacy.dispose();
   const f = fixture(), catalog = new RemoteScheduleCatalog(f.model, 'parent');
   catalog.start(); f.reads[0].resolve({ ok: false, error: { message: 'service_unavailable' } }); await flush();

@@ -173,16 +173,16 @@ internal class RemoteNoticeConnection(context: Context, private val notices: Rem
             // 仅记录固定错误分类，便于核验实际溢出恢复；不输出帧、身份或通知内容。
             if (BuildConfig.DEBUG && type == "error" && frame.optString("code") == "remote_notifications_overflow")
                 android.util.Log.d("DSHMNoticeConnection", "stream_overflow")
-            failed(if (frame.optString("code") in setOf("host_upgrade_required", "unsupported_dsh_version")) "unsupported" else null); return
+            failed(if (frame.optString("code") in setOf("host_upgrade_required", "unsupported_dsh_version", "unsupported_dsh_capabilities", "unsupported_remote_capabilities")) "unsupported" else null); return
         }
         if (stage == "negotiating") {
             require(type == "result")
             val value = frame.getJSONObject("value")
             val hostVersion = value.optString("dshVersion")
-            // 与聊天传输使用同一离散兼容组合，避免 rc.2 聊天在线但通知拒绝连接。
-            val compatibleHost = hostVersion == BuildConfig.DSH_SDK_VERSION ||
-                (BuildConfig.DSH_SDK_VERSION == "0.2.1-alpha.2" && hostVersion == "0.2.0-rc.2")
-            if (value.optInt("transport") != 2 || !compatibleHost || value.opt("taskNotifications") != true) {
+            val channels = value.optJSONArray("channels")
+            val streamAvailable = channels != null && (0 until channels.length()).any { channels.optString(it) == "stream" }
+            if (value.optInt("transport") != 2 || !RemoteDshCompatibility.accepts(BuildConfig.DSH_SDK_VERSION, hostVersion)
+                || !streamAvailable || value.opt("taskNotifications") != true) {
                 failed("unsupported"); return
             }
             stage = "subscribing"; followId = UUID.randomUUID().toString(); deadline(owner)

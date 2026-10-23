@@ -1,5 +1,7 @@
 # rc.2 与 alpha.2 的手机兼容
 
+本文为2026-10-14发布基线，其中rc.2指 `0.2.0-rc.2`。当前独立分支对 `0.2.1-rc.2` 的范围与能力策略见[新版兼容说明](./dsh-rc21-compatibility.md)，不将下文旧白名单描述作为新策略。
+
 - 状态：核心路径已在同一独立 MuMu APK 上通过；[新版公开 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.2)已发布，构建、签名和匿名下载校验通过。
 - 维护角色：DSHM 手机端维护者；核验日期：2026-10-14。
 - 来源：[JS 版本规则](../../src/remote-dsh-version.mjs)、[实际聊天协商](../../src/remote-transport.mjs)、[原生通知连接](../../android/app/src/main/java/dev/dshmobile/validation/RemoteNoticeConnection.kt)、[Android 实测驱动](../../tests/support/market-baseline-android.mjs)。

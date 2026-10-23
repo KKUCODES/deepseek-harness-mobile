@@ -4,12 +4,12 @@ import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const root = resolve(import.meta.dirname, '..');
-const source = resolve(root, 'artifacts/ci/official-source');
+const source = resolve(root, 'artifacts/ci/official-source-rc21');
 const revision = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8', windowsHide: true });
 assert.equal(revision.status, 0, 'Fixed official source checkout is required');
-assert.equal(revision.stdout.trim(), 'd743267388641bc76f17c45ce8b4c231aed1d32c');
+assert.equal(revision.stdout.trim(), '687f282e8625c6b8d11ff58211a90524be2e4317');
 assert.ok(process.env.npm_execpath, 'Run through npm run prepare:ci');
-for (const variant of ['mobile', 'host']) {
+for (const variant of ['rc21']) {
   const runtime = resolve(root, 'artifacts/ci/sdk', variant);
   await mkdir(runtime, { recursive: true });
   for (const file of ['package.json', 'package-lock.json']) {

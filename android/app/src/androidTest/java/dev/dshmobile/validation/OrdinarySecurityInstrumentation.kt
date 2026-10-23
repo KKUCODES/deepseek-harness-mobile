@@ -21,7 +21,9 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
     private var shareDeathOnly = false
     private var shareOnly = false
     private var providersOnly = false
+    private var compatibilityOnly = false
     override fun onCreate(arguments: Bundle?) {
+        compatibilityOnly = arguments?.getString("compatibilityOnly") == "true"
         providersOnly = arguments?.getString("providersOnly") == "true"
         noticeEpochRevoke = arguments?.getString("noticeEpochRevoke") == "true"
         noticeQueueOverflow = arguments?.getString("noticeQueueOverflow") == "true"
@@ -29,6 +31,19 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
         super.onCreate(arguments); noticeEpochSession = arguments?.getString("noticeEpochSession"); notificationsOnly = arguments?.getString("notificationsOnly") == "true"; appearanceOnly = arguments?.getString("appearanceOnly") == "true"; computerKeyOnly = arguments?.getString("computerKeyOnly") == "true"; resourcesOnly = arguments?.getString("resourcesOnly") == "true"; saveOnly = arguments?.getString("saveOnly") == "true"; saveWriteOnly = arguments?.getString("saveWriteOnly") == "true"; saveDeathOnly = arguments?.getString("saveDeathOnly") == "true"; shareDeathOnly = arguments?.getString("shareDeathOnly") == "true"; shareOnly = arguments?.getString("shareOnly") == "true"; start()
     }
     override fun onStart() {
+        if (compatibilityOnly) {
+            val result = Bundle()
+            try {
+                val rows = org.json.JSONArray(context.assets.open("remote-compatibility.json").bufferedReader().use { it.readText() })
+                for (index in 0 until rows.length()) {
+                    val row = rows.getJSONObject(index)
+                    check(RemoteDshCompatibility.accepts(row.getString("sdk"), row.getString("host")) == row.getBoolean("expected")) { "compatibility case $index" }
+                }
+                result.putString("result", "PASS: ${rows.length()} shared JS/native compatibility cases")
+                finish(Activity.RESULT_OK, result)
+            } catch (error: Exception) { result.putString("result", "FAIL: compatibility ${error.message}"); finish(Activity.RESULT_CANCELED, result) }
+            return
+        }
         if (providersOnly) {
             val result = Bundle()
             try { OrdinaryProviderChecks.run(this); result.putString("result", "PASS: provider persistence, original credential preservation, encrypted isolation, endpoint lock, request codec, defaults, stale rejection and cleanup"); finish(Activity.RESULT_OK, result) }

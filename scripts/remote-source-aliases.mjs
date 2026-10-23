@@ -9,7 +9,7 @@ export function remoteSourceAliases(root, options = {}) {
   return {
     '@dshm/settings-components': resolve(root, options.nativeNavigation ? 'src/remote-settings-components-latest.jsx' : 'src/remote-settings-components.jsx'),
     '@dshm/config-forms': resolve(root, options.nativeNavigation ? 'src/remote-config-forms-latest.mjs' : 'src/remote-config-forms.mjs'),
-    '@dshm/chat-presentation': resolve(root, options.version === '0.2.1-alpha.2' ? 'src/remote-chat-presentation-alpha2.jsx'
+    '@dshm/chat-presentation': resolve(root, options.nativeNavigation && options.version !== '0.2.1-alpha.1' ? 'src/remote-chat-presentation-alpha2.jsx'
       : options.nativeNavigation ? 'src/remote-chat-presentation-latest.jsx' : 'src/remote-chat-presentation.jsx'),
     '@dshm/office-face': resolve(root, options.nativeNavigation ? 'src/remote-office-face-latest.mjs' : 'src/remote-office-face.mjs'),
     '@dshm/review-diff': source('client/ui-deliverables/src/client/' + (options.nativeNavigation ? 'FileDiff.tsx' : 'ReviewTab.tsx')),
