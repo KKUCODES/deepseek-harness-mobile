@@ -8,6 +8,7 @@ import { RemoteBoundHero, RemoteActivePreset } from './RemoteConversationHero.js
 import { UserMessage } from './ChatMessage.jsx';
 import { OrdinaryMarkdown } from '../ordinary-rendering.jsx';
 import { unwrap } from '../remote-model.mjs';
+import { responseFailures } from '../remote-response-errors.mjs';
 import { RemoteMessage, RemoteFiles, fileSize, contentText } from './RemoteMessage.jsx';
 import { RemoteQueue } from './RemoteQueue.jsx';
 import { RemoteFilePreview } from './RemoteFilePreview.jsx';
@@ -256,7 +257,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       <div className="remote-heading">{selected ? <RemoteHeaderTitle model={model} title={chat?.displayTitle ?? '聊天'}/> : <strong>{workspace ? state.workspaces.items.find(item => item.workspaceId === workspace)?.title : 'Remote'}</strong>}</div>
       <IconButton label={t("Remote 选项")} disabled={busy} onClick={() => setSheet('menu')}><IconEllipsisOutline16/></IconButton></header>
     {selected && <><RemoteHeaderAncestors model={model}/><RemoteHeaderExtensions/></>}
-    {(notice || state.error) && <div className="remote-error" role="alert">{t(notice || state.error)}</div>}
+    {(notice || state.error) && <div className="remote-error" role="alert">{t(responseFailures[notice || state.error] ?? (notice || state.error))}</div>}
     <RemoteOfflineStatus model={model}/>
     {!!state.endpointRecoveries?.length && <p className="remote-offline-status" role="status">
       {t('有服务地址保存结果尚未确认，请打开对应设置重新读取地址。')}

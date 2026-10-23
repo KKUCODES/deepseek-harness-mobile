@@ -1,4 +1,9 @@
 export const english = Object.freeze({
+  "当前连接暂不支持大响应，请更新 App、电脑插件和中转服务后重新连接。": "This connection does not support large responses. Update the App, desktop plugin and relay, then reconnect.",
+  "这份内容超过当前连接的大小限制，请更新 App、电脑插件和中转服务后重试。": "This content exceeds the connection's size limit. Update the App, desktop plugin and relay, then try again.",
+  "大响应传输已超时，请检查连接后重新打开聊天。": "The large response timed out. Check the connection and reopen the chat.",
+  "正在接收的内容较多，请稍后重新打开聊天。": "Too much content is being received. Please reopen the chat shortly.",
+  "接收内容校验失败，请重新打开聊天。": "Received content failed verification. Please reopen the chat.",
   "开启时发送自定义思考强度，关闭时使用服务端默认思考。": "When enabled, sends a custom reasoning effort. When disabled, uses the service default.",
   "使用服务端默认思考": "Use the service default reasoning",
   "使用自定义思考强度": "Use custom reasoning effort",

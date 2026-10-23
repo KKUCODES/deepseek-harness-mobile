@@ -109,6 +109,8 @@ test('坏差量只重试只读基线一次，实时流重建不丢更新，写�
   host.state.remoteError = 'sync_cache_invalid';
   const before = host.frames.length;
   await assert.rejects(transport.call('/api', 'session/cancel', { args: { sessionId: 'fixture' } }), /sync_cache_invalid/);
-  assert.equal(host.frames.length, before + 1);
+  const failureFrames = host.frames.slice(before);
+  assert.equal(failureFrames.filter(frame => frame.type === 'request').length, 1);
+  assert.equal(failureFrames.filter(frame => frame.type === 'cancel').length, 1);
   transport.dispose(); host.client.reset();
 });

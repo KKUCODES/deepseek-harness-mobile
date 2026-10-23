@@ -6,7 +6,7 @@
 
 **DSHM** is a community-developed Android client for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Chat directly with DeepSeek or synchronize DSH conversations from your computer. Away from your desk, you can keep sending messages, viewing execution results, switching models, and handling approvals; the computer runs the tasks.
 
-[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.6/DSHM-0.1.0-preview.6.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
+[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.7/DSHM-0.1.0-preview.7.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
@@ -68,9 +68,9 @@ The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTT
 
 Development preview; not an app-store release. Core Remote features passed local Web + MuMu validation with **official DSH `0.2.1-alpha.2` + plugin `0.1.80-latest.0` + the matching Android app**. See the [compatibility report (Chinese)](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md) for the supported scope.
 
-**preview.6** adds core connectivity for official **DSH `0.2.1-rc.2`**, using compatibility ranges and capability checks. Update the desktop plugin to `0.1.86-latest.0` as well. See the [fix and validation scope (Chinese)](./docs/integration/dsh-rc21-compatibility.md).
+**preview.7** fixes oversized Remote responses across initial snapshots, history pages and large live events, with fresh reads after reconnect. Update the plugin to `0.1.87-latest.0` and self-hosted relays to include protocol commit `94183d0`. See the [fix and validation scope (Chinese)](./docs/integration/remote-response-chunks.md).
 
-[0.1.0-preview.6](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.6) retains custom direct-chat providers, models, existing DeepSeek settings and chats. See [provider details (Chinese)](./docs/integration/ordinary-providers-current.md). Remote requires desktop plugin `0.1.86-latest.0`; core connections were tested with official DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`; see the [validation scope (Chinese)](./docs/integration/market-baseline.md). The identity and signature are unchanged: install over preview.1–preview.5 to retain local data.
+[0.1.0-preview.7](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.7) retains custom direct-chat providers, models, existing DeepSeek settings and chats. See [provider details (Chinese)](./docs/integration/ordinary-providers-current.md). Remote requires desktop plugin `0.1.87-latest.0`; core connections were tested with official DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`; see the [validation scope (Chinese)](./docs/integration/market-baseline.md). The identity and signature are unchanged: install over preview.1–preview.5 to retain local data.
 
 - Android only for the first version. Physical devices, the complete public-network path, and other versions, plugins, and models still need validation.
 - Keep the computer and DSH running. Install the standalone plugin; no DSH core modifications are needed.

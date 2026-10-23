@@ -1,6 +1,7 @@
 import { acceptsRemoteDshVersion, isProfileDshVersion, assertRemoteCapabilities } from './remote-dsh-version.mjs';
 import { uploadRemote, promptRemote } from './remote-upload.mjs';
 import { RemotePluginOperations, longPluginCalls } from './remote-plugin-operations.mjs';
+import { MAX_RESPONSE_BUFFER_BYTES } from '../../backend/packages/protocol/dist/index.js';
 
 export const isRemoteHostDisconnect = error => error instanceof Error &&
   ['host_offline', 'host_disconnected_outcome_unknown', 'connection_closed_outcome_unknown', 'remote_not_connected'].includes(error.message);
@@ -20,6 +21,7 @@ export class RemoteTransport {
     this.loadScript = loadScript;
     this.generation = 0;
     this.hostOffline = false;
+    this.queuedStreamBytes = 0;
     this.lifetime = new AbortController();
     this.unsubscribe = client.subscribe(frame => {
       if (frame.type === 'closed' || frame.type === 'ready') {
@@ -27,6 +29,7 @@ export class RemoteTransport {
         this.generation++;
         this.hostOffline = frame.type === 'closed' || frame.hostOnline === false;
         this.capabilities = undefined;
+        this.client.responseChunksEnabled = false;
         this.lifetime.abort();
         this.lifetime = new AbortController();
       }
@@ -51,6 +54,7 @@ export class RemoteTransport {
     // 不能递增世代并取消正在确认能力的请求；真正的远端断线仍结束旧操作。
     if (error.message === 'remote_not_connected' && !this.capabilities && this.client.connected) return;
     this.hostOffline = true;
+    this.client.responseChunksEnabled = false;
     this.generation++;
     // 电脑退出时中转仍可保留手机socket；本地保存窗口也必须结束旧传输。
     // 多条订阅会同时失败，只取消一次；保留能力供已加载的聊天继续显示。
@@ -58,6 +62,7 @@ export class RemoteTransport {
     this.lifetime = new AbortController();
   }
   async negotiate({ signal } = {}) {
+    this.client.responseChunksEnabled = false;
     signal?.throwIfAborted();
     const generation = this.generation;
     const request = this.client.request({ method: 'remote.negotiate', version: 2 });
@@ -72,6 +77,7 @@ export class RemoteTransport {
     if (!acceptsRemoteDshVersion(mobileSdkVersion, result.dshVersion)) throw new Error('unsupported_dsh_version');
     if (isProfileDshVersion(result.dshVersion)) assertRemoteCapabilities(result);
     this.capabilities = result;
+    this.client.responseChunksEnabled = this.client.relayResponseChunks === true && result.responseChunksVersion === 1;
     this.hostOffline = false;
     return result;
   }
@@ -163,12 +169,12 @@ export class RemoteTransport {
     const queue = []; let bytes = 0, ended = false, failure, wake;
     const notify = () => wake?.();
     const request = this.client.request({ method: 'remote.stream', endpoint, payload: hint?.payload ?? payload }, value => {
-      const size = JSON.stringify(value).length;
-      if (queue.length >= 256 || bytes + size > 8 * 1024 * 1024) {
+      const size = new TextEncoder().encode(JSON.stringify(value)).byteLength;
+      if (queue.length >= 256 || this.queuedStreamBytes + size > MAX_RESPONSE_BUFFER_BYTES) {
         failure = new Error('remote_consumer_too_slow'); request.cancel(); notify(); return;
       }
       this.lastReceivedAt = Date.now();
-      queue.push({ value, size }); bytes += size; notify();
+      queue.push({ value, size }); bytes += size; this.queuedStreamBytes += size; notify();
     }, () => { ended = true; notify(); });
     void request.promise.then(() => { ended = true; notify(); }, error => { failure = error; notify(); });
     const abort = () => { request.cancel(); notify(); };
@@ -178,11 +184,11 @@ export class RemoteTransport {
         signal.throwIfAborted();
         if (failure) throw failure;
         const item = queue.shift();
-        if (item) { bytes -= item.size; yield hint ? await cache.decode(item.value, hint, signal) : item.value; }
+        if (item) { bytes -= item.size; this.queuedStreamBytes -= item.size; yield hint ? await cache.decode(item.value, hint, signal) : item.value; }
         else if (ended) return;
         else await new Promise(resolve => { wake = resolve; });
       }
-    } finally { signal.removeEventListener('abort', abort); request.cancel(); }
+    } finally { this.queuedStreamBytes -= bytes; queue.length = 0; signal.removeEventListener('abort', abort); request.cancel(); }
   }
   resourceUrl(input) {
     const raw = typeof input === 'string' ? input : input.url ?? String(input);

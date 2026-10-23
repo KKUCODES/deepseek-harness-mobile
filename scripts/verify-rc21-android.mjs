@@ -19,7 +19,8 @@ const state = await readJson(resolve(control, 'state.json'));
 assert.equal(state.stage, 'ready');
 const pkg = process.env.DSHM_CHECK_APP ?? 'dev.dshmobile.validation.rc21test';
 assert.ok(['dev.dshmobile.validation.rc21test', 'dev.dshmobile.validation.compatibilitytest'].includes(pkg));
-const device = (await _android.devices({ omitDriverInstall: true })).find(d => d.serial() === '127.0.0.1:16384');
+const serial = process.env.DSHM_ANDROID_SERIAL ?? '127.0.0.1:16384';
+const device = (await _android.devices({ omitDriverInstall: true })).find(d => d.serial() === serial);
 assert.ok(device); device.setDefaultTimeout(20000);
 const report = { version: state.version, package: pkg, errors: [], inference: false };
 async function command(action, fields = {}) {
@@ -60,6 +61,26 @@ try {
     if (['error', 'warning'].includes(message.type())) (report.pluginLogs ??= []).push(message.text().slice(0, 800));
   });
   page.setDefaultTimeout(30000);
+  if (state.largeHistory) await page.exposeFunction('dshmRecordChunk', frame => {
+    (report.chunkProgress ??= []).push(frame);
+    console.log(JSON.stringify({ responseChunkProgress: frame }));
+  });
+  const auditChunks = async () => page.evaluate(() => {
+    const receive = DSHMRemote.onmessage;
+    const audit = globalThis.__dshmChunkAudit = { starts: [], chunks: 0, maxFrameBytes: 0 };
+    DSHMRemote.onmessage = event => {
+      const frame = JSON.parse(event.data).event;
+      if (frame) {
+        audit.maxFrameBytes = Math.max(audit.maxFrameBytes, new TextEncoder().encode(JSON.stringify(frame)).byteLength);
+        if (frame.type === 'responseStart') audit.starts.push({ kind: frame.kind, bytes: frame.bytes });
+        if (frame.type === 'responseChunk') audit.chunks++;
+        if (['responseStart', 'responseEnd', 'error'].includes(frame.type) || (frame.type === 'responseChunk' && frame.index < 4)) {
+          void globalThis.dshmRecordChunk({ type: frame.type, kind: frame.kind, bytes: frame.bytes, index: frame.index, code: frame.code });
+        }
+      }
+      return receive.call(DSHMRemote, event);
+    };
+  });
   await command('pair');
   const pairing = JSON.parse(await readFile(resolve(control, 'pair.private.json'), 'utf8'));
   assert.equal(pairing.run, state.run);
@@ -74,6 +95,41 @@ try {
   await page.getByTestId('remote-workspace').waitFor({ timeout: 60000 });
   report.remoteReady = true;
   report.ownPage = (await page.locator('iframe').count()) === 0;
+  if (state.largeHistory) {
+    await auditChunks();
+    // 官方冷会话列表在首次观察前用工作区名作标题；隔离home只有这一条非空聊天。
+    const historyRow = page.locator('.remote-session-row');
+    await historyRow.waitFor(); assert.equal(await historyRow.count(), 1);
+    await historyRow.click();
+    await page.locator('[data-composer-input]').waitFor();
+    await page.getByText('首次快照验收，请查看结果。', { exact: true }).waitFor({ timeout: 60000 });
+    report.largeSnapshot = true;
+    console.log(JSON.stringify({ stage: 'large_snapshot_rendered' }));
+    for (let count = 0; count < 5 && await page.locator('[data-history-loader]').count(); count++) {
+      await page.locator('[data-history-loader]').click();
+      await expectHistoryIdle(page);
+    }
+    await page.getByText('历史分页验收，请查看结果。', { exact: true }).waitFor({ timeout: 60000 });
+    report.largeHistoryPage = true;
+    console.log(JSON.stringify({ stage: 'large_history_rendered' }));
+    report.chunkAudit = await page.evaluate(() => globalThis.__dshmChunkAudit);
+    assert.ok(report.chunkAudit.starts.some(frame => frame.kind === 'event' && frame.bytes > 2 * 1024 * 1024));
+    assert.ok(report.chunkAudit.starts.some(frame => frame.kind === 'result' && frame.bytes > 2 * 1024 * 1024));
+    assert.ok(report.chunkAudit.maxFrameBytes < 2 * 1024 * 1024);
+    await page.reload();
+    // 页面重载按既有规则回到Remote列表；重新打开同一聊天验证新连接重新协商/读取。
+    await page.getByTestId('remote-workspace').waitFor({ timeout: 60000 });
+    console.log(JSON.stringify({ stage: 'reloaded_remote_ready' }));
+    await auditChunks();
+    await page.locator('.remote-session-row').filter({ hasText: state.largeHistory.title }).click();
+    await page.locator('[data-composer-input]').waitFor({ timeout: 60000 });
+    await page.getByText('首次快照验收，请查看结果。', { exact: true }).waitFor({ timeout: 60000 });
+    report.reconnectChunkAudit = await page.evaluate(() => globalThis.__dshmChunkAudit);
+    assert.ok(report.reconnectChunkAudit.starts.some(frame => frame.kind === 'event' && frame.bytes > 2 * 1024 * 1024));
+    report.largeReconnect = true;
+    console.log(JSON.stringify({ stage: 'large_reconnect_rendered' }));
+    await page.getByRole('button', { name: '返回', exact: true }).click();
+  }
   await page.getByRole('button', { name: '在已有工作区新建聊天', exact: true }).click();
   await page.getByLabel('选择工作区', { exact: true }).getByRole('button', { name: 'rc21-check-project', exact: true }).click();
   await page.locator('[data-composer-input]').waitFor();
@@ -115,4 +171,8 @@ try {
   const { plugins, ...summary } = report;
   console.log(JSON.stringify({ ...summary, pluginCounts: plugins?.reduce((counts, row) => ({ ...counts, [row.state]: (counts[row.state] ?? 0) + 1 }), {}) }));
   await device.close();
+}
+
+async function expectHistoryIdle(page) {
+  await page.waitForFunction(() => !document.querySelector('[data-history-loader]:disabled'), { timeout: 60000 });
 }

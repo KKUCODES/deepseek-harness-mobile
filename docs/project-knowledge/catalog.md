@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+长聊天修复：[通用分块、原生确认、分页/快照/实时流与重连](../integration/remote-response-chunks.md)。preview.7配套插件0.1.87与新版中转正在准备发行，不包含插件适配分支。
+
 DSH rc.2 独立修复：[范围与能力检查、平台单例、主题及原生通知](../integration/dsh-rc21-compatibility.md)。preview.6 已公开预发布，配套插件0.1.86；[云端签名与匿名下载检查](../releases.md#已核验范围)通过。
 
 普通聊天模型服务：[自定义供应商、OpenAI Chat Completions、独立 Key 与旧数据兼容](../integration/ordinary-providers-current.md)。preview.5 已公开预发布；DeepSeek 与 GLM 的真实 Android 验证范围单独记录。

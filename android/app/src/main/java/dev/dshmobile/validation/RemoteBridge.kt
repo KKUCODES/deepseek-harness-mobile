@@ -153,6 +153,11 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
                         when (frame.getString("type")) {
                             "cancel" -> Unit
                             "ack" -> if (frame.getInt("count") !in 1..4) throw Failure("invalid_frame")
+                            "responseAck" -> {
+                                UUID.fromString(frame.getString("transferId"))
+                                if (frame.keys().asSequence().toSet() != setOf("type", "id", "transferId", "index") ||
+                                    frame.get("index") !is Int || frame.getInt("index") !in 0..511) throw Failure("invalid_frame")
+                            }
                             "uploadChunk" -> if (frame.getString("data").length !in 4..87384) throw Failure("invalid_frame")
                             "uploadEnd" -> Unit
                             "request" -> {

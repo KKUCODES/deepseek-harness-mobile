@@ -19,11 +19,13 @@ import { ThemePresenter } from '../../deepseek-harness/packages/client/ui-layout
 import { watchPhoneAppearance } from './phone-appearance.mjs';
 import { LocaleProvider, useTranslate } from './ui/locale.jsx';
 import { SupportDiagnostics } from './ui/SupportDiagnostics.jsx';
+import { responseFailures } from './remote-response-errors.mjs';
 
 const stages = { negotiating: '正在确认电脑能力…', loading: '正在读取电脑会话…', ready: '已连接', connecting: '正在连接电脑…', disconnected: '连接已断开' };
 const scanFailures = { scan_unavailable: '暂时无法打开扫码，请粘贴配对链接。', scan_busy: '扫码窗口已打开，请先完成或返回。', scan_timeout: '扫码已超时，请重新尝试。', scan_camera_permission: '未获得相机权限，可从图片识别或粘贴配对链接。', scan_image_invalid: '无法读取这张图片，请选择其他图片。', scan_image_too_large: '图片过大，请裁剪二维码后重试。', scan_qr_not_found: '未识别到二维码，请使用清晰的二维码图片。' };
 const failures = { pairing_unavailable: '链接已过期或已被领取，请在电脑上生成新链接。', device_pending: '请先在电脑端核对指纹并批准连接。', device_revoked: '电脑已撤销这台手机，请重新配对。', http_401: '连接授权已失效，请移除本机绑定后重新配对。', permissions_changed: '电脑已调整这台手机的权限，请重新连接。', host_offline: '电脑暂时离线，请检查 DSH 是否正在运行。', host_upgrade_required: '请先更新电脑端 DSH Mobile 插件，再重新连接。',
   unsupported_remote_version: 'Remote 通信版本不兼容，请更新 App、电脑插件和中转服务后重试。',
+  ...responseFailures,
   unsupported_remote_capabilities: '电脑缺少当前聊天需要的接口能力，请更新电脑插件或检查 DSH 插件状态。',
   unsupported_dsh_capabilities: '电脑缺少当前聊天需要的接口能力，请更新电脑插件或检查 DSH 插件状态。',
   unsupported_dsh_version: '电脑 DSH 版本与当前手机端不兼容，请使用配套版本后重试。' };
