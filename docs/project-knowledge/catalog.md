@@ -1,6 +1,6 @@
 # 手机端知识总目录
 
-DSH rc.2 修复分支：[范围与能力检查、平台单例、主题及原生通知](../integration/dsh-rc21-compatibility.md)。独立修复发行目标为 preview.6，配套插件 0.1.86。
+DSH rc.2 独立修复：[范围与能力检查、平台单例、主题及原生通知](../integration/dsh-rc21-compatibility.md)。preview.6 已公开预发布，配套插件0.1.86；[云端签名与匿名下载检查](../releases.md#已核验范围)通过。
 
 普通聊天模型服务：[自定义供应商、OpenAI Chat Completions、独立 Key 与旧数据兼容](../integration/ordinary-providers-current.md)。preview.5 已公开预发布；DeepSeek 与 GLM 的真实 Android 验证范围单独记录。
 
@@ -24,7 +24,7 @@ Remote 动效：[页面进退、共享窗口与执行过程](../integration/moti
 
 自动构建与下载：[GitHub Actions、固定 SDK、独立签名与公开 APK](../releases.md)。用户已授权将签名凭据保存到指定仓库 Secrets；PR 仍只生成无签名包，签名与发布使用受信任入口。原本地与历史候选入口保持，CI 构建不代替手机功能兼容验收。
 
-公开下载：`0.1.0-preview.5` 已发布，加入自定义供应商与模型，保留原 DeepSeek 数据、应用身份、签名及官方 rc.2 / alpha.2 Remote 范围；[发行页及匿名下载核验](../releases.md#已核验范围)。
+公开下载：`0.1.0-preview.6` 已发布，新增官方0.2.1-rc.2核心连接兼容，保留自定义供应商、原数据、身份、签名和旧Host支持；[发行页及匿名下载核验](../releases.md#已核验范围)。
 
 阅读入口：[项目首页](../../README.md) · [English](../../README.en.md) · [使用指南](../usage.md) · [开发指南](../development.md) · [截图来源](../images/README.md)。本总目录负责查找技术依据；日常使用和构建步骤从前述指南进入。
 

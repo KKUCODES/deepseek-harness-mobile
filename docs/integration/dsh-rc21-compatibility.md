@@ -47,4 +47,4 @@ rc.2 官方平台静态模块增加了 `zod` 和 `@tanstack/react-virtual`。原
 
 ## 分支
 
-`fix/dsh-0.2.1-rc.2` 从已发布 main 创建。未合并或摘取 `feature/plugin-adaptation`；本地 npm 插件安装和此前通用插件宿主阶段仍留在原分支。本修复需同时更新 App 与电脑插件，公开 preview.5 和插件0.1.85旧下载不会自行获得新代码。
+`fix/dsh-0.2.1-rc.2` 从已发布 main 创建。未合并或摘取 `feature/plugin-adaptation`；本地 npm 插件安装和此前通用插件宿主阶段仍留在原分支。本修复需同时更新 App preview.6 与电脑插件0.1.86；两者已公开预发布，旧下载不会自行获得新代码。[发行及签名检查](../releases.md#已核验范围)。
