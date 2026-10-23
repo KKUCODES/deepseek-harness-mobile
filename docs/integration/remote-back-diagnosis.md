@@ -1,6 +1,6 @@
 # Remote 项目聊天系统返回失效排查
 
-- 状态：本地修复和返回专项回归完成，preview.9/code11准备发布；下方保留修复前诊断。[发行任务](https://linear.app/kkcodes/issue/KKC-80)。
+- 状态：本地修复和返回专项回归完成，已随preview.9/code11公开预发布；[云端签名与APK匿名下载核验](../releases.md#已核验范围)通过。下方保留修复前诊断。[发行任务](https://linear.app/kkcodes/issue/KKC-80)。
 - 维护角色：DSHM 手机端维护者；最近核验：2026-10-24。
 - 用户反馈版本：preview.7；[任务 KKC-79](https://linear.app/kkcodes/issue/KKC-79)。
 
@@ -54,7 +54,7 @@ node scripts/build-web.mjs --latest-candidate --official-candidate --official-rc
 
 rc.2 和 alpha.2 专项通过，无页面错误；540 项 Node 测试和官方 rc.2 手机页面构建通过。回放项目数据直接送入真实工作区 model 的 baseline，测试关注导航和生命周期，不将其描述为已验证电脑工作区推送协议。
 
-Android 16/API36 独立模拟器、手势导航模式2：在无配对的 `.rc21test` 原生 RemoteActivity 注入当前 rc.2 组件回放包，保留原生返回实现。点击真实列表进入后，ADB 返回键和屏幕边缘手势均退出聊天；自有弹窗、插件菜单、原插件弹窗、插件面板再到聊天逐层返回通过。只在诊断页面暂时绕过 CSP 以加载本地回放脚本，不修改产品安全策略。此检查不等于真实配对聊天或物理手机验收，也没有生成或安装含本次修复的新 APK。
+Android 16/API36 独立模拟器、手势导航模式2：在无配对的 `.rc21test` 原生 RemoteActivity 注入当前 rc.2 组件回放包，保留原生返回实现。点击真实列表进入后，ADB 返回键和屏幕边缘手势均退出聊天；自有弹窗、插件菜单、原插件弹窗、插件面板再到聊天逐层返回通过。只在诊断页面暂时绕过 CSP 以加载本地回放脚本，不修改产品安全策略。此检查不等于真实配对聊天或物理手机验收；当时未生成或安装含修复的新APK。后续preview.9由Actions构建、签名并公开发布，本轮仅核验下载包身份与签名，未覆盖用户模拟器App。
 
 证据为 `artifacts/remote-back-navigation-0.2.1-rc.2.json`、`artifacts/remote-back-navigation-0.2.1-alpha.2.json`、`artifacts/back-diagnosis/regression-before.log`、`regression-final.log`、`node-tests.log`、`web-build.log`、`native-after.json`、`native-after-final.log`。原生报告包含所注入包的摘要。
 
