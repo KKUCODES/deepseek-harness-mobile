@@ -1,6 +1,7 @@
 {
-  "version": "0.1.0-preview.7",
-  "versionCode": 9,
+  "version": "0.1.0-preview.8",
+  "versionCode": 10,
+  "requiredPluginVersion": "0.1.87-latest.0",
   "dshVersion": "0.2.1-rc.2",
   "remoteDshVersions": ["0.2.0-rc.2", "0.2.1-alpha.2", "0.2.1-rc.2"],
   "upstreamCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",

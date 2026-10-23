@@ -4,15 +4,15 @@
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.7 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.7/DSHM-0.1.0-preview.7.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.7)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
+直接下载 [DSHM 0.1.0-preview.8 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.8/DSHM-0.1.0-preview.8.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.8)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1–preview.6。不要卸载旧版来更新，以免删除本地数据。普通聊天使用你自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，请配套升级电脑插件至 `0.1.87-latest.0`；大响应分块需要中转同步升级到包含提交 `94183d0` 的版本。
+当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1–preview.7。不要卸载旧版来更新，以免删除本地数据。旧公开版没有更新入口，先手动安装preview.8，此后可在App内检查新版。普通聊天使用你自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，配套电脑插件仍为 `0.1.87-latest.0`；本版不要求额外升级插件或中转。此前大响应分块仍要求中转包含提交 `94183d0`。
 
 ## 自动构建与发布
 
-`0.1.0-preview.7`（versionCode 9）加入[通用大响应分块](./integration/remote-response-chunks.md)，保留rc.2兼容、自定义供应商、Remote缓存和启动交接。身份与签名保持，历史发行及附件不覆盖。
+`0.1.0-preview.8`（versionCode 10）加入[App内更新、具体校验错误与Markdown说明](./integration/app-updates-current.md)，保留rc.2兼容、长聊天分块、自定义供应商、Remote缓存和启动交接。身份与签名保持，历史发行及附件不覆盖。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。

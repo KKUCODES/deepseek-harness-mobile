@@ -18,6 +18,7 @@ class ValidationActivity : Activity() {
     companion object { const val OPEN_APPEARANCE = "dshm.private.openAppearance" }
     private lateinit var webView: WebView
     private lateinit var ordinary: OrdinaryBridge
+    private lateinit var updates: AppUpdateBridge
     private var pendingAppearance = false
     private var startup: StartupScreen? = null
 
@@ -68,6 +69,7 @@ class ValidationActivity : Activity() {
         }
         ordinary = OrdinaryBridge(this, webView)
         ordinary.install()
+        updates = AppUpdateBridge(this, webView, OrdinaryBridge.ORIGIN, "mobile.html").also { it.install() }
         if (!MobileWebWindow.install(this, webView)) setContentView(webView)
         stopWindowAppearance = MobileWebWindow.observeAppearance(this)
         val entry = if (BuildConfig.DEBUG && intent.getBooleanExtra("diagnostics", false)) "index.html" else "mobile.html"
@@ -100,6 +102,7 @@ class ValidationActivity : Activity() {
         startup?.close()
         stopWindowAppearance?.invoke()
         ordinary.close()
+        updates.close()
         webView.destroy()
         super.onDestroy()
     }

@@ -22,7 +22,9 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
     private var shareOnly = false
     private var providersOnly = false
     private var compatibilityOnly = false
+    private var updatesOnly = false
     override fun onCreate(arguments: Bundle?) {
+        updatesOnly = arguments?.getString("updatesOnly") == "true"
         compatibilityOnly = arguments?.getString("compatibilityOnly") == "true"
         providersOnly = arguments?.getString("providersOnly") == "true"
         noticeEpochRevoke = arguments?.getString("noticeEpochRevoke") == "true"
@@ -31,6 +33,12 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
         super.onCreate(arguments); noticeEpochSession = arguments?.getString("noticeEpochSession"); notificationsOnly = arguments?.getString("notificationsOnly") == "true"; appearanceOnly = arguments?.getString("appearanceOnly") == "true"; computerKeyOnly = arguments?.getString("computerKeyOnly") == "true"; resourcesOnly = arguments?.getString("resourcesOnly") == "true"; saveOnly = arguments?.getString("saveOnly") == "true"; saveWriteOnly = arguments?.getString("saveWriteOnly") == "true"; saveDeathOnly = arguments?.getString("saveDeathOnly") == "true"; shareDeathOnly = arguments?.getString("shareDeathOnly") == "true"; shareOnly = arguments?.getString("shareOnly") == "true"; start()
     }
     override fun onStart() {
+        if (updatesOnly) {
+            val result = Bundle()
+            try { AppUpdateChecks.run(targetContext); result.putString("result", "PASS: native update channel, release contract, URL/digest/size/package rejection and same-version prevention"); finish(Activity.RESULT_OK, result) }
+            catch (error: Exception) { result.putString("result", "FAIL: app updates"); result.putString("location", error.stackTrace.firstOrNull { it.className.contains("AppUpdateChecks") }?.toString()); finish(Activity.RESULT_CANCELED, result) }
+            return
+        }
         if (compatibilityOnly) {
             val result = Bundle()
             try {

@@ -1,5 +1,7 @@
 # 手机端模块地图
 
+[更新服务](../../../android/app/src/main/java/dev/dshmobile/validation/AppUpdates.kt)由Application共享，两个自有Activity挂载[受限更新桥](../../../android/app/src/main/java/dev/dshmobile/validation/AppUpdateBridge.kt)，不复用聊天/Remote网络凭据。[前端状态](../../../src/app-updates.mjs)与[共用更新窗口](../../../src/ui/AppUpdates.jsx)接入普通设置、Remote连接菜单和启动提示；安装前复验由[校验器](../../../android/app/src/main/java/dev/dshmobile/validation/AppUpdateVerifier.kt)负责，发行清单沿原CI携带配套插件版本。维护：手机端维护者，核验2026-10-24；[流程、原生安装证据与未发布边界](../../integration/app-updates-current.md)。
+
 普通聊天通过[供应商目录](../../../src/ordinary-providers.mjs)、[共享模型选择](../../../src/ui/OrdinaryModels.jsx)与[供应商设置](../../../src/ui/OrdinaryProviders.jsx)管理服务和模型；[原生配置](../../../android/app/src/main/java/dev/dshmobile/validation/OrdinaryProviders.kt)保存目标与独立凭据引用，[原生请求桥](../../../android/app/src/main/java/dev/dshmobile/validation/OrdinaryBridge.kt)按目录快照发送。沿用原 DeepSeek 别名与 IndexedDB v2；聊天备份升为 v2 并接受旧 v1。维护角色手机端维护者，核验2026-10-15；[规则与实际入口证据](../../integration/ordinary-providers-current.md)。
 
 [Remote回复尾部](../../../src/ui/RemoteMessage.jsx)复用官方分支图标，[会话扩展](../../../src/remote-plugin-slots.jsx)将反馈与分支合在同一操作行；仅官方反馈的操作框使用[内容宽度](../../../src/ui/MobilePluginFrame.jsx)，不改变其他插件的外层缩放。维护角色手机端维护者，核验2026-10-15；[显示规则与真实入口证据](../../integration/remote-reply-actions-current.md)。

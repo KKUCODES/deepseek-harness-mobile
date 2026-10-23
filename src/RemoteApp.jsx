@@ -19,6 +19,7 @@ import { ThemePresenter } from '../../deepseek-harness/packages/client/ui-layout
 import { watchPhoneAppearance } from './phone-appearance.mjs';
 import { LocaleProvider, useTranslate } from './ui/locale.jsx';
 import { SupportDiagnostics } from './ui/SupportDiagnostics.jsx';
+import { AppUpdateEntry, AppUpdateNotice, AppUpdatePanel } from './ui/AppUpdates.jsx';
 import { responseFailures } from './remote-response-errors.mjs';
 
 const stages = { negotiating: '正在确认电脑能力…', loading: '正在读取电脑会话…', ready: '已连接', connecting: '正在连接电脑…', disconnected: '连接已断开' };
@@ -54,6 +55,7 @@ function RemoteConnection({ client, language, appearanceReady }) {
   const recovery = useRef({ resume: null, timer: null, attempt: 0, epoch: 0, stopped: true });
   const [model, setModel] = useState(null);
   const [diagnostics, setDiagnostics] = useState(false);
+  const [updatesOpen, setUpdatesOpen] = useState(false);
   useEffect(() => { model?.pluginSlots?.locale?.setLocale(language); }, [model, language]);
   useEffect(() => {
     let active = true;
@@ -293,9 +295,12 @@ function RemoteConnection({ client, language, appearanceReady }) {
         </>}
       </section>
     </main>
+    <AppUpdateNotice/>
+    <SurfacePresence>{updatesOpen && <AppUpdatePanel onClose={() => setUpdatesOpen(false)}/>}</SurfacePresence>
     {stage === 'ready' && model && <RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={back} onConnection={() => setMenu(true)}/></RemotePluginScope>}
     <SurfacePresence>{menu && <Surface title={t('电脑连接')} onClose={() => setMenu(false)}><header><h2>{t('电脑连接')}</h2><IconButton label={t('关闭窗口')} onClick={() => setMenu(false)}><IconCloseOutline16/></IconButton></header>
       <Button className="option" onClick={() => { setMenu(false); setDiagnostics(true); }}>{t('问题诊断')}</Button>
+      <AppUpdateEntry buttonClass="option" onOpen={() => { setMenu(false); setUpdatesOpen(true); }}/>
       <p>{binding?.origin ?? t('尚未连接电脑')}</p>
       {binding?.paired && <><Button className="option" onClick={() => void run(async () => { setMenu(false); await disconnect(); })}>{t('断开连接')}</Button>
         <details><summary>{t('移除本机绑定')}</summary><p>{t('移除后清理这台电脑的本机草稿，需要重新配对；电脑上的设备记录仍可在电脑端撤销。')}</p><Button onClick={() => void run(async () => { await model?.transport.syncCache?.clear(); await disconnect(); await stop(); const drafts = await RemoteDraftStore.open(binding); try { await drafts.clear(); } finally { drafts.close(); } await client.call('binding.forget'); setBinding({ paired: false }); setStatus(''); setMenu(false); })}>{t('确认移除')}</Button></details></>}

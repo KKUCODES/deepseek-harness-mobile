@@ -11,6 +11,7 @@ import { decodeBackup } from '../ordinary-backup.mjs';
 import { ordinaryError } from '../ordinary-errors.mjs';
 import './settings.css';
 import { SupportDiagnostics } from './SupportDiagnostics.jsx';
+import { AppUpdateEntry } from './AppUpdates.jsx';
 
 function Row({ title, value, onClick, icon, danger, disabled }) {
   return <button className={`settings-row ${danger ? 'danger' : ''}`} onClick={onClick} disabled={disabled}>{icon}<span className="settings-row-label">{title}</span>{value && <span className="settings-row-value">{value}</span>}<IconChevronRightOutline14/></button>;
@@ -53,6 +54,7 @@ export function OrdinarySettings({ host, session, state, onBack, registerBack, r
           <Row icon={<IconPersonalizationOutline16/>} title={t("外观与语言")} value={{ system: t('跟随系统'), light: t('浅色'), dark: t('深色') }[theme.value.preference]} onClick={() => setPage('appearance')}/>
           <Row icon={<IconDataOutline16/>} title={t("本地数据")} value={stats ? t('{count} 条聊天', { count: stats.chats }) : t('读取中')} onClick={() => setPage('data')}/>
           <Row title={t('问题诊断')} onClick={() => setDiagnostics(true)}/>
+          <AppUpdateEntry/>
         </div><h2 className="settings-group-title">Remote</h2><div className="settings-group"><Row icon={<IconBrowseOutline16/>} title={t("电脑连接")} onClick={() => perform(session.openRemote)}/><Row title={t("Remote 提醒")} disabled={busy} onClick={() => perform(session.notificationSettings)}/></div>
       </> : page === 'chat' ? <>
         <h2 className="settings-group-title">{t("模型服务")}</h2><div className="settings-group"><Row title={t('管理供应商与模型')} value={t('{count} 个供应商', { count: state.providers.length })} onClick={() => setPage('providers')}/><Row title={t("默认模型")} value={defaultModel.label} onClick={() => setSheet('model')}/></div>

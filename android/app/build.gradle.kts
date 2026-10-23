@@ -3,6 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseInfo = groovy.json.JsonSlurper().parse(file("../../ci/release.json")) as Map<*, *>
+
 val latestCompatibilityTest = providers.gradleProperty("latestCompatibilityTest").orNull == "true"
 val latestOfficeLifetimeTest = providers.gradleProperty("latestOfficeLifetimeTest").orNull == "true"
 val latestCordisPeerTest = providers.gradleProperty("latestCordisPeerTest").orNull == "true"
@@ -59,6 +61,7 @@ android {
             }
         }
         buildConfigField("String", "DSH_SDK_VERSION", "\"${if (latestCompatibilityTest) officialDshVersion else "0.1.6-alpha.2"}\"")
+        buildConfigField("String", "REQUIRED_PLUGIN_VERSION", "\"${releaseInfo["requiredPluginVersion"]}\"")
         testInstrumentationRunner = "dev.dshmobile.validation.OrdinarySecurityInstrumentation"
     }
     buildFeatures { buildConfig = true }

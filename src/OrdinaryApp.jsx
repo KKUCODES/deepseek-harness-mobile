@@ -18,6 +18,7 @@ import { ChatSearch } from './ui/ChatSearch.jsx';
 import { PhonePluginsPage } from './ui/PhonePlugins.jsx';
 import { OrdinarySettings } from './ui/OrdinarySettings.jsx';
 import { SurfacePresence } from './ui/motion.jsx';
+import { AppUpdateNotice } from './ui/AppUpdates.jsx';
 
 
 export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
@@ -107,6 +108,7 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
       {page !== 'chat' && <strong>{page === 'settings' ? t('设置') : t('手机插件')}</strong>}
       {page === 'chat' ? <div className="header-actions">{chat && <IconButton label={t("聊天选项")} onClick={() => setSheet({ kind: 'chat' })}><IconEllipsisOutline16/></IconButton>}<IconButton label={t("新聊天")} onClick={() => act(session.newChat)}><IconNewChatOutline16 size={20}/></IconButton></div> : <span className="header-spacer"/>}
     </header>
+    <AppUpdateNotice/>
     {state.error && <div role="alert" className="ordinary-error">{t(ordinaryError(state.error))}<IconButton label={t("关闭提示")} onClick={() => session.clearError()}><IconCloseOutline16/></IconButton></div>}
     {!state.ready ? <p role="status" className="no-results">{t("正在读取聊天记录…")}</p> : page === 'chat' ? <>
       <section ref={scroll} className={`conversation ${!turns.length ? 'is-empty' : ''}`} aria-label={t("聊天内容")} onScroll={event => {

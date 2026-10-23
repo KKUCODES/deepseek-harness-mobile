@@ -20,6 +20,7 @@ class RemoteActivity : Activity() {
     companion object { const val PAIR_HANDOFF = "dshm.private.pairHandoff" }
     private lateinit var webView: WebView
     private lateinit var bridge: RemoteBridge
+    private lateinit var updates: AppUpdateBridge
     private lateinit var files: RemoteFileChooser
     private var stopWindowAppearance: (() -> Unit)? = null
     private var startup: StartupScreen? = null
@@ -60,6 +61,7 @@ class RemoteActivity : Activity() {
             }
         }
         bridge = RemoteBridge(this, webView) { appearance -> ModeNavigation.ordinary(this, appearance) }; bridge.install()
+        updates = AppUpdateBridge(this, webView, RemoteBridge.ORIGIN, "remote.html").also { it.install() }
         (application as DshmApplication).notices.accept(intent)
         acceptPairLink(intent)
         files = RemoteFileChooser(this, bridge::connectionGeneration)
@@ -75,7 +77,7 @@ class RemoteActivity : Activity() {
         MobileWebWindow.updateAppearance(this)
     }
 
-    override fun onDestroy() { startup?.close(); stopWindowAppearance?.invoke(); files.cancel(); bridge.close(); webView.destroy(); super.onDestroy() }
+    override fun onDestroy() { startup?.close(); stopWindowAppearance?.invoke(); files.cancel(); updates.close(); bridge.close(); webView.destroy(); super.onDestroy() }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

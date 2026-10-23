@@ -10,6 +10,7 @@ assert.deepEqual(config.remoteDshVersions, ['0.2.0-rc.2', '0.2.1-alpha.2', '0.2.
 assert.equal(config.upstreamCommit, '687f282e8625c6b8d11ff58211a90524be2e4317');
 assert.match(config.backendCommit, /^[a-f0-9]{40}$/);
 assert.match(config.signingCertificateSha256, /^[a-f0-9]{64}$/);
+assert.match(config.requiredPluginVersion, /^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/, 'Declare the companion desktop plugin version');
 if (process.env.GITHUB_REF_TYPE === 'tag') {
   assert.equal(process.env.GITHUB_REF_NAME, `v${config.version}`, 'Tag must match ci/release.json');
 }

@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+App内更新：[每日检查、原生下载/校验、系统覆盖安装与配套插件版本](../integration/app-updates-current.md)。本地实现已验，准备发布preview.8/code10，云端签名与公开下载待验；两页面入口和Android原签名覆盖安装、历史/草稿保留已验，校验错误按具体原因分别提示。说明使用Markdown、下载文案按状态精简，最新状态也能查看本版说明；同版下载仍拒绝。[实现](https://linear.app/kkcodes/issue/KKC-77) · [发布](https://linear.app/kkcodes/issue/KKC-78)。
+
 长聊天修复：[通用分块、原生确认、分页/快照/实时流与重连](../integration/remote-response-chunks.md)。preview.7与插件0.1.87已公开预发布，[云端签名及匿名下载核验](../releases.md#已核验范围)通过；公共中转已升级并通过公网传输及旧端兼容，不包含插件适配分支。
 
 DSH rc.2 独立修复：[范围与能力检查、平台单例、主题及原生通知](../integration/dsh-rc21-compatibility.md)。preview.6 已公开预发布，配套插件0.1.86；[云端签名与匿名下载检查](../releases.md#已核验范围)通过。
