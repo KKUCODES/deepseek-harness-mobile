@@ -29,11 +29,17 @@ class RemoteActivity : Activity() {
         super.onCreate(savedInstanceState)
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         val assets = WebViewAssetLoader.Builder().setDomain("remote.dshm.invalid")
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this)).build()
+            .addPathHandler("/assets/", (application as DshmApplication).webUpdates.pathHandler()).build()
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true; settings.domStorageEnabled = true
             settings.allowFileAccess = false; settings.allowContentAccess = false
             webViewClient = object : WebViewClient() {
+                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    startup?.rendererFailed()
+                    (view.parent as? android.view.ViewGroup)?.removeView(view)
+                    view.destroy()
+                    return true
+                }
                 override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                     startup?.loading()
                     if (::files.isInitialized) files.cancel()

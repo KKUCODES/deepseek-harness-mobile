@@ -41,6 +41,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
     private var phase = "loading"
     private var generation = 0L
     private val timeout = Runnable { fail() }
+    private val pageUpdates get() = (activity.application as DshmApplication).webUpdates
 
     init {
         cover.isClickable = true
@@ -65,6 +66,10 @@ internal class StartupScreen(private val activity: Activity, private val webView
             text = if (english) "Try again" else "重新打开"
             setOnClickListener { loading(); webView.reload() }
         })
+        error.addView(Button(context).apply {
+            text = if (english) "Restore bundled pages" else "恢复内置页面"
+            setOnClickListener { pageUpdates.recovery(activity) }
+        })
         cover.addView(error, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         content.addView(cover, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) WebViewCompat.addWebMessageListener(webView, "DSHMStartup", setOf(page.origin)) { _, message, source, main, _ ->
@@ -82,12 +87,14 @@ internal class StartupScreen(private val activity: Activity, private val webView
             } else view.remove()
         }
         cover.postDelayed(timeout, 30_000)
+        pageUpdates.started(page.entry)
     }
 
     private fun dp(value: Int) = (value * activity.resources.displayMetrics.density).toInt()
 
     fun loading() {
         if (phase == "closed") return
+        pageUpdates.started(page.entry)
         generation++
         if (phase == "revealing") {
             splash?.animate()?.cancel()
@@ -127,6 +134,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
                     content.removeView(cover)
                     webView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
                     phase = "ready"
+                    pageUpdates.ready(page.entry)
                 }
                 if (!ValueAnimator.areAnimatorsEnabled()) finish.run()
                 else target.animate().alpha(0f).setDuration(220)
@@ -138,6 +146,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
     fun fail() {
         if (phase != "loading" && phase != "drawing") return
         phase = "failed"
+        pageUpdates.failed()
         cover.removeCallbacks(timeout)
         cover.visibility = View.VISIBLE
         logo.visibility = View.GONE
@@ -145,6 +154,15 @@ internal class StartupScreen(private val activity: Activity, private val webView
         removeSplash?.invoke()
         splash = null
         removeSplash = null
+    }
+
+    fun rendererFailed() {
+        if (phase == "closed") return
+        phase = "loading"
+        if (cover.parent == null) content.addView(cover)
+        cover.alpha = 1f
+        (error.getChildAt(1) as? Button)?.isEnabled = false
+        fail()
     }
 
     fun close() {
@@ -155,7 +173,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
         removeSplash?.invoke()
         splash = null
         removeSplash = null
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) WebViewCompat.removeWebMessageListener(webView, "DSHMStartup")
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) runCatching { WebViewCompat.removeWebMessageListener(webView, "DSHMStartup") }
         content.removeView(cover)
         webView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
     }

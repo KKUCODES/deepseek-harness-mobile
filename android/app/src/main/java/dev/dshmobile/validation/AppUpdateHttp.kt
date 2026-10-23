@@ -10,9 +10,8 @@ import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
 /** 独立无凭据HTTP客户端；每次重定向重新核对HTTPS主机，不借用聊天或Remote的网络身份。 */
-internal class AppUpdateHttp {
-    private val client = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
-        .connectTimeout(20, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).callTimeout(5, TimeUnit.MINUTES).build()
+internal class AppUpdateHttp(private val client: OkHttpClient = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
+        .connectTimeout(20, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).callTimeout(5, TimeUnit.MINUTES).build()) {
     @Volatile private var active: Call? = null
     @Volatile private var cancelled = false
     fun cancel() { cancelled = true; active?.cancel() }
@@ -33,7 +32,8 @@ internal class AppUpdateHttp {
         }
         throw IOException("update_redirect_limit")
     }
-    fun json(url: String, max: Int, etag: String? = null): Pair<ByteArray?, String?> = open(url, etag).use { response ->
+    fun json(url: String, max: Int, etag: String? = null, missingIsEmpty: Boolean = false): Pair<ByteArray?, String?> = open(url, etag).use { response ->
+        if (missingIsEmpty && response.code == 404) return Pair(null, null)
         if (response.code == 304) return Pair(null, etag)
         if (response.code == 403 || response.code == 429) throw IOException("update_rate_limited")
         if (!response.isSuccessful) throw IOException("update_network")

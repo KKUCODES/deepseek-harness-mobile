@@ -23,8 +23,12 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
     private var providersOnly = false
     private var compatibilityOnly = false
     private var updatesOnly = false
+    private var webUpdatesOnly = false
+    private var webUpdateLive: String? = null
     override fun onCreate(arguments: Bundle?) {
         updatesOnly = arguments?.getString("updatesOnly") == "true"
+        webUpdatesOnly = arguments?.getString("webUpdatesOnly") == "true"
+        webUpdateLive = arguments?.getString("webUpdateLive")
         compatibilityOnly = arguments?.getString("compatibilityOnly") == "true"
         providersOnly = arguments?.getString("providersOnly") == "true"
         noticeEpochRevoke = arguments?.getString("noticeEpochRevoke") == "true"
@@ -33,6 +37,18 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
         super.onCreate(arguments); noticeEpochSession = arguments?.getString("noticeEpochSession"); notificationsOnly = arguments?.getString("notificationsOnly") == "true"; appearanceOnly = arguments?.getString("appearanceOnly") == "true"; computerKeyOnly = arguments?.getString("computerKeyOnly") == "true"; resourcesOnly = arguments?.getString("resourcesOnly") == "true"; saveOnly = arguments?.getString("saveOnly") == "true"; saveWriteOnly = arguments?.getString("saveWriteOnly") == "true"; saveDeathOnly = arguments?.getString("saveDeathOnly") == "true"; shareDeathOnly = arguments?.getString("shareDeathOnly") == "true"; shareOnly = arguments?.getString("shareOnly") == "true"; start()
     }
     override fun onStart() {
+        webUpdateLive?.let { mode ->
+            val result = Bundle()
+            try { WebUpdateLiveChecks.run(this, mode); result.putString("result", "PASS: resource $mode") ; finish(Activity.RESULT_OK, result) }
+            catch (error: Exception) { result.putString("result", "FAIL: resource $mode"); result.putString("detail", error.message); result.putString("location", error.stackTrace.take(3).joinToString()); finish(Activity.RESULT_CANCELED, result) }
+            return
+        }
+        if (webUpdatesOnly) {
+            val result = Bundle()
+            try { WebUpdateChecks.run(this); result.putString("result", "PASS: Node/Android ECDSA signatures, compatibility, safe extraction, next-process activation, layered health, rollback, interruption and data isolation"); finish(Activity.RESULT_OK, result) }
+            catch (error: Exception) { result.putString("result", "FAIL: web resource updates"); result.putString("location", error.stackTrace.take(3).joinToString()); result.putString("detail", error.message); finish(Activity.RESULT_CANCELED, result) }
+            return
+        }
         if (updatesOnly) {
             val result = Bundle()
             try { AppUpdateChecks.run(targetContext); result.putString("result", "PASS: native update channel, release contract, URL/digest/size/package rejection and same-version prevention"); finish(Activity.RESULT_OK, result) }

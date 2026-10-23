@@ -27,8 +27,11 @@ class DshmApplication : Application(), Application.ActivityLifecycleCallbacks {
     private lateinit var saveRecovery: RemoteSaveRecovery
     internal lateinit var updates: AppUpdates
         private set
+    internal lateinit var webUpdates: WebUpdates
+        private set
     override fun onCreate() {
         super.onCreate()
+        webUpdates = WebUpdates(this)
         updates = AppUpdates(this)
         appearance = PhoneAppearance(this)
         saveJournal = RemoteSaveJournal(File(noBackupFilesDir, "remote-save-writes"))
@@ -42,7 +45,7 @@ class DshmApplication : Application(), Application.ActivityLifecycleCallbacks {
     override fun onActivityStopped(activity: Activity) = notices.stopped(activity)
     override fun onActivityResumed(activity: Activity) {
         notices.resumed(activity); saveRecovery.resumed(activity)
-        if (activity is ValidationActivity || activity is RemoteActivity) updates.resumed()
+        if (activity is ValidationActivity || activity is RemoteActivity) { updates.resumed(); webUpdates.check(automatic = true) }
     }
     override fun onActivityPaused(activity: Activity) { saveRecovery.paused(activity); notices.paused(activity) }
     override fun onActivityDestroyed(activity: Activity) = notices.destroyed(activity)

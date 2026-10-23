@@ -1,0 +1,176 @@
+name: Build signed page resources
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: 'Strictly increasing page-resource revision'
+        required: true
+        type: string
+      min_apk_code:
+        description: 'Minimum compatible Android versionCode'
+        required: true
+        type: string
+      max_apk_code:
+        description: 'Maximum compatible Android versionCode'
+        required: true
+        type: string
+      notes:
+        description: 'Page update notes (Markdown)'
+        type: string
+        default: ''
+      publish:
+        description: 'Publish to the separate web-preview channel'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-resources-preview
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: dsh-mobile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: dsh-mobile
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+      - id: config
+        run: node scripts/ci-version.mjs
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ steps.config.outputs.upstream_ref }}
+          path: dsh-mobile/artifacts/ci/official-source-rc21
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: KKUCODES/dshm-relay
+          ref: ${{ steps.config.outputs.backend_ref }}
+          path: backend
+          persist-credentials: false
+      - name: Prepare shared protocol
+        working-directory: backend
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build --workspace @dsh-mobile/protocol
+      - name: Build pinned mobile resources
+        run: |
+          npm ci --ignore-scripts --legacy-peer-deps --no-audit --no-fund
+          npm run prepare:ci
+          npm test
+          npm run build:web:ci
+      - name: Package unsigned resources
+        env:
+          REVISION: ${{ inputs.revision }}
+          MIN_APK: ${{ inputs.min_apk_code }}
+          MAX_APK: ${{ inputs.max_apk_code }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          node scripts/web-update-package.mjs pack-unsigned --source artifacts/ci/web --output artifacts/web-package --revision "$REVISION" --min-apk "$MIN_APK" --max-apk "$MAX_APK" --application-id dev.dshmobile.validation.officialtest --notes "$NOTES"
+          printf '%s' "$GITHUB_SHA" > artifacts/web-package/source.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: unsigned-web-resources
+          path: dsh-mobile/artifacts/web-package/*
+          if-no-files-found: error
+          retention-days: 30
+
+  sign:
+    needs: build
+    if: github.repository == 'KKUCODES/deepseek-harness-mobile' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: unsigned-web-resources
+          path: unsigned
+      # 此作业不检出源码或安装依赖；签名仅使用Node内置crypto。
+      - name: Sign resource manifest
+        env:
+          WEB_RESOURCE_SIGNING_KEY_BASE64: ${{ secrets.WEB_RESOURCE_SIGNING_KEY_BASE64 }}
+          REVISION: ${{ inputs.revision }}
+          MIN_APK: ${{ inputs.min_apk_code }}
+          MAX_APK: ${{ inputs.max_apk_code }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs'), crypto = require('node:crypto'), assert = require('node:assert/strict');
+          const hash = value => crypto.createHash('sha256').update(value).digest('hex');
+          assert.ok(process.env.WEB_RESOURCE_SIGNING_KEY_BASE64, 'Configure the separate resource signing secret before publishing');
+          assert.equal(fs.readFileSync('unsigned/source.txt', 'utf8'), process.env.GITHUB_SHA);
+          const manifest = JSON.parse(fs.readFileSync('unsigned/web-payload.json'));
+          assert.equal(manifest.applicationId, 'dev.dshmobile.validation.officialtest');
+          assert.equal(manifest.bridgeVersion, 1); assert.equal(manifest.dataVersion, 1);
+          assert.equal(manifest.revision, Number(process.env.REVISION));
+          assert.equal(manifest.minApkCode, Number(process.env.MIN_APK)); assert.equal(manifest.maxApkCode, Number(process.env.MAX_APK));
+          assert.match(manifest.archive.name, /^dshm-web-r[1-9][0-9]*\.zip$/);
+          const archive = fs.readFileSync(`unsigned/${manifest.archive.name}`);
+          assert.equal(archive.length, manifest.archive.bytes); assert.equal(hash(archive), manifest.archive.sha256);
+          const key = crypto.createPrivateKey(Buffer.from(process.env.WEB_RESOURCE_SIGNING_KEY_BASE64, 'base64'));
+          assert.equal(key.asymmetricKeyType, 'ec'); assert.equal(key.asymmetricKeyDetails.namedCurve, 'prime256v1');
+          const spki = crypto.createPublicKey(key).export({ format: 'der', type: 'spki' }), keyId = hash(spki);
+          const trust = JSON.parse(fs.readFileSync('unsigned/trust.json'));
+          assert.ok(trust.keys.some(item => item.id === keyId && item.spki === spki.toString('base64')), 'Resource key must match the APK trust root');
+          const payload = Buffer.from(JSON.stringify(manifest));
+          const envelope = { keyId, payload: payload.toString('base64'), signature: crypto.sign('sha256', payload, { key, dsaEncoding: 'der' }).toString('base64') };
+          fs.mkdirSync('signed'); fs.copyFileSync(`unsigned/${manifest.archive.name}`, `signed/${manifest.archive.name}`);
+          fs.writeFileSync('signed/web-update.json', JSON.stringify(envelope) + '\n');
+          fs.writeFileSync('signed/trust.json', JSON.stringify(trust));
+          NODE
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: signed-web-resources
+          path: signed/*
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    needs: sign
+    if: inputs.publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: signed-web-resources
+          path: signed
+      - name: Check increasing revision
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs'), crypto = require('node:crypto'), assert = require('node:assert/strict');
+          (async () => {
+            const current = await fetch('https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/web-preview/web-update.json');
+            if (current.status === 404) return;
+            assert.ok(current.ok, 'Unable to verify the existing resource revision');
+            const envelope = await current.json(), trust = JSON.parse(fs.readFileSync('signed/trust.json'));
+            const key = trust.keys.find(item => item.id === envelope.keyId); assert.ok(key, 'Unknown existing signer');
+            const bytes = Buffer.from(envelope.payload, 'base64');
+            assert.ok(crypto.verify('sha256', bytes, { key: crypto.createPublicKey({ key: Buffer.from(key.spki, 'base64'), type: 'spki', format: 'der' }), dsaEncoding: 'der' }, Buffer.from(envelope.signature, 'base64')));
+            const next = JSON.parse(Buffer.from(JSON.parse(fs.readFileSync('signed/web-update.json')).payload, 'base64'));
+            assert.ok(next.revision > JSON.parse(bytes).revision, 'Do not republish or downgrade resource revisions');
+          })().catch(error => { console.error(error.message); process.exit(1); });
+          NODE
+      - name: Publish separate resource channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if ! gh release view web-preview >/dev/null 2>&1; then
+            gh release create web-preview --target "$GITHUB_SHA" --prerelease --title 'DSHM page resources' --notes 'Signed page resources for compatible DSHM APKs. APK downloads remain in versioned releases.'
+          fi
+          gh release upload web-preview signed/dshm-web-r*.zip
+          gh release upload web-preview signed/web-update.json --clobber

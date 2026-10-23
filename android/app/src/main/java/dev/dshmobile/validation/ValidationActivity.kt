@@ -29,7 +29,7 @@ class ValidationActivity : Activity() {
         intent.removeExtra(OPEN_APPEARANCE)
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         val assets = WebViewAssetLoader.Builder()
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/assets/", (application as DshmApplication).webUpdates.pathHandler())
             .build()
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
@@ -38,6 +38,12 @@ class ValidationActivity : Activity() {
             settings.allowContentAccess = false
             // 网页仍只能加载本地资源；模型联网由原生受限请求桥负责。
             webViewClient = object : WebViewClient() {
+                override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    startup?.rendererFailed()
+                    (view.parent as? android.view.ViewGroup)?.removeView(view)
+                    view.destroy()
+                    return true
+                }
                 override fun onPageFinished(view: WebView, url: String?) { deliverAppearanceNavigation() }
                 override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                     startup?.loading()

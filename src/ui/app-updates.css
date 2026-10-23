@@ -19,3 +19,4 @@
 .app-update-skeleton { display: grid; gap: 8px; }
 .app-update-skeleton span { height: 14px; border-radius: 5px; background: color-mix(in srgb, currentColor 9%, transparent); }
 .app-update-skeleton span:last-child { width: 65%; }
+.resource-update-content { border-top: 1px solid color-mix(in srgb, currentColor 15%, transparent); padding-top: 16px; margin-top: 16px; }

@@ -1,5 +1,18 @@
 const phases = new Set(['idle', 'checking', 'available', 'current', 'downloading', 'verifying', 'ready', 'permission', 'installing', 'error', 'cancelled']);
 export const updateFailures = Object.freeze({
+  web_manifest_invalid: '页面资源信息无效，请重新检查更新。',
+  web_signature_invalid: '页面资源签名校验失败，已拒绝更新。',
+  web_package_mismatch: '页面资源与当前 App 不匹配。',
+  web_requires_apk: '此页面更新需要升级 App，请先安装新版 APK。',
+  web_sdk_mismatch: '页面资源与当前客户端 SDK 不兼容，请升级 App。',
+  web_plugin_mismatch: '此页面资源需要不同的配套插件版本，请升级 App。',
+  web_path_invalid: '页面资源包含不允许的文件路径，已拒绝更新。',
+  web_storage_failed: '无法保存页面资源，请检查手机存储空间。',
+  web_version_not_newer: '此页面资源无需更新，或已因故障停用。',
+  web_archive_invalid: '页面资源包校验失败，请重新下载。',
+  web_file_invalid: '页面资源不完整或校验失败，已保留旧版。',
+  web_recovery_pending: '已安排恢复页面，下次完整启动后生效。',
+  web_rolled_back: '上次页面启动失败，已恢复可用页面。',
   update_network: '无法连接更新服务，请检查网络后重试。',
   update_rate_limited: '更新服务暂时限流，请稍后重试。',
   update_invalid_release: '保存的更新信息无效，请重新检查更新。',
@@ -85,7 +98,7 @@ export class AppUpdates {
   async action(operation, data = {}) {
     if (!this.#bridge) return;
     try {
-      if (!['watch', 'read', 'check', 'download', 'cancel', 'install', 'openRelease', 'openLink'].includes(operation)) throw Error('update_bridge_failed');
+      if (!['watch', 'read', 'check', 'download', 'cancel', 'install', 'openRelease', 'openLink', 'resources.check', 'resources.download', 'resources.cancel', 'resources.recover'].includes(operation)) throw Error('update_bridge_failed');
       if (operation === 'openLink') {
         if (Object.keys(data).length !== 1 || typeof data.url !== 'string' || data.url.length > 8192) throw Error('update_bridge_failed');
         const url = new URL(data.url);

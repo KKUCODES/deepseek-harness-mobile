@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.9/DSHM-0.1.0-preview.9.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.10/DSHM-0.1.0-preview.10.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -68,9 +68,9 @@ flowchart LR
 
 开发预览，尚未进入应用商店。核心 Remote 已在 **官方 DSH `0.2.1-alpha.2`＋插件 `0.1.80-latest.0`＋配套 Android** 上完成 Web + MuMu 本地验收；扩展范围见[兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
 
-**preview.9** 修复 [Remote 项目聊天的返回手势](./docs/integration/remote-back-diagnosis.md)，保留弹窗和插件面板先关闭的顺序。保留 [App 内更新](./docs/integration/app-updates-current.md)和此前长聊天分块修复；preview.8 可在 App 内更新，更早版本请手动覆盖安装。Remote 仍配套插件 `0.1.87-latest.0`，已完成此前升级的插件和中转无需再升级。
+**preview.10** 新增[完整页面资源热更新](./docs/integration/web-resource-updates-current.md)：独立签名与兼容检查、下次完整启动启用、失败回退及原生恢复入口。先升级本版 APK 一次，之后可接收兼容的页面更新；涉及原生能力仍需升级 APK。保留此前返回手势、App 内更新及长聊天修复；preview.8 起可在 App 内更新，更早版本请手动覆盖安装。
 
-[0.1.0-preview.9](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.9) 保留普通聊天自定义供应商和模型、原 DeepSeek 配置与聊天；[模型服务说明](./docs/integration/ordinary-providers-current.md)。Remote 配套电脑插件 `0.1.87-latest.0`，核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`；[版本验证范围](./docs/integration/market-baseline.md)。沿用原身份和签名，可覆盖 preview.1–preview.8，保留本地数据。
+[0.1.0-preview.10](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.10) 保留普通聊天自定义供应商和模型、原 DeepSeek 配置与聊天；[模型服务说明](./docs/integration/ordinary-providers-current.md)。Remote 配套电脑插件 `0.1.87-latest.0`，核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`；[版本验证范围](./docs/integration/market-baseline.md)。沿用原身份和签名，可覆盖 preview.1–preview.9，保留本地数据；本版无需额外升级插件或中转。
 
 - 首版仅 Android。真机、完整公网链路及其他版本、插件、模型仍需验证。
 - 电脑和 DSH 保持运行，只安装独立插件，不修改 DSH 本体。

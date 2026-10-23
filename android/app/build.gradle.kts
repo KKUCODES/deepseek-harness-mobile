@@ -90,6 +90,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/webAssets"))
+    sourceSets["androidTest"].assets.srcDir(file("../../artifacts/web-update-tests/fixtures"))
 }
 
 // 同一个已验证的 Web 产物进入 APK，避免另维护一套插件加载逻辑。
