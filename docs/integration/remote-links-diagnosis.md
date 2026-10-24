@@ -1,6 +1,6 @@
 # Remote网页链接点击无反应排查
 
-- 状态：已按通用方案修复并完成本地回归，纳入preview.12/code15发行候选；云端构建与公开下载待验证，preview.11不包含修复。下述原始诊断与当时测试边界保留。[发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)。
+- 状态：通用修复已随[preview.12/code15](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.12)公开发布；Actions40082470843构建/lint/原证书签名与APK及附件匿名下载核验通过，固定源码783e979；[发行证据](../releases.md#已核验范围)。旧preview.11不含修复。下述原始诊断与当时测试边界保留。[发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)。
 - 维护：手机端维护者；核验日期：2026-10-24；[诊断 KKC-87](https://linear.app/kkcodes/issue/KKC-87) · [修复 KKC-88](https://linear.app/kkcodes/issue/KKC-88)。
 - 发布源码基线：`30f4c6c1e6d730bf53c8bb77c4ecc69f819e810a`（preview.11发行后的文档提交）；Android使用上轮已构建的同逻辑Debug/code13隔离包，不冒充用户真机或公开code14 APK的完整Remote验收。
 

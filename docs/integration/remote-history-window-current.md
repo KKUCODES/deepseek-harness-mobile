@@ -1,6 +1,6 @@
 # Remote 长聊天窗口与恢复
 
-- 状态：2026-10-24 本地验收完成，纳入 preview.12/code15 发行候选；云端构建与公开下载待验证。preview.11 不包含本轮修复。
+- 状态：2026-10-24 已随[preview.12/code15](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.12)公开发布；[Actions40082470843](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40082470843)构建/lint/原签名和APK及附件匿名下载核验通过。源码固定783e979；[发行证据](../releases.md#已核验范围)。旧preview.11不含本轮修复。
 - 维护角色：DSHM 协作 Agent。
 - 需求：[KKC-89](https://linear.app/kkcodes/issue/KKC-89)。只修改手机端，不改 DSH、插件、中转，不合入插件适配分支。
 - 依据：[连续翻页的资源压力、未复现部分与行业方案](./remote-history-white-screen-diagnosis.md)。资源压力不等于已证明反馈用户白屏的唯一根因。
@@ -36,7 +36,7 @@ Android onRenderProcessGone 关闭旧桥、销毁失效 WebView，重建可见 A
 
 563项Node测试、CI固定rc.2页面构建、Android debug/release构建与对应lint通过；涉及文档1,011处本地链接已核对。
 
-验收后卸载专用rc21test并关闭5556，日常MuMu/5554未变。此前Linear传输失败，发布阶段已补同步并关闭KKC-89；[发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)独立跟踪云端签名与公开下载。
+验收后卸载专用rc21test并关闭5556，日常MuMu/5554未变；本次发行没有覆盖安装日常App。此前Linear传输失败已补同步，KKC-89实现与[发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)分别记录实现验收和云端签名/公开下载。
 
 | 路径 | 结果 |
 | --- | --- |

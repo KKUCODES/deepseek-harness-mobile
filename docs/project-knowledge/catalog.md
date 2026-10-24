@@ -1,8 +1,8 @@
 # 手机端知识总目录
 
-长聊天反复加载历史：[有界数据/渲染、双向查阅与恢复](../integration/remote-history-window-current.md)本地验收完成，纳入preview.12/code15候选；rc.2/alpha.2连续24页、审批/插件输入状态、局部恢复和Android渲染器退出恢复通过。用户持续白屏未复现，配对后的崩溃阅读恢复尚未实测；见[原诊断](../integration/remote-history-white-screen-diagnosis.md)。[实现KKC-89](https://linear.app/kkcodes/issue/KKC-89)已补同步；[发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)跟踪云端与下载验收。
+长聊天反复加载历史：[有界数据/渲染、双向查阅与恢复](../integration/remote-history-window-current.md)已随preview.12/code15公开，Actions40082470843构建/lint/原签名及[匿名下载核验](../releases.md#已核验范围)通过；rc.2/alpha.2连续24页、审批/插件输入、局部和Android渲染器恢复已验。用户持续白屏未复现，配对后的崩溃阅读恢复未实测；见[原诊断](../integration/remote-history-white-screen-diagnosis.md)。[实现KKC-89](https://linear.app/kkcodes/issue/KKC-89)已补同步；[发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)。
 
-Remote网页链接：[原始缺口、统一Markdown委托、受限原生打开与验收](../integration/remote-links-diagnosis.md)。正文/思考/工具及新旧Markdown预览已修复；rc.2/alpha.2页面、Android真实浏览器打开及来源/框架/地址拒绝通过，文件入口保持。纳入preview.12/code15候选，旧preview.11不含修复。[诊断KKC-87](https://linear.app/kkcodes/issue/KKC-87) · [修复KKC-88](https://linear.app/kkcodes/issue/KKC-88) · [发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)。
+Remote网页链接：[原始缺口、统一Markdown委托、受限原生打开与验收](../integration/remote-links-diagnosis.md)。正文/思考/工具及新旧Markdown预览已修复；rc.2/alpha.2页面、Android真实浏览器及来源/框架/地址拒绝通过，文件入口保持。preview.12/code15云端签名、公开发布及匿名下载已验，旧preview.11不含修复。[诊断KKC-87](https://linear.app/kkcodes/issue/KKC-87) · [修复KKC-88](https://linear.app/kkcodes/issue/KKC-88) · [发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)。
 
 统一更新与一键重启：[单一状态卡片、双页面保存屏障及原生接力重启](../integration/unified-updates-current.md)。本地候选code13已安装MuMu，550项Node、双入口布局及API36真实下载/自动重启/草稿保留/自动恢复通过；preview.11/code14 APK已公开预发布，云端构建/lint/原签名/发布及匿名下载核验通过，公共r1资产保持，未投放r2。本轮未安装用户模拟器，见[实际核验记录](../releases.md#已核验范围)。[实现 KKC-85](https://linear.app/kkcodes/issue/KKC-85) · [发布 KKC-86](https://linear.app/kkcodes/issue/KKC-86)。
 
