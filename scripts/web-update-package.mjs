@@ -46,7 +46,7 @@ export async function packageResources({ source, output, privatePath, trustPath,
   assert.ok(Number.isSafeInteger(minApkCode) && minApkCode > 0 && Number.isSafeInteger(maxApkCode) && maxApkCode >= minApkCode && maxApkCode <= 2100000000);
   assert.ok(typeof notes === 'string' && notes.length <= 32000);
   const config = JSON.parse(await readFile(resolve(root, 'ci/release.json'), 'utf8'));
-  assert.match(applicationId, /^dev\.dshmobile\.validation(?:\.(?:officialtest|rc21test|compatibilitytest))?$/);
+  assert.match(applicationId, /^dev\.dshmobile\.validation(?:\.(?:officialtest|rc21test|compatibilitytest|updaterestarttest))?$/);
   const archiveFiles = {}, files = [], folded = new Set();
   async function visit(directory) {
     for (const entry of (await readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name, 'en'))) {

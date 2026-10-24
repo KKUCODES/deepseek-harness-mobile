@@ -60,7 +60,8 @@ internal data class WebResourceManifest(val envelope: ByteArray, val revision: L
             val revision = number(value, "revision", 1, 2147483647)
             val min = number(value, "minApkCode", 1, 2100000000)
             val max = number(value, "maxApkCode", min, 2100000000)
-            require(apkCode in min..max) { "web_requires_apk" }
+            require(apkCode >= min) { "web_requires_apk" }
+            require(apkCode <= max) { "web_resource_superseded" }
             require(number(value, "bridgeVersion", 1, 2147483647) == 1L && number(value, "dataVersion", 1, 2147483647) == 1L) { "web_requires_apk" }
             require(text(value, "sdkVersion") == sdk) { "web_sdk_mismatch" }
             val plugin = text(value, "requiredPluginVersion")

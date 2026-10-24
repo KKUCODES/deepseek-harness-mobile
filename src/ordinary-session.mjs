@@ -270,6 +270,11 @@ export class OrdinarySession {
       this.#publish({ busy: false, owner: null });
     }
   }
+  prepareUpdate = () => this.#serial(async () => {
+    if (this.#state.busy) throw Error('web_restart_busy');
+    const chat = this.#state.chat;
+    if (chat) await this.#history.update(chat.id, value => { value.draft = this.#state.draft; });
+  });
   export = () => this.#serial(() => this.#history.export());
   import = text => this.#serial(async () => {
     if (this.#state.busy) throw new Error('request_busy');

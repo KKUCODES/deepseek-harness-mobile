@@ -22,6 +22,18 @@ class History {
   page = async () => ({ items: [...this.rows.values()].map(row => ({ id: row.id, title: row.title })), next: null });
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
+test('update preparation waits for a just-typed draft and rejects failed persistence', async () => {
+  const history = new History();
+  const session = new OrdinarySession({ history, native: { status: async () => ({ configured: false }) } });
+  await session.start();
+  const writing = session.editDraft('draft before restart');
+  await session.prepareUpdate(); await writing;
+  const id = session.getSnapshot().chat.id;
+  assert.equal((await history.get(id)).draft, 'draft before restart');
+  history.failWrites = true;
+  await assert.rejects(session.prepareUpdate, /disk_full/);
+  history.failWrites = false; await session.dispose();
+});
 function setup() {
   const history = new History();
   const calls = [];

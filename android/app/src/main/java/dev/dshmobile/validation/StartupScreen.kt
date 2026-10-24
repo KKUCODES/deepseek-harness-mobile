@@ -68,7 +68,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
         })
         error.addView(Button(context).apply {
             text = if (english) "Restore bundled pages" else "恢复内置页面"
-            setOnClickListener { pageUpdates.recovery(activity) }
+            setOnClickListener { pageUpdates.recovery(activity, preparePages = false) }
         })
         cover.addView(error, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         content.addView(cover, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))

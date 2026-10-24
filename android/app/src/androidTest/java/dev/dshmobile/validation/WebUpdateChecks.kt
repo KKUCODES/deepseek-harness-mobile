@@ -21,6 +21,7 @@ object WebUpdateChecks {
         }
         val first = parse("r1.json"); val second = parse("r2.json"); val third = parse("r3.json")
         check(first.revision == 1L)
+        rejected("web_resource_superseded") { WebResourceManifest.parse(first.envelope, trust, context.packageName, 999, "0.2.1-rc.2") }
         for ((file, code) in mapOf("bridge" to "web_requires_apk", "data" to "web_requires_apk", "sdk" to "web_sdk_mismatch",
             "package" to "web_package_mismatch", "apk" to "web_requires_apk", "plugin" to "web_plugin_mismatch", "path" to "web_path_invalid")) {
             rejected(code) { parse("$file.json") }
@@ -32,6 +33,11 @@ object WebUpdateChecks {
         val outside = File(root, "do-not-touch.txt").apply { writeText("retained") }
         val updatesRoot = File(root, "updates")
         val archive = File(root, "valid.zip").apply { writeBytes(fixture("valid.zip")) }
+        val obsoleteRoot = File(root, "superseded")
+        WebResourceStore(obsoleteRoot, trust, context.packageName, 2, "0.2.1-rc.2").apply { beginProcess(); stage(first, archive) }
+        val upgraded = WebResourceStore(obsoleteRoot, trust, context.packageName, 999, "0.2.1-rc.2").apply { beginProcess() }.snapshot()
+        check(upgraded.getLong("pendingRevision") == 0L && upgraded.getLong("currentRevision") == 0L && upgraded.isNull("notice"))
+        check(upgraded.getLong("highestRevision") == 1L)
         fun next() = WebResourceStore(updatesRoot, trust, context.packageName, 2, "0.2.1-rc.2").apply { beginProcess() }
         fun healthy(store: WebResourceStore) { for (page in listOf("mobile.html", "remote.html")) { store.started(page); store.ready(page) } }
         try {

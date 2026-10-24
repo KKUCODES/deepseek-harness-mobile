@@ -104,6 +104,8 @@ npm run serve
 
 preview.10起包含完整页面资源热更新加载器；打包、信任公钥、单独Actions与两入口/Android验收见[资源更新说明](./integration/web-resource-updates-current.md)。旧APK不能直接接受资源包，需要先升级本版。资源签名私钥通过独立Actions Secret使用，不随仓库分发，公开源码仅有公钥。
 
+preview.11包含[统一更新界面与原生重启](./integration/unified-updates-current.md)，共用页面保存屏障与独立私有接力进程。Debug回放仅存在于Debug源码集，公开Release不含测试资源入口；APK发布与资源通道仍独立，本次不发布r2。`node scripts/check-unified-updates-web.mjs`检查两个实际页面入口，Android驱动限制独立测试UID，避免清理日常数据。
+
 Remote 系统返回回归：`node scripts/verify-remote-plugin-slots.mjs --back-navigation` 默认使用固定官方rc.2 SDK；加 `--official-alpha2` 检查旧SDK。测试通过真实列表按钮进入会话，覆盖读取忙碌期、读取结束、连续返回、项目导航、弹窗与插件面板优先级和草稿保留。该入口仍需准备对应SDK材料；[结果与Android检查边界](./integration/remote-back-diagnosis.md)。
 
 在本仓库根目录执行默认测试：

@@ -4,15 +4,15 @@
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.10 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.10/DSHM-0.1.0-preview.10.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.10)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
+直接下载 [DSHM 0.1.0-preview.11 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.11/DSHM-0.1.0-preview.11.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.11)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1–preview.9。不要卸载旧版来更新，以免删除本地数据。preview.8起可在App内检查新版；更早的公开版没有更新入口，请手动下载本版覆盖安装。普通聊天使用你自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，配套电脑插件仍为 `0.1.87-latest.0`；本版不要求额外升级插件或中转。此前大响应分块仍要求中转包含提交 `94183d0`。
+当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1–preview.10及本地preview.11-dev/code13。不要卸载旧版来更新，以免删除本地数据。preview.8起可在App内检查新版；更早的公开版没有更新入口，请手动下载本版覆盖安装。普通聊天使用你自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，配套电脑插件仍为 `0.1.87-latest.0`；本版不要求额外升级插件或中转。此前大响应分块仍要求中转包含提交 `94183d0`。
 
 ## 自动构建与发布
 
-`0.1.0-preview.10`（versionCode 12）新增[完整页面资源热更新](./integration/web-resource-updates-current.md)，包括独立签名、兼容检查、下次完整启动启用及失败回退。旧版需先安装本版APK以获得加载器；原生功能仍通过APK更新。保留返回手势、App内更新及此前能力。身份与签名保持，历史发行及附件不覆盖。
+`0.1.0-preview.11`（versionCode 14）加入[统一更新界面与一键重启](./integration/unified-updates-current.md)：资源下载后保存草稿并自动重启，恢复内置页也无需系统强停。保留[签名资源加载器](./integration/web-resource-updates-current.md)、返回手势与此前能力。身份与签名保持，历史发行及附件不覆盖。本次只发布APK，不投放r2。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。
@@ -36,7 +36,7 @@
 
 当前沿用本地测试候选的证书，公开摘要写入 `ci/release.json`；保持本地私钥备份。Secrets 不代替备份。后续应用商店身份、签名迁移和完整真机验收另行处理。
 
-页面资源使用单独的 `WEB_RESOURCE_SIGNING_KEY_BASE64` Secret和APK内置公钥，已获用户授权配置；不复用APK签名私钥。资源工作流独立构建及签名，可选择发布至 `web-preview`；本次仅核验构建/签名，不投放与内置页面重复的资源包。
+页面资源使用单独的 `WEB_RESOURCE_SIGNING_KEY_BASE64` Secret和APK内置公钥，已获用户授权配置；不复用APK签名私钥。资源工作流独立构建及签名，可选择发布至 `web-preview`；目前仅有适配code12的r1，本次不触发资源工作流、不投放r2。
 
 ## 构建来源与边界
 

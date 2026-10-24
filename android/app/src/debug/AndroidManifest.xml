@@ -1,5 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application android:name=".DebugDshmApplication" android:label="@string/debug_app_label" tools:replace="android:name,android:label">
         <activity android:name=".RemoteSaveProbeActivity" android:exported="false" />
         <activity android:name=".RemoteShareFeedProbeActivity" android:exported="true"
             android:theme="@android:style/Theme.NoDisplay" android:excludeFromRecents="true" />

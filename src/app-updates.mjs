@@ -1,5 +1,9 @@
 const phases = new Set(['idle', 'checking', 'available', 'current', 'downloading', 'verifying', 'ready', 'permission', 'installing', 'error', 'cancelled']);
 export const updateFailures = Object.freeze({
+  web_restart_busy: '请等待正在发送或保存的消息完成，再重启。',
+  web_resource_superseded: '当前 App 已包含更新的页面，无需下载此资源包。',
+  web_restart_save_failed: '当前内容未能保存，已取消重启，请重试。',
+  web_restart_unavailable: '暂时无法重新启动，已保留更新，请重试。',
   web_manifest_invalid: '页面资源信息无效，请重新检查更新。',
   web_signature_invalid: '页面资源签名校验失败，已拒绝更新。',
   web_package_mismatch: '页面资源与当前 App 不匹配。',
@@ -98,7 +102,7 @@ export class AppUpdates {
   async action(operation, data = {}) {
     if (!this.#bridge) return;
     try {
-      if (!['watch', 'read', 'check', 'download', 'cancel', 'install', 'openRelease', 'openLink', 'resources.check', 'resources.download', 'resources.cancel', 'resources.recover'].includes(operation)) throw Error('update_bridge_failed');
+      if (!['watch', 'read', 'check', 'download', 'cancel', 'install', 'openRelease', 'openLink', 'resources.check', 'resources.download', 'resources.cancel', 'resources.recover', 'resources.restart'].includes(operation)) throw Error('update_bridge_failed');
       if (operation === 'openLink') {
         if (Object.keys(data).length !== 1 || typeof data.url !== 'string' || data.url.length > 8192) throw Error('update_bridge_failed');
         const url = new URL(data.url);

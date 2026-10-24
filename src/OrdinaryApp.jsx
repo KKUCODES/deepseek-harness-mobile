@@ -19,11 +19,13 @@ import { PhonePluginsPage } from './ui/PhonePlugins.jsx';
 import { OrdinarySettings } from './ui/OrdinarySettings.jsx';
 import { SurfacePresence } from './ui/motion.jsx';
 import { AppUpdateNotice } from './ui/AppUpdates.jsx';
+import { registerUpdatePreparation } from './update-preparation.mjs';
 
 
 export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
   const t = useTranslate();
   const [session] = useState(() => new OrdinarySession());
+  useEffect(() => registerUpdatePreparation(() => session.prepareUpdate()), [session]);
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const plugins = useSyncExternalStore(host.phonePlugins.state.subscribe, host.phonePlugins.state.getSnapshot);
   const [drawer, setDrawer] = useState(false);

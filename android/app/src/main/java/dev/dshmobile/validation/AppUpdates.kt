@@ -16,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.Executors
 
 /** 应用级单次更新任务；页面切换不重下，进程结束不启动后台服务或自行安装。 */
-internal class AppUpdates(private val context: Context) {
+internal class AppUpdates(private val context: Context, private val httpFactory: () -> AppUpdateHttp = { AppUpdateHttp() }) {
     private val worker = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
     private val listeners = CopyOnWriteArraySet<() -> Unit>()
@@ -63,7 +63,7 @@ internal class AppUpdates(private val context: Context) {
         if (automatic && now - preferences.getLong("lastAttempt", 0) in 0 until 24 * 60 * 60 * 1000L) return
         preferences.edit().putLong("lastAttempt", now).apply()
         val owner = ++generation
-        val http = AppUpdateHttp(); network = http; state("checking")
+        val http = httpFactory(); network = http; state("checking")
         worker.execute {
             try {
                 val cached = runCatching { listCache.openRead().use { it.readBytes() } }.getOrNull()

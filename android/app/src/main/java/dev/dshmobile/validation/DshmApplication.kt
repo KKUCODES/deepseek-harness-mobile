@@ -6,7 +6,7 @@ import android.os.Bundle
 import java.io.File
 
 /** 只观察本进程的页面生命周期，不启动服务或注册唤醒入口。 */
-class DshmApplication : Application(), Application.ActivityLifecycleCallbacks {
+open class DshmApplication : Application(), Application.ActivityLifecycleCallbacks {
     private val cacheListeners = java.util.concurrent.CopyOnWriteArraySet<() -> Unit>()
     fun cacheEpoch(): Long = getSharedPreferences("dshm.cache.v1", MODE_PRIVATE).getLong("epoch", 0)
     fun observeCacheClear(listener: () -> Unit): () -> Unit { cacheListeners.add(listener); return { cacheListeners.remove(listener) } }
@@ -29,10 +29,14 @@ class DshmApplication : Application(), Application.ActivityLifecycleCallbacks {
         private set
     internal lateinit var webUpdates: WebUpdates
         private set
+    internal open fun createWebUpdates() = WebUpdates(this)
+    internal open fun createAppUpdates() = AppUpdates(this)
     override fun onCreate() {
         super.onCreate()
-        webUpdates = WebUpdates(this)
-        updates = AppUpdates(this)
+        // 重启接力进程不初始化资源存储，防止它提前激活pending或与主进程写入竞争。
+        if (getProcessName() == "$packageName:updateRestart") return
+        webUpdates = createWebUpdates()
+        updates = createAppUpdates()
         appearance = PhoneAppearance(this)
         saveJournal = RemoteSaveJournal(File(noBackupFilesDir, "remote-save-writes"))
         saveRecovery = RemoteSaveRecovery(saveJournal, appearance)

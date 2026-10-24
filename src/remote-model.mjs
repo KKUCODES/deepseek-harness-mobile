@@ -277,6 +277,13 @@ export class RemoteModel {
     return unwrap(await reference.binding.session.cancel());
   }
   draft(value) { return this.writeDraft(this.snapshot.selected, value); }
+  async prepareUpdate() {
+    if (this.sending.size || this.draftTransfers.size || Object.values(this.snapshot.draftSaving ?? {}).some(Boolean)
+      || Object.values(this.snapshot.attachmentDraftSaving ?? {}).some(Boolean)) throw Error('web_restart_busy');
+    // 重新提交当前快照并等待事务，不能只依据界面已显示文字判断落盘完成。
+    for (const [id, text] of Object.entries(this.snapshot.drafts)) await this.draftStore?.write(id, text, this.snapshot.draftEditors[id]);
+    for (const [id, attachments] of Object.entries(this.snapshot.attachments)) await this.draftStore?.writeAttachments?.(id, attachments, this.sendingAttachmentIds.get(id) ?? []);
+  }
   async writeDraft(id, value, editor) {
     if (!id || this.lifetime.signal.aborted) return;
     const version = (this.draftVersions.get(id) ?? 0) + 1; this.draftVersions.set(id, version);

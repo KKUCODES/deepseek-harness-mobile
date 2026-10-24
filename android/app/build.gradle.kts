@@ -69,6 +69,7 @@ android {
     bundle { language { enableSplit = false } }
     // 独立配对验收包使用另一个 UID/存储，不能为了测未绑定入口清除用户数据。
     buildTypes.getByName("debug") {
+        resValue("string", "debug_app_label", if (providers.gradleProperty("updateRestartDemo").orNull == "true") "DSHM 更新验收" else "DSHM")
         if (latestCompatibilityTest) applicationIdSuffix = when {
             remoteCompatibilityTest -> ".compatibilitytest"
             remoteToolLayoutTest -> ".toolstyletest"
@@ -81,6 +82,7 @@ android {
         }
         if (providers.gradleProperty("isolatedPairingTest").orNull == "true") applicationIdSuffix = ".pairingtest"
         check(!(latestCompatibilityTest && providers.gradleProperty("isolatedPairingTest").orNull == "true")) { "Choose only one isolated test package" }
+        if (providers.gradleProperty("updateRestartDemo").orNull == "true") applicationIdSuffix = ".updaterestarttest"
     }
     // CI 保持原测试包 UID；Gradle 只打无签名包，由独立作业签名。
     if (ciBuild) buildTypes.getByName("release") { applicationIdSuffix = ".officialtest" }

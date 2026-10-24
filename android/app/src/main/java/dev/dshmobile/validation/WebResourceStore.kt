@@ -32,6 +32,11 @@ internal class WebResourceStore(private val root: File, private val trust: JSONO
         val content = File(folder, "content"); manifest.verifyDirectory(content)
         Pair(manifest, content)
     }.getOrNull()
+    private fun superseded(name: String): Boolean = runCatching {
+        val envelope = File(packageDirectory(name), "manifest.json")
+        require(envelope.length() in 1..WebResourceManifest.MAX_MANIFEST.toLong())
+        parse(envelope.readBytes())
+    }.exceptionOrNull()?.message == "web_resource_superseded"
     /** 每个Application进程只选一次；后续Activity和资源请求都沿同一不可变世代。 */
     @Synchronized fun beginProcess() {
         check(!opened); opened = true
@@ -44,10 +49,19 @@ internal class WebResourceStore(private val root: File, private val trust: JSONO
                 if (read(pending) != null) {
                     if (healthy()) state.put("previous", state.optString("active"))
                     state.put("active", pending).put("healthy", JSONObject()).put("pending", "").put("pendingRevision", 0)
-                } else state.put("pending", "").put("pendingRevision", 0).put("notice", "web_file_invalid")
+                } else {
+                    if (!superseded(pending)) state.put("notice", "web_file_invalid")
+                    state.put("pending", "").put("pendingRevision", 0)
+                }
             }
         }
+
         var active = state.optString("active")
+        // 新APK已超出旧资源的有效范围时直接使用新版内置页，不误报为启动崩溃。
+        if (active.isNotEmpty() && superseded(active)) {
+            state.put("active", "").put("previous", "").put("healthy", JSONObject())
+            active = ""
+        }
         var loaded = if (active.isNotEmpty()) read(active) else null
         if (active.isNotEmpty() && loaded == null) {
             rollback("web_rolled_back"); active = state.optString("active"); loaded = if (active.isNotEmpty()) read(active) else null

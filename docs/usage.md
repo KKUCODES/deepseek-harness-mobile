@@ -100,7 +100,9 @@ DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可�
 
 ## App 更新
 
-preview.10起支持[页面资源更新](./integration/web-resource-updates-current.md)：同一窗口下载后待下次完整启动生效；失败可恢复上一可用版或APK内置页面，保留本地数据。旧版本需先升级本版APK；涉及原生能力仍升级APK。尚无新资源包时会继续使用内置页面。
+preview.11将APK与页面资源合并为统一更新卡片，主按钮依状态显示下载、安装或「重启并应用」，更新说明和技术信息可展开查看；[实现与验收范围](./integration/unified-updates-current.md)。
+
+preview.10起支持[页面资源更新](./integration/web-resource-updates-current.md)。preview.11下载兼容资源后，点击「重启并应用」即可自动重新打开原模式；先保存各页面草稿，发送中或保存失败时保留当前页面并提示重试，无需去系统设置强行停止。失败可恢复上一可用版或APK内置页面，保留本地数据；涉及原生能力仍升级APK。本次不发布r2，尚无兼容新资源包时继续使用内置页面。
 
 从preview.8开始支持App内更新。preview.7及更早的公开版没有更新入口，请先从[发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases)下载最新APK覆盖安装；之后可在「设置 → 软件更新」或「Remote → 连接选项 → 软件更新」手动检查，启动时每天也会检查一次。
 

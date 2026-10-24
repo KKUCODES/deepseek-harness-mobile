@@ -34,7 +34,7 @@ internal class WebUpdates(private val context: Context, private val httpFactory:
     private fun publish() { main.post { listeners.forEach { it() } } }
     @Synchronized private fun state(value: String, failure: String? = null) { phase = value; error = failure; publish() }
     @Synchronized private fun finish(owner: Long, action: () -> Unit) { if (owner == generation) action() }
-    @Synchronized fun snapshot(): JSONObject = store.snapshot().put("phase", phase).put("error", error ?: JSONObject.NULL).put("received", received)
+    @Synchronized fun snapshot(): JSONObject = store.snapshot().put("phase", phase).put("error", error ?: JSONObject.NULL).put("received", received).put("restartSupported", true)
         .put("release", candidate?.let { JSONObject().put("revision", it.revision).put("notes", it.notes).put("bytes", it.archive.bytes) } ?: JSONObject.NULL)
     @Synchronized fun check(automatic: Boolean = false) {
         if (busy || store.snapshot().optLong("pendingRevision") > 0 || store.snapshot().optBoolean("recoveryPending")) return
@@ -64,7 +64,10 @@ internal class WebUpdates(private val context: Context, private val httpFactory:
                     candidate = found?.takeIf { manifest -> manifest.revision > store.snapshot().getLong("highestRevision") }
                     received = 0; state(if (candidate == null) "current" else "available")
                 }
-            } catch (failure: Exception) { finish(owner) { state("error", failureCode(failure)) } }
+            } catch (failure: Exception) { finish(owner) {
+                if (failure.message == "web_resource_superseded") { candidate = null; state("current") }
+                else state("error", failureCode(failure))
+            } }
             finally { finish(owner) { network = null } }
         }
     }
@@ -89,18 +92,32 @@ internal class WebUpdates(private val context: Context, private val httpFactory:
         }
     }
     @Synchronized fun cancel() { if (!busy) return; ++generation; network?.cancel(); network = null; received = 0; state("cancelled") }
+    @Synchronized fun restart(activity: Activity) {
+        require(store.snapshot().optLong("pendingRevision") > 0 || store.snapshot().optBoolean("recoveryPending")) { "web_restart_unavailable" }
+        if (phase in setOf("preparing", "restarting")) return
+        state("preparing")
+        AppUpdateBridge.prepareAll { failure ->
+            if (failure != null) state("staged", failure)
+            else try { state("restarting"); UpdateRestartActivity.launch(activity) }
+            catch (_: Exception) { state("staged", "web_restart_unavailable") }
+        }
+    }
     fun started(page: String) = store.started(page)
     fun ready(page: String) { store.ready(page); publish() }
     fun failed() { store.failed(); publish() }
-    fun recovery(activity: Activity) {
+    fun recovery(activity: Activity, preparePages: Boolean = true) {
         val english = (activity.application as DshmApplication).appearance.language() == "en"
         AlertDialog.Builder(activity).setTitle(if (english) "Restore bundled pages" else "恢复内置页面")
-            .setMessage(if (english) "Keep chats, keys and pairing. DSHM will exit; open it again to use the bundled pages." else "保留聊天、Key和配对。恢复后将退出DSHM，请重新打开以使用内置页面。")
+            .setMessage(if (english) "DSHM will restart with bundled pages. Chats, keys and pairing are kept." else "重启后使用内置页面，保留聊天、Key和配对。")
             .setNegativeButton(if (english) "Cancel" else "取消", null)
-            .setPositiveButton(if (english) "Restore and exit" else "恢复并退出") { _, _ ->
-                store.recoverBundled()
-                activity.finishAffinity()
-                main.postDelayed({ android.os.Process.killProcess(android.os.Process.myPid()) }, 150)
+            .setPositiveButton(if (english) "Restore and restart" else "恢复并重启") { _, _ ->
+                val applyRecovery = { failure: String? ->
+                    if (failure != null) state("staged", failure)
+                    else try { store.recoverBundled(); state("restarting"); UpdateRestartActivity.launch(activity) }
+                    catch (_: Exception) { state("staged", "web_restart_unavailable") }
+                }
+                // 页面损坏时原生恢复必须独立可用，不能等待已无法运行的JS确认。
+                if (preparePages) AppUpdateBridge.prepareAll(applyRecovery) else applyRecovery(null)
             }.show()
     }
     fun pathHandler(): WebViewAssetLoader.PathHandler {

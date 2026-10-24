@@ -21,6 +21,7 @@ import { LocaleProvider, useTranslate } from './ui/locale.jsx';
 import { SupportDiagnostics } from './ui/SupportDiagnostics.jsx';
 import { AppUpdateEntry, AppUpdateNotice, AppUpdatePanel } from './ui/AppUpdates.jsx';
 import { responseFailures } from './remote-response-errors.mjs';
+import { registerUpdatePreparation } from './update-preparation.mjs';
 
 const stages = { negotiating: '正在确认电脑能力…', loading: '正在读取电脑会话…', ready: '已连接', connecting: '正在连接电脑…', disconnected: '连接已断开' };
 const scanFailures = { scan_unavailable: '暂时无法打开扫码，请粘贴配对链接。', scan_busy: '扫码窗口已打开，请先完成或返回。', scan_timeout: '扫码已超时，请重新尝试。', scan_camera_permission: '未获得相机权限，可从图片识别或粘贴配对链接。', scan_image_invalid: '无法读取这张图片，请选择其他图片。', scan_image_too_large: '图片过大，请裁剪二维码后重试。', scan_qr_not_found: '未识别到二维码，请使用清晰的二维码图片。' };
@@ -54,6 +55,10 @@ function RemoteConnection({ client, language, appearanceReady }) {
   const runtime = useRef(null), operation = useRef(Promise.resolve()), cleanup = useRef(Promise.resolve());
   const recovery = useRef({ resume: null, timer: null, attempt: 0, epoch: 0, stopped: true });
   const [model, setModel] = useState(null);
+  useEffect(() => registerUpdatePreparation(async () => {
+    await operation.current;
+    await model?.prepareUpdate();
+  }), [model]);
   const [diagnostics, setDiagnostics] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   useEffect(() => { model?.pluginSlots?.locale?.setLocale(language); }, [model, language]);

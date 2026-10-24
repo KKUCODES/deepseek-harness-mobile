@@ -1,5 +1,7 @@
 # 手机端模块地图
 
+软件更新共用[面板](../../../src/ui/AppUpdates.jsx)和[选择规则](../../../src/update-presentation.mjs)，普通/Remote保存屏障通过受限更新桥交给独立进程重启；[当前实现、旧桥兼容及本地验收范围](../../integration/unified-updates-current.md)。
+
 页面资源更新由Application共享的[WebUpdates](../../../android/app/src/main/java/dev/dshmobile/validation/WebUpdates.kt)协调固定来源下载，[签名清单/安全解压](../../../android/app/src/main/java/dev/dshmobile/validation/WebResourceManifest.kt)与[进程固定世代/回退存储](../../../android/app/src/main/java/dev/dshmobile/validation/WebResourceStore.kt)分工；两个Activity继续使用原HTTPS来源和更新桥，StartupScreen提供健康确认及原生恢复。只操作独立资源目录，未迁移数据。[打包签名工具](../../../scripts/web-update-package.mjs)和[资源工作流](../../../.github/workflows/web-resources.yml)独立于APK签名。维护：手机端维护者，核验2026-10-24；[状态、验收与未发布边界](../../integration/web-resource-updates-current.md)。
 
 [更新服务](../../../android/app/src/main/java/dev/dshmobile/validation/AppUpdates.kt)由Application共享，两个自有Activity挂载[受限更新桥](../../../android/app/src/main/java/dev/dshmobile/validation/AppUpdateBridge.kt)，不复用聊天/Remote网络凭据。[前端状态](../../../src/app-updates.mjs)与[共用更新窗口](../../../src/ui/AppUpdates.jsx)接入普通设置、Remote连接菜单和启动提示；安装前复验由[校验器](../../../android/app/src/main/java/dev/dshmobile/validation/AppUpdateVerifier.kt)负责，发行清单沿原CI携带配套插件版本。维护：手机端维护者，核验2026-10-24；[流程、原生安装证据与未发布边界](../../integration/app-updates-current.md)。

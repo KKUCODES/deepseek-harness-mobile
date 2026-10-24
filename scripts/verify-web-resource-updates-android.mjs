@@ -97,12 +97,13 @@ try {
   await page.getByRole('button', { name: '打开侧边抽屉', exact: true }).click();
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByRole('button', { name: /^软件更新/ }).click();
-  const resources = page.getByTestId('resource-updates');
+  const resources = page.getByTestId('app-updates');
   await resources.locator('summary').filter({ hasText: '更多' }).click();
   await resources.getByRole('button', { name: '恢复内置页面', exact: true }).click();
-  await nativeTap('恢复并退出');
-  await poll(() => shell(`pidof ${pkg} || true`).trim() === '');
-  page = await launch(); await showChat(page);
+  const beforeRecovery = shell(`pidof ${pkg}`).trim();
+  await nativeTap('恢复并重启');
+  await poll(() => { const pid = shell(`pidof ${pkg} || true`).trim(); return pid && pid !== beforeRecovery; });
+  page = await (await androidAppWebView(device, pkg)).page(); await showChat(page);
   assert.equal((await readUpdates(page)).resources.currentRevision, 0);
   await writeFile(resolve(folder, 'retention-final.txt'), instrument('retention'));
   report.checks.push('Native-confirmed bundled-page recovery, encrypted ordinary key, remote token storage and device identity retention');

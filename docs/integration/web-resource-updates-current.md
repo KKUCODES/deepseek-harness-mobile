@@ -38,7 +38,7 @@ APK内置[资源信任公钥](../../android/app/src/main/assets/web-update-trust
 
 [单独工作流](../../.github/workflows/web-resources.yml)手动构建固定官方SDK的完整资源包；签名作业只在受信任main运行，不检出或执行项目依赖，使用Node内置crypto和独立Secret。普通APK流水线继续使用原签名。发布前验证资源序号递增，先上传不可变序号ZIP，再发布签名清单。
 
-资源使用同仓库固定 `web-preview` Release及 `web-update.json`，压缩包为 `dshm-web-r<序号>.zip`。它不符合旧APK更新器的 `v<版本>` 格式，也不会每次创建新Release挤占旧端20条列表窗口。替换GitHub清单附件的短暂间隙可能检查失败，保留旧包并可重试。本次先发布加载器APK，并验证资源云端构建与签名，不创建公开资源Release或投放重复资源包。
+资源使用同仓库固定 `web-preview` Release及 `web-update.json`，压缩包为 `dshm-web-r<序号>.zip`。它不符合旧APK更新器的 `v<版本>` 格式，也不会每次创建新Release挤占旧端20条列表窗口。替换GitHub清单附件的短暂间隙可能检查失败，保留旧包并可重试。加载器APK首发未投放资源包；随后用户明确要求体验完整线上流程，已公开内容与preview.10相同的r1，仅适用于code12。不会自动下载安装，启用后可在软件更新查看资源序号。
 
 本地打包命令参数：`node scripts/web-update-package.mjs pack --source <Web输出目录> --output <新输出目录> --private <本地私钥文件> --revision <递增序号> --min-apk <最小versionCode> --max-apk <最大versionCode> --application-id <目标包名> --notes <更新说明>`。目录不得已有同名输出。生产用公开包名，实际兼容范围必须以包含加载器且已验收的APK为准；测试包名不能投放给公开App。`pack-unsigned`用于无私钥构建。
 
@@ -47,6 +47,8 @@ APK内置[资源信任公钥](../../android/app/src/main/assets/web-update-trust
 [资源Actions40009515878](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40009515878)基于18e1140构建及独立Secret签名通过，publish=false。下载签名产物并用APK公钥验签，ZIP与167个文件摘要全匹配；与APK对照166个文件逐字节一致，sdk-versions.json只有键顺序差异、版本映射相同。云端首次全量测试因依赖本地多版上游目录失败，工作流改为13项自包含更新测试；本地545项通过记录保持。一次因推送网络失败误选旧提交的调度已取消，不计通过。证据在忽略目录 `artifacts/web-resource-release/`；未创建公开web-preview资源Release，不冒充真实公网资源下载/安装验收。
 
 ## 验证结果
+
+2026-10-24后续体验准备：[Actions40054927382](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40054927382)在固定main66a42ff构建、签名及公开发布全部通过。[web-preview](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/web-preview)提供r1，ZIP为5,978,409字节。签名清单及ZIP均匿名下载；用APK公钥验签、兼容范围code12/SDK/包名与167文件摘要核对通过，页面内容与preview.10一致（SDK清单仅键顺序不同）。原MuMu的preview.7/code9已原签名覆盖preview.10/code12，UID10196与首次安装时间保持，未清数据；实际打开设置的软件更新入口。模拟器直连GitHub失败，临时使用电脑现有HTTP代理后，真实原生检查、清单下载及验签成功，界面显示「APK内置页面 → r1 · 5.7 MB」和下载按钮。未绕过HTTPS或签名，没有注入回放。下载、重启激活与恢复留给用户操作，不以准备完成冒充MuMu全流程通过。证据在本地忽略目录 `artifacts/web-update-user-flow/`。[体验任务 KKC-84](https://linear.app/kkcodes/issue/KKC-84)。
 
 | 范围 | 入口与结果 |
 | --- | --- |
