@@ -136,7 +136,7 @@ const transport = {
     if (fileListMode && endpoint === 'workspaceFiles/list') return { ok: true, value: { path: '.', absolutePath: payload.args.path,
       entries: payload.args.path.endsWith('/folder') ? [{ name: 'nested.txt', type: 'file' }]
         : [{ name: 'folder', type: 'directory' }, ...Array.from({ length: 90 }, (_, index) => ({ name: `approval-${String(index).padStart(3, '0')}.txt`, type: 'file' }))], truncated: false } };
-    if (endpoint === 'session/page' && historyReplay.active && payload.args.request.address.sessionId === 'one') return historyReplay.page(payload.args.request);
+    if (endpoint === 'session/page' && historyReplay.active && (payload.args.request.address.childSessionId ?? payload.args.request.address.sessionId) === historyReplay.sessionId) return historyReplay.page(payload.args.request);
     if (endpoint === 'session/page' && historyTesting && payload.args.request.address.sessionId === 'one') {
       historyRequests.push(payload.args.request);
       return new Promise(resolve => { historyReply = resolve; });
@@ -237,7 +237,9 @@ const transport = {
     if (endpoint === '$events') yield { type: 'ready', clientId: 'fixture', host: { home: '/fixture' } };
     if (endpoint === 'session/follow') yield { type: 'snapshot', header: { version: 1, id: key, createdAt: 0, isSeeded: false }, cursor: historyTesting && key === 'one' ? 10 : -1,
       records: historyTesting && key === 'one' ? [{ type: 'event', event: { type: 'turn/start', seq: 10, time: 1, data: { turn: 1 } } }] : [], hasMore: historyTesting && key === 'one',
-      projections: { asOfSeq: -1, values: { agentPreset: 'standard' } }, assistantStream: { revision: 0 }, ...(historyReplay.active && key === 'one' ? historyReplay.snapshot() : {}) };
+      projections: { asOfSeq: -1, values: { agentPreset: 'standard', ...(historyReplay.sessionId === 'child-chat' && key === 'one'
+        ? { subagentCatalog: [{ id: 'child-chat', mode: 'continuable', label: '分析助手' }] } : {}) } },
+      assistantStream: { revision: 0 }, ...(historyReplay.active && key === historyReplay.sessionId ? historyReplay.snapshot() : {}) };
     const abort = () => wake?.(); signal.addEventListener('abort', abort);
     try { while (!signal.aborted) { if (frames.length) yield frames.shift(); else await new Promise(resolve => { wake = resolve; }); } }
     finally { signal.removeEventListener('abort', abort); channels.delete(key); }
@@ -1028,6 +1030,8 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     await plugin.await();
   },
   longHistoryFail: value => { historyReplay.fail = value; },
+  longHistoryHold: () => historyReplay.hold(),
+  longHistoryRelease: () => historyReplay.release(),
   longHistoryParagraphs: value => { historyReplay.paragraphs = value; },
   // 专门验证输出面板的呈现预算；目录为固定输入，输出正文仍经过原Session事件与工具投影。
   historyOutputRows: (sessionId, rows) => {
@@ -1036,7 +1040,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     model.publish();
   },
   longHistoryState: () => {
-    const binding = model.reference.binding, entries = binding.eventSource.getSnapshot().entries;
+    const binding = (model.conversationFocus.getSnapshot() ?? model).reference.binding, entries = binding.eventSource.getSnapshot().entries;
     return { ...binding.session.getSnapshot().history, calls: historyReplay.calls,
       first: entries[0]?.event.seq, last: entries.at(-1)?.event.seq,
       liveRecords: (binding.history?.original ?? binding).eventSource.getSnapshot().entries.length,

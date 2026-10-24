@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { checkRemoteHistoryAutoInputs } from './check-remote-history-auto-inputs.mjs';
 
 export async function checkRemoteHistoryWindow(page) {
   page.setDefaultTimeout(20000);
@@ -14,6 +15,9 @@ export async function checkRemoteHistoryWindow(page) {
   page.on('pageerror', error => report.errors.push(error.message));
   const state = () => page.evaluate(() => window.fixture.longHistoryState());
   const top = async () => { await chat.evaluate(el => { el.scrollTop = 0; }); await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); };
+  const settle = () => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r)))));
+  const upward = async () => { await chat.hover(); await page.mouse.wheel(0, -80); };
+  await settle(); assert.equal((await state()).calls, 0, '首次进入不自动读取全部历史');
   for (let index = 0; index < 24; index++) {
     if (index === 2) {
       await page.evaluate(() => window.fixture.event({ type: 'waterfall', event: 'approval/request', eventId: 'history-approval', agentId: 'one',
@@ -21,22 +25,29 @@ export async function checkRemoteHistoryWindow(page) {
       await page.locator('[data-approval-key]').waitFor();
     }
     await top();
-    // 浏览器聚焦按钮会滚动几像素；基线取真实点击聚焦后的阅读位置。
-    await chat.getByRole('button', { name: '加载更早的消息', exact: true }).focus();
-    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     const before = await state();
     const anchor = await chat.locator('[data-history-group]').first().evaluate(el => ({ key: el.dataset.historyGroup, top: el.getBoundingClientRect().top }));
-    await chat.getByRole('button', { name: '加载更早的消息', exact: true }).click();
+    if (index === 0) await page.evaluate(() => window.fixture.longHistoryHold());
+    await upward();
+    if (index === 0) {
+      await page.waitForFunction(() => window.fixture.longHistoryState().calls === 1);
+      await chat.getByRole('status').filter({ hasText: '正在加载记录…' }).waitFor();
+      for (let repeat = 0; repeat < 8; repeat++) await upward();
+      assert.equal((await state()).calls, 1, '连续滚动期间同一批只有一个在途请求');
+      await page.evaluate(() => window.fixture.longHistoryRelease());
+    }
     await page.waitForFunction(n => { const value = window.fixture.longHistoryState(); return value.calls > n && !document.querySelector('[data-history-loader]')?.disabled; }, before.calls);
-    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await settle();
     const after = await state();
+    assert.equal(after.calls, before.calls + 1, '自动加载一次只读取一批');
     assert.ok(after.first < before.first, '连续分页确实到达更早 cut');
     assert.ok(after.records <= 400 && after.bytes <= 4 * 1024 * 1024, '查阅数据预算');
     assert.ok(after.liveRecords <= 400, '原实时尾部不累计旧页');
     assert.ok(after.groups.length <= 12, '仅挂载可见回合和缓冲');
     const offset = await chat.locator(`[data-history-group="${anchor.key}"]`).evaluate(el => el.getBoundingClientRect().top).catch(() => null);
-    if (offset !== null) assert.ok(Math.abs(offset - anchor.top) < 4, `历史锚点保持 ${offset - anchor.top}`);
-    report.pages.push({ first: after.first, records: after.records, groups: after.groups.length, dom: await page.locator('*').count() });
+    assert.notEqual(offset, null, '前插后阅读锚点仍存在，不能跳过位置验证');
+    assert.ok(Math.abs(offset - anchor.top) < 4, `历史锚点保持 ${offset - anchor.top}`);
+    report.pages.push({ first: after.first, records: after.records, groups: after.groups.length, anchorDelta: offset - anchor.top, dom: await page.locator('*').count() });
   }
   await page.evaluate(() => window.fixture.longHistoryLive());
   await page.waitForFunction(() => window.fixture.longHistoryState().hasNewer);
@@ -45,9 +56,11 @@ export async function checkRemoteHistoryWindow(page) {
   await page.waitForFunction(last => window.fixture.longHistoryState().last > last, beforeLive.last);
   await top(); const failedBefore = await state();
   await page.evaluate(() => window.fixture.longHistoryFail(true));
-  await chat.getByRole('button', { name: '加载更早的消息', exact: true }).click();
+  await upward();
   await page.getByRole('alert').filter({ hasText: '未能加载更早的记录，请重试。' }).waitFor();
   assert.equal((await state()).first, failedBefore.first);
+  const failedCalls = (await state()).calls;
+  await upward(); await settle(); assert.equal((await state()).calls, failedCalls, '失败后不自动重试');
   await page.evaluate(() => window.fixture.longHistoryFail(false));
   await chat.getByRole('button', { name: '加载更早的消息', exact: true }).click();
   await page.waitForFunction(first => window.fixture.longHistoryState().first < first, failedBefore.first);
@@ -93,6 +106,7 @@ export async function checkRemoteHistoryWindow(page) {
   await output.getByText(/第 2 \/ /).waitFor();
   assert.ok(await output.locator('*').count() < 3000, '任务输出按段解析与挂载');
   await output.getByRole('button', { name: '关闭任务输出', exact: true }).click();
+  report.autoInputs = await checkRemoteHistoryAutoInputs(page);
   assert.deepEqual(report.errors, []);
-  return { ...report, live: true, newer: true, readFailureRetry: true, reconnect: true, draftAndBack: true, approvalPreservedAndSingleDecision: true, pluginState: true, renderRecovery: true, builtinLongContent: true, jobOutputPages: true };
+  return { ...report, autoLoad: true, singleInflight: true, noInitialOrFailedAutoRead: true, live: true, newer: true, readFailureRetry: true, reconnect: true, draftAndBack: true, approvalPreservedAndSingleDecision: true, pluginState: true, renderRecovery: true, builtinLongContent: true, jobOutputPages: true };
 }

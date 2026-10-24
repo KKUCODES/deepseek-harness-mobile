@@ -24,6 +24,22 @@
 | 阅读位置 | 按来源、设备、指纹隔离保存会话地址、seq、组和偏移；不保存正文、凭据或审批决定。损坏/过期记录不恢复 |
 | 子会话 | 沿用原地址解析和公开 page 读取，不降级为普通主会话 |
 
+## 触顶自动加载
+
+已纳入 preview.13/code16 发行候选；用户已授权提交、推送、Actions 与 APK 发布，[发行 KKC-93](https://linear.app/kkcodes/issue/KKC-93)跟踪云端签名和公开下载，当前待核验。
+
+2026-10-24，[KKC-92](https://linear.app/kkcodes/issue/KKC-92)。[自动加载控制器](../../src/remote-history-auto-load.mjs)由主聊天和旁栏共用的 RemoteWorkspace 挂载：用户向上阅读到距离顶部 160 CSS px 内，复用同一个 loadHistory → loadEarlierHistory → loadRemoteHistory 路径。只增加触发入口，不扩大历史窗口或改写电脑日志；原虚拟列表继续维护可见锚点。
+
+采用用户输入意图配合滚动距离，而非顶部 IntersectionObserver 一直可见就反复加载。触摸、滚轮、键盘和鼠标滚动条均支持；抬手后最多 1.5 秒的上行惯性仍可触发。一次触摸最多读一批，请求及两帧前插校正期间不排队，继续阅读才加载下一页。初次进入、程序滚动、返回最新、切换聊天、离线后恢复不重放旧手势；失败阻止自动重试，原按钮仍可手动重试。顶部显示加载状态，读完显示「没有更早的消息」。后台任务输出是独立分页面板，本轮不改成自动拉取。
+
+rc.2 与 alpha.2 的真实列表点击入口、连续 24 次自动加载、原锚点/数据/DOM预算、实时/审批/草稿/插件状态回归通过。新增实际触摸输入、键盘、离线恢复不重放、在途切换、读完不再请求、旁栏四次自动翻页均通过；数据为隔离合成协议，不冒充真实电脑会话。最初实际触摸发现同一手势在快速回执后连读，已加入手势消费门槛并复验；rc.2 旁栏夹具补齐原 SDK subagentCatalog 投影后通过，未修改产品子会话逻辑。新增四项自动加载单元测试，全量 567 项通过，正式页面构建通过（原翻译重复键警告保持）。
+
+隔离 API36.1/5556、独立 rc21test UID 的真实 RemoteActivity/WebView 使用当前产品组件和合成协议复验同一路径通过：连续24批、实际触摸、键盘、主/旁栏、在途切换、失败与重连、审批/输入插件状态均验证。页面保持120条查阅事件、6个挂载组，DOM约1239–1255。本轮未测试真实配对的用户长会话，也未改原生代码；`--auto-load`专门跳过不相关的渲染进程崩溃专项，旧崩溃验收沿用原记录。初次冷启隔离模拟器 System UI 无响应、原驱动停留的问题未计通过；重试的完整路径有独立报告。未操作日常MuMu/5554或其preview.12。
+
+证据：`artifacts/remote-history-window-0.2.1-rc.2.json`、`artifacts/remote-history-window-0.2.1-alpha.2.json`、`artifacts/history-auto-load/android-window-report.json`及同目录Node报告；均为忽略产物。锚点必须存在后再做小于4px的断言，不允许因虚拟卸载而跳过位置验证；两版桌面回放24批均为0px，Android均约0.381px。专项结束卸载独立测试包、关闭5556及自有临时转发，日常MuMu保持。
+
+来源：[自动输入回归](../../scripts/check-remote-history-auto-inputs.mjs)、[连续历史回归](../../scripts/check-remote-history-window.mjs)、[意图门控测试](../../tests/remote-history-auto-load.test.mjs)。不包含插件适配分支。
+
 ## 故障恢复
 
 局部呈现错误提供「重新显示」，保留其他区域和输入。页面级渲染错误通过既有草稿保存屏障重新加载，一次性标记恢复同一绑定下的阅读位置。React 边界不覆盖全部异步错误，原插件内部错误仍遵循 SDK 隔离/诊断。
@@ -58,4 +74,5 @@ Android onRenderProcessGone 关闭旧桥、销毁失效 WebView，重建可见 A
 - [连续历史回归](../../scripts/check-remote-history-window.mjs)、[Android 驱动](../../scripts/verify-remote-history-android.mjs)、[窗口单测](../../tests/remote-history-window.test.mjs)。
 - `npm test`；`npm run build:web:ci`；`node scripts/verify-remote-plugin-slots.mjs --history-window`；增加 `--official-alpha2` 核验旧 SDK。
 - Android 驱动仅允许 emulator-5556/ranchu、dev.dshmobile.validation.rc21test；debug/release 构建及 lint，不签名、不替换日常 App、不发布。
+- 本地自动加载专项：`node scripts/verify-remote-history-android.mjs --auto-load`；使用已有隔离 debug APK，注入当前构建的产品组件，实际触摸和共享会话入口回放，不重测无关原生崩溃恢复。
 - 报告：`artifacts/remote-history-window-0.2.1-rc.2.json`、`artifacts/remote-history-window-0.2.1-alpha.2.json`、`artifacts/history-white-screen/android-window-report.json` 及同目录 Node/构建/视觉证据，均为忽略产物。

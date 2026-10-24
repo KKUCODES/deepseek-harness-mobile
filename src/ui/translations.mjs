@@ -1049,6 +1049,8 @@ export const english = Object.freeze({
   "探索未至之境": "Explore the unknown",
   "有什么想聊的？": "What would you like to talk about?",
   "加载更早的消息": "Load earlier messages",
+  "正在加载记录…": "Loading messages…",
+  "没有更早的消息": "No earlier messages",
   "未能加载更早的记录，请重试。": "Couldn't load earlier records. Please try again.",
   "编辑": "Edit",
   "思考过程": "Thinking",

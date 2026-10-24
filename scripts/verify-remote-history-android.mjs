@@ -11,30 +11,37 @@ const adb = 'C:/Users/KKirin/AppData/Local/Android/Sdk/platform-tools/adb.exe';
 const serial = 'emulator-5556', pkg = 'dev.dshmobile.validation.rc21test';
 const shell = (...args) => execFileSync(adb, ['-s', serial, 'shell', ...args], { encoding: 'utf8', windowsHide: true });
 assert.match(shell('getprop', 'ro.hardware'), /ranchu/);
-const folder = 'artifacts/history-white-screen'; await mkdir(folder, { recursive: true });
+const autoOnly = process.argv.includes('--auto-load');
+const folder = autoOnly ? 'artifacts/history-auto-load' : 'artifacts/history-white-screen'; await mkdir(folder, { recursive: true });
 await writeFile(`${folder}/native-fixture-build.log`, execFileSync(process.execPath, ['scripts/verify-remote-plugin-slots.mjs', '--history-window'], { encoding: 'utf8', windowsHide: true }));
 let device = (await _android.devices({ omitDriverInstall: true })).find(value => value.serial() === serial);
 assert.ok(device); device.setDefaultTimeout(20000);
-const report = { actualAndroidWebView: true, syntheticProtocol: true, errors: [] };
+const report = { actualAndroidWebView: true, syntheticProtocol: true, errors: [], phases: [] };
+const mark = name => { report.phases.push(name); console.log(name); };
 try {
   shell('am', 'force-stop', pkg);
   shell('am', 'start', '-W', '-n', `${pkg}/dev.dshmobile.validation.ValidationActivity`);
   let page = await (await androidAppWebView(device, pkg)).page();
+  mark('ordinary-webview');
   await page.getByRole('button', { name: '打开侧边抽屉', exact: true }).click();
   await page.getByRole('button', { name: 'Remote', exact: true }).click();
   for (let index = 0; index < 100 && !page.url().startsWith('https://remote.dshm.invalid/'); index++) {
     page = page.context().pages().find(value => value.url().startsWith('https://remote.dshm.invalid/')) ?? page; await wait(100);
   }
   assert.equal(page.url(), 'https://remote.dshm.invalid/assets/web/remote.html');
+  mark('remote-webview');
   await page.evaluate(() => { document.body.replaceChildren(Object.assign(document.createElement('div'), { id: 'app' })); });
   const source = (await readFile('artifacts/tests/remote-plugin-slots/test.js', 'utf8'))
     .replace(/^export\s*\{[^}]*\};?/m, '').replaceAll('import.meta.env', "({MODE:'production'})").replaceAll('import.meta.url', 'location.href');
   await page.evaluate(`(async()=>{${source}\n})()`);
+  mark('fixture-mounted');
   for (const path of ['artifacts/tests/remote-plugin-slots/test.css', 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) {
     await page.addStyleTag({ content: await readFile(path, 'utf8') });
   }
   report.history = await checkRemoteHistoryWindow(page);
+  mark('history-paths-passed');
   await page.screenshot({ path: `${folder}/android-window-after.png` });
+  if (!autoOnly) {
   // 自建隔离页的存储标记验证重建不清数据，不写入真实Key或配对信息。
   await page.evaluate(() => localStorage.setItem('history-recovery-test', 'preserved'));
   const pid = shell('pidof', pkg).trim();
@@ -53,6 +60,7 @@ try {
   assert.ok(await page.locator('body').innerText(), '恢复到真实产品入口而非空白页');
   report.rendererRecovery = { mainProcessRetained: true, ownStorageRetained: true, url: page.url() };
   await page.screenshot({ path: `${folder}/android-after-renderer-recovery.png` });
+  }
   report.passed = true;
 } catch (error) { report.failure = error.message; throw error; }
 finally {

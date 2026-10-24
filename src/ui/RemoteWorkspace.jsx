@@ -43,6 +43,7 @@ import { RemoteInputExtensions } from '../remote-plugin-slots.jsx';
 import { RemoteOfflineStatus } from './RemoteOfflineStatus.jsx';
 import { loadEarlierHistory } from '../remote-history-position.mjs';
 import { loadRemoteHistory } from '../remote-history.mjs';
+import { observeHistoryTop } from '../remote-history-auto-load.mjs';
 import { observeRemoteReadingContext } from '../remote-reading-context.mjs';
 import { RemoteMainConversationBody, RemoteMainConversationFrame } from '../remote-sidebar-chat.jsx';
 import { SurfacePresence, useSceneMotion, RemoteFlowMotion } from './motion.jsx';
@@ -87,6 +88,8 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [command, setCommand] = useState(() => model.commandResume?.target ?? null);
   const [jobOutput, setJobOutput] = useState(() => model.jobOutputResume?.target ?? null);
   const scroll = useRef(null), bottom = useRef(true);
+  const historyActions = useRef(null), stopHistoryAutoLoad = useRef(null);
+  const [historyError, setHistoryError] = useState(false);
   const scene = useRef(null);
   useSceneMotion(scene, state.selected ?? `workspace:${workspace ?? ''}`, state.selected ? 2 : workspace ? 1 : 0);
   const [flowMotion] = useState(() => createChatFlowMotion?.(() => {}, active => {
@@ -110,6 +113,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   }, []);
   // 局部 Views 可暂时卸载正文；阅读位置属于常驻会话，恢复正文时不能跳回顶部。
   const attachScroll = useCallback(node => {
+    stopHistoryAutoLoad.current?.dispose(); stopHistoryAutoLoad.current = null;
     cancelAnimationFrame(scrollRestoreFrame.current);
     cancelAnimationFrame(scrollFollowFrame.current);
     scrollFollowFrame.current = null;
@@ -123,6 +127,10 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       scrollPosition.current = node.scrollTop;
     });
     if (node) {
+      stopHistoryAutoLoad.current = observeHistoryTop(node, {
+        canLoad: () => historyActions.current?.canLoad() ?? false,
+        load: () => historyActions.current?.load(),
+      });
       // 图片/局部插件及输入区可在会话事件之后改变布局；仅原本跟随尾部时补齐滚动。
       const observer = new ResizeObserver(followBottom);
       observer.observe(node);
@@ -153,13 +161,18 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     const container = scroll.current, reference = model.reference;
     const generation = model.connection.generation.getSnapshot(), request = {};
     const isCurrent = () => historyRequest.current === request && scroll.current === container && model.reference === reference && model.connection.generation.getSnapshot() === generation;
-    historyRequest.current = request; bottom.current = false; setNotice('');
+    historyRequest.current = request; stopHistoryAutoLoad.current?.reset(); bottom.current = false; setNotice(''); setHistoryError(false);
     try {
       // 分页仅锁住自己的按钮；用户离开时由原会话引用释放来取消请求。
       await loadEarlierHistory({ container, load: () => direction === 'newer'
         ? reference.binding.history.newer() : loadRemoteHistory(reference.binding, { isCurrent }), isCurrent });
-    } catch (error) { if (isCurrent()) setNotice(t(error.message)); }
+    } catch (error) { if (isCurrent()) { setNotice(t(error.message)); setHistoryError(true); } }
     finally { if (historyRequest.current === request) historyRequest.current = null; }
+  };
+  historyActions.current = {
+    canLoad: () => connected && !busy && !historyError && !state.session?.history?.error
+      && state.session?.openState === 'open' && state.session.hasMore && !state.session.loadingOlder && !historyRequest.current,
+    load: () => loadHistory('older'),
   };
   const connectionLabel = connected ? '已连接电脑' : state.connectionState === 'connecting' ? '正在连接电脑…' : '电脑连接已断开';
   const childAccess = subagentAccess(state);
@@ -225,7 +238,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       error: /SESSION_QUERY_SEARCH_DISABLED|session search is disabled/.test(error.message) ? 'disabled' : 'failed' }); }); }, 180);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [phrase, model, selected, searchAttempt, state.ready, state.connectionState]);
-  useEffect(() => { historyRequest.current = null; bottom.current = true; scrollPosition.current = 0; setFile(null); setCommand(current => current?.sessionId === selected ? current : null); setJobOutput(current => current?.sessionId === selected ? current : null); setSheet(null); }, [selected, state.selectionRevision]);
+  useEffect(() => { historyRequest.current = null; stopHistoryAutoLoad.current?.reset(); setHistoryError(false); bottom.current = true; scrollPosition.current = 0; setFile(null); setCommand(current => current?.sessionId === selected ? current : null); setJobOutput(current => current?.sessionId === selected ? current : null); setSheet(null); }, [selected, state.selectionRevision]);
   useEffect(() => {
     if (embedded || !state.notificationNavigation) return;
     setSheet(null); setFile(null); setCommand(null); setJobOutput(null);
@@ -292,7 +305,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     {selected && childAccess.address && <div className="remote-agent-mode"><Button disabled={busy} onClick={() => void act(() => model.back())}>{t("返回父会话")}</Button><span>{childAccess.address.mode === 'one-shot' ? '一次性子任务' : '子会话'}</span></div>}
   </>;
   const conversation = <>{header}
-    <section className="conversation" ref={attachScroll} aria-label={t("聊天内容")} onScroll={event => {
+    <section className="conversation" ref={attachScroll} aria-label={t("聊天内容")} tabIndex={0} onScroll={event => {
       const el = event.currentTarget, top = el.scrollTop;
       const atBottom = el.scrollHeight - top - el.clientHeight < 80;
       // 自己的滚动事件可能晚于新卡片布局到达；位置未变时不能误判成用户向上阅读。
@@ -305,7 +318,10 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         {state.session?.openError && <><p role="alert">{t(subagentReadError(state.session.openError))}</p>
           <Button disabled={!connected || busy || state.subagentServiceAvailable === false && !!childAccess.address}
             onClick={() => void act(() => model.select(state.selectedTarget, { trail: state.selectionTrail }))}>{t('重试读取')}</Button></>}
-        {state.session?.hasMore && <Button data-history-loader disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadHistory('older')}>{t("加载更早的消息")}</Button>}
+        {state.session?.hasMore ? <div className="remote-history-loader">
+          {state.session.loadingOlder && <span role="status">{t('正在加载记录…')}</span>}
+          <Button data-history-loader disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadHistory('older')}>{t("加载更早的消息")}</Button>
+        </div> : state.session?.openState === 'open' && state.conversation?.order.length > 0 && <div className="remote-history-loader muted" role="status">{t('没有更早的消息')}</div>}
         <RemoteHistoryList key={`${selected}:${state.selectionRevision}`} conversation={state.conversation} container={scroll}
           history={model.reference?.binding.history} renderNode={renderHistoryNode} following={bottom} sessionKey={selected}
           reading={model.reading} target={state.selectedTarget} resume={model.readingResume}/>
@@ -316,7 +332,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     </section>
     {state.session?.history?.hasNewer && <div className="remote-history-navigation">
       <Button disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadHistory('newer')}>{t('加载较新的消息')}</Button>
-      <Button onClick={() => { bottom.current = true; model.reference.binding.history.latest(); followBottom(); }}>{t('返回最新消息')}</Button>
+      <Button onClick={() => { stopHistoryAutoLoad.current?.reset(); bottom.current = true; model.reference.binding.history.latest(); followBottom(); }}>{t('返回最新消息')}</Button>
     </div>}
   </>;
   return <RemoteFlowMotion.Provider value={flowMotion}>{!embedded && <RemoteSettingsOnboarding model={model} openSection={id => {

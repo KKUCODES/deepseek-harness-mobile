@@ -134,7 +134,7 @@ const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const report = { errors: [], sdk: layoutSdk?.version ?? '0.1.6-alpha.2', source: 'isolated protocol replay and local plugin; not a live desktop plugin' };
 let page;
 try {
-  page = await browser.newPage({ viewport: { width: 375, height: 667 }, hasTouch: forkActionsOnly });
+  page = await browser.newPage({ viewport: { width: 375, height: 667 }, hasTouch: forkActionsOnly || historyOnly });
   page.setDefaultTimeout(8000);
   page.on('pageerror', error => report.errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error' && !(historyOnly && message.text().includes('HistoryRenderFixture'))) report.errors.push(message.text()); });

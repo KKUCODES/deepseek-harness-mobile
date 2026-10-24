@@ -6,7 +6,7 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 
 ## 安装与准备
 
-从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。当前preview.12保留普通聊天自定义供应商与模型；Remote配套插件 `0.1.87-latest.0`，核心支持范围为官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`。不要直接混用任意新版 DSH 与旧手机包，实际验证范围及安装说明见[安装包指南](./releases.md)。
+从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。当前preview.13保留普通聊天自定义供应商与模型；Remote配套插件 `0.1.87-latest.0`，核心支持范围为官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`。不要直接混用任意新版 DSH 与旧手机包，实际验证范围及安装说明见[安装包指南](./releases.md)。
 
 普通聊天只需要 DSHM 和所选模型服务的 API Key，默认可使用 DeepSeek。Remote 另需电脑上的官方 DSH、DSHM 插件及手机和电脑都能连接的中转地址。候选安装与版本核对见[配套安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)；从源码构建见[开发指南](./development.md)。
 
@@ -72,6 +72,8 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 ### 继续工作
 
 打开进行中或历史会话，或在已有工作区创建新会话。手机发送的消息进入同一份电脑会话，当前模型实时同步，手机切换会影响电脑后续回复。
+
+preview.13支持向上阅读到顶部附近自动加载一批更早记录，保持当前阅读位置；加载失败时可点击「加载更早的消息」重试。主聊天与旁栏共用此行为，仍可加载较新记录或返回最新。preview.12及更早版需点击按钮加载历史。
 
 DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可以查看执行过程、命令结果、文件及改动预览。支持的局部插件界面沿用外层缩放规则，用户可以切换自适应设置。
 

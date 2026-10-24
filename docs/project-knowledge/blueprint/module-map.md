@@ -1,5 +1,7 @@
 # 手机端模块地图
 
+[触顶意图控制器](../../../src/remote-history-auto-load.mjs)由[RemoteWorkspace](../../../src/ui/RemoteWorkspace.jsx)在正文挂载/卸载时统一持有，主聊天和旁栏沿用同一分页请求锁、锚点和有界窗口。触摸一批门槛、惯性意图期限和失败手动重试防止自动连读；[规则与验证](../../integration/remote-history-window-current.md#触顶自动加载)。preview.13候选，云端发行验收由专题跟踪；维护：手机端维护者，核验2026-10-24。
+
 [历史窗口](../../../src/remote-history-window.mjs)装饰公开Session binding，将实时尾部和历史查阅分开限制；[虚拟列表](../../../src/ui/RemoteHistoryList.jsx)只挂载可见组，[统一节点分页](../../../src/ui/RemotePagedNode.jsx)覆盖原内置正文与思考。[阅读位置](../../../src/remote-reading-memory.mjs)只保存身份隔离的游标，[原生恢复](../../../android/app/src/main/java/dev/dshmobile/validation/RendererRecovery.kt)重建失效WebView；不重放写操作。[当前实现与验证限制](../../integration/remote-history-window-current.md)。维护：手机端维护者，核验2026-10-24。
 
 [Remote统一Markdown外链](../../../src/remote-markdown-links.jsx)在会话/面板共享作用域同时连接源码与已发布SDK的Markdown上下文；显式处理函数仍优先，文件委托不继承网页能力。[原生ExternalLinks](../../../android/app/src/main/java/dev/dshmobile/validation/ExternalLinks.kt)由普通聊天和Remote桥复用，限制HTTP(S)并交系统浏览器，不放宽WebView导航。[规则、真实入口回归与未发布状态](../../integration/remote-links-diagnosis.md)。维护：手机端维护者，核验2026-10-24。

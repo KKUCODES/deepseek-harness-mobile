@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+触顶自动加载历史：[规则与回归](../integration/remote-history-window-current.md#触顶自动加载)，主聊天/旁栏复用锚点与有界窗口；用户输入触发、一批在途、失败手动重试，不随初次进入或重连连读。[实现KKC-92](https://linear.app/kkcodes/issue/KKC-92)已验；preview.13/code16[发行KKC-93](https://linear.app/kkcodes/issue/KKC-93)云端与公开下载待核验。
+
 长聊天反复加载历史：[有界数据/渲染、双向查阅与恢复](../integration/remote-history-window-current.md)已随preview.12/code15公开，Actions40082470843构建/lint/原签名及[匿名下载核验](../releases.md#已核验范围)通过；rc.2/alpha.2连续24页、审批/插件输入、局部和Android渲染器恢复已验。用户持续白屏未复现，配对后的崩溃阅读恢复未实测；见[原诊断](../integration/remote-history-white-screen-diagnosis.md)。[实现KKC-89](https://linear.app/kkcodes/issue/KKC-89)已补同步；[发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)。
 
 Remote网页链接：[原始缺口、统一Markdown委托、受限原生打开与验收](../integration/remote-links-diagnosis.md)。正文/思考/工具及新旧Markdown预览已修复；rc.2/alpha.2页面、Android真实浏览器及来源/框架/地址拒绝通过，文件入口保持。preview.12/code15云端签名、公开发布及匿名下载已验，旧preview.11不含修复。[诊断KKC-87](https://linear.app/kkcodes/issue/KKC-87) · [修复KKC-88](https://linear.app/kkcodes/issue/KKC-88) · [发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)。

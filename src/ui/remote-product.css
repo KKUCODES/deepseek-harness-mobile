@@ -7,6 +7,7 @@
 .remote-history-group > [data-slot="dshm.chat.node"]:has(> [data-chat-flow-key]:not([hidden]):not(:empty))
   ~ [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty) { margin-top: var(--dsh-chat-flow-gap, 6px); }
 .remote-history-navigation { display: flex; justify-content: center; gap: 12px; padding: 8px 16px; flex: none; }
+.remote-history-loader { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; min-height: 44px; font-size: 14px; }
 .remote-render-recovery { padding: 16px; font-size: 14px; line-height: 1.6; }
 .remote-render-recovery p { margin: 0 0 8px; }
 .remote-app .messages { font-size: var(--dsh-content-font-size, 14px); gap: 0; }
