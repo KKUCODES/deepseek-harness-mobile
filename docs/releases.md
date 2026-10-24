@@ -12,7 +12,7 @@
 
 ## 自动构建与发布
 
-`0.1.0-preview.13`（versionCode 16）加入[触顶自动加载历史](./integration/remote-history-window-current.md#触顶自动加载)，保留长聊天有界窗口、网页外链、[统一更新与一键重启](./integration/unified-updates-current.md)、[签名资源加载器](./integration/web-resource-updates-current.md)和此前能力。原身份与签名、历史发行及附件保持；仅发布APK，不投放r2。云端与公开下载待核验，由[KKC-93](https://linear.app/kkcodes/issue/KKC-93)跟踪。
+`0.1.0-preview.13`（versionCode 16）加入[触顶自动加载历史](./integration/remote-history-window-current.md#触顶自动加载)，保留长聊天有界窗口、网页外链、[统一更新与一键重启](./integration/unified-updates-current.md)、[签名资源加载器](./integration/web-resource-updates-current.md)和此前能力。原身份与签名、历史发行及附件保持；仅发布APK，不投放r2。云端与公开下载核验通过，由[KKC-93](https://linear.app/kkcodes/issue/KKC-93)记录。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。
@@ -47,6 +47,8 @@ Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地�
 维护来源：[工作流](../.github/workflows/android-build.yml)、[版本与证书](../ci/release.json)、[SDK 准备](../scripts/prepare-ci.mjs)、[无签名产物整理](../scripts/ci-package.mjs)、[Android 构建规则](../android/app/build.gradle.kts)。
 
 ## 已核验范围
+
+2026-10-24的[Actions40088585593](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40088585593)完成preview.13/code16构建、lint、原签名及公开[Release](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.13)，源码与版本标签固定`dcca78287e060a43fc00dd177fbdb42b15606d24`。APK及三个校验附件均实际匿名下载，大小与SHA-256匹配GitHub资产摘要和SHA256SUMS。APK11,217,060字节，SHA-256 `5a87e0507663656b96d79fcdfbe3b174ba83e235b7734a514b9346d21907456d`。本机apksigner/aapt复核原证书、原包名、code16、最低Android9和非调试；包内自动加载、历史窗口、外链/恢复及原资源信任公钥保持，调试夹具与故障注入未包含。公共r1两个资产ID/大小/摘要与发布前一致，不投放r2。插件0.1.87、DSH/SDK/中转来源和代码保持，插件适配分支非发行提交祖先。567项Node和固定rc.2页面构建重新通过，21个文件/1014处文档链接检查通过；两版SDK与Android24批自动加载、锚点、触摸/键盘、旁栏、在途切换和状态保持证据见[专题](./integration/remote-history-window-current.md#触顶自动加载)。本轮只做公开包核验，不替换用户MuMu，也不扩大真实配对/原始长会话覆盖。证据：忽略目录`artifacts/history-auto-load/release/public-verification.json`。[发行KKC-93](https://linear.app/kkcodes/issue/KKC-93)。
 
 2026-10-24的[Actions40082470843](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40082470843)已完成preview.12/code15构建、lint、原证书签名及公开[Release](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.12)，源码固定`783e9793530e21ea75e12fdf1c49206f38f9b24e`。APK和三个附件均匿名下载，大小/摘要与GitHub资产及SHA256SUMS一致。APK为11,217,060字节，SHA-256 `db74a444fc58918b10a384b804e2647c2121a36fd23da1888cb2942cb47f027b`。本机apksigner/aapt复核原证书、原包名、code15、最低Android9及非调试属性；原生外链/恢复、页面历史窗口和既有资源公钥存在，调试夹具与故障注入不在包内。插件仍0.1.87、R1两个资产的ID/大小/摘要保持，不投放R2，不混入插件适配分支，不改DSH/插件/中转。563项本地Node和发版前1,060处文档链接、两SDK连续24页/Android原生外链及渲染恢复证据见对应专题；本次没有覆盖安装用户日常App，不扩大真实配对、真机和原始白屏结论。公开下载证据在忽略目录`artifacts/history-links-release/public-verification.json`。[发布任务KKC-90](https://linear.app/kkcodes/issue/KKC-90)。
 

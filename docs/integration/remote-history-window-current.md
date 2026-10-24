@@ -26,7 +26,7 @@
 
 ## 触顶自动加载
 
-已纳入 preview.13/code16 发行候选；用户已授权提交、推送、Actions 与 APK 发布，[发行 KKC-93](https://linear.app/kkcodes/issue/KKC-93)跟踪云端签名和公开下载，当前待核验。
+已随[preview.13/code16](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.13)公开发布；源码dcca782，Actions40088585593构建/lint/原签名/Release及APK与附件匿名下载核验通过。[发行KKC-93](https://linear.app/kkcodes/issue/KKC-93)与[发行证据](../releases.md#已核验范围)记录准确来源。旧preview.12没有自动加载入口。
 
 2026-10-24，[KKC-92](https://linear.app/kkcodes/issue/KKC-92)。[自动加载控制器](../../src/remote-history-auto-load.mjs)由主聊天和旁栏共用的 RemoteWorkspace 挂载：用户向上阅读到距离顶部 160 CSS px 内，复用同一个 loadHistory → loadEarlierHistory → loadRemoteHistory 路径。只增加触发入口，不扩大历史窗口或改写电脑日志；原虚拟列表继续维护可见锚点。
 
