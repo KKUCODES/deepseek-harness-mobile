@@ -1,6 +1,6 @@
 # 统一软件更新与一键重启
 
-- 状态：本地实现及独立Android验收通过；用户已授权提交推送并发布 `0.1.0-preview.11` / code14，发布核验完成前以[发行说明](../releases.md#已核验范围)实际证据为准。MuMu本地候选为 `0.1.0-preview.11-dev` / code13，原包名和签名保持。
+- 状态：本地实现及独立Android验收通过；`0.1.0-preview.11` / code14已提交推送并公开预发布，Actions构建/lint/原证书签名/发布及APK、三个附件匿名下载核验通过，见[发行证据](../releases.md#已核验范围)。MuMu仍为此前本地候选 `0.1.0-preview.11-dev` / code13，本轮未安装；原包名和签名保持。
 - 维护：手机端维护者；最近核验：2026-10-24。[KKC-85](https://linear.app/kkcodes/issue/KKC-85)。
 - 用户最新授权发布APK，仍不发布r2。公共资源通道保留原r1；MuMu另设独立「DSHM 更新验收」入口，使用本地签名r2，不是线上r2。[实现 KKC-85](https://linear.app/kkcodes/issue/KKC-85) · [发布 KKC-86](https://linear.app/kkcodes/issue/KKC-86)。
 

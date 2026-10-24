@@ -1,6 +1,6 @@
 # 手机端知识总目录
 
-统一更新与一键重启：[单一状态卡片、双页面保存屏障及原生接力重启](../integration/unified-updates-current.md)。本地候选code13已安装MuMu，550项Node、双入口布局及API36真实下载/自动重启/草稿保留/自动恢复通过；用户已授权发布preview.11/code14 APK，仍不投放r2，公共资源通道保持r1。发布结果以[实际核验记录](../releases.md#已核验范围)为准。[实现 KKC-85](https://linear.app/kkcodes/issue/KKC-85) · [发布 KKC-86](https://linear.app/kkcodes/issue/KKC-86)。
+统一更新与一键重启：[单一状态卡片、双页面保存屏障及原生接力重启](../integration/unified-updates-current.md)。本地候选code13已安装MuMu，550项Node、双入口布局及API36真实下载/自动重启/草稿保留/自动恢复通过；preview.11/code14 APK已公开预发布，云端构建/lint/原签名/发布及匿名下载核验通过，公共r1资产保持，未投放r2。本轮未安装用户模拟器，见[实际核验记录](../releases.md#已核验范围)。[实现 KKC-85](https://linear.app/kkcodes/issue/KKC-85) · [发布 KKC-86](https://linear.app/kkcodes/issue/KKC-86)。
 
 页面资源热更新：[完整签名包、兼容检查、下次进程启用及失败回退](../integration/web-resource-updates-current.md)。545项Node、双入口页面与API36签名互通/真实加载和恢复通过；聊天/草稿、测试Key及设备身份存储保持。preview.10/code12已公开，旧APK需先升级；独立资源Secret配置及云端构建/签名通过，公开APK及附件匿名下载核验通过。APK发行作业403后通过获授权账号发布同一签名产物，未重新构建；随后用户授权投放同内容r1供体验，云端资源发布与匿名验签通过，仅code12可用。MuMu已覆盖安装，下载/激活留给用户。[实现 KKC-82](https://linear.app/kkcodes/issue/KKC-82) · [发布 KKC-83](https://linear.app/kkcodes/issue/KKC-83) · [体验 KKC-84](https://linear.app/kkcodes/issue/KKC-84)。
 
@@ -34,7 +34,7 @@ Remote 动效：[页面进退、共享窗口与执行过程](../integration/moti
 
 自动构建与下载：[GitHub Actions、固定 SDK、独立签名与公开 APK](../releases.md)。用户已授权将签名凭据保存到指定仓库 Secrets；PR 仍只生成无签名包，签名与发布使用受信任入口。原本地与历史候选入口保持，CI 构建不代替手机功能兼容验收。
 
-当前发行目标：`0.1.0-preview.11` 统一更新界面并加入一键重启，保留资源热更新加载器、返回手势、App内更新、长聊天分块、官方0.2.1-rc.2核心连接兼容、自定义供应商、原数据、身份、签名和旧Host支持；本版发布核验见[发行页](../releases.md#已核验范围)。
+公开下载：`0.1.0-preview.11` 统一更新界面并加入一键重启，保留资源热更新加载器、返回手势、App内更新、长聊天分块、官方0.2.1-rc.2核心连接兼容、自定义供应商、原数据、身份、签名和旧Host支持；本版发布核验见[发行页](../releases.md#已核验范围)。
 
 阅读入口：[项目首页](../../README.md) · [English](../../README.en.md) · [使用指南](../usage.md) · [开发指南](../development.md) · [截图来源](../images/README.md)。本总目录负责查找技术依据；日常使用和构建步骤从前述指南进入。
 
