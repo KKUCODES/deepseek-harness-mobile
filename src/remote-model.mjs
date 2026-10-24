@@ -33,6 +33,7 @@ import { RemoteWorkspaceNavigation } from './remote-workspace-navigation.mjs';
 import { RemoteViewNotifications } from './remote-view-notifications.mjs';
 import { sameRemoteDraft } from './remote-drafts.mjs';
 import { RemoteEndpointJournal } from './remote-endpoint-journal.mjs';
+import { RemoteReadingMemory } from './remote-reading-memory.mjs';
 
 /** 只组装数据和会话投影；不启动 bootClient，不挂载电脑页面。 */
 export class RemoteModel {
@@ -58,6 +59,7 @@ export class RemoteModel {
     this.ctx = new Context();
     this.loadRemotes = loadRemotes;
     this.draftStore = draftStore;
+    this.reading = new RemoteReadingMemory(notificationKey);
     this.endpointJournal = new RemoteEndpointJournal(draftStore, () => this.publish({ endpointRecoveries: this.endpointJournal.summaries() }));
     this.snapshot.endpointRecoveries = this.endpointJournal.summaries();
     // 同一绑定的核心模块重建沿用去重记录；新绑定不沿用旧电脑的通知身份。
@@ -311,7 +313,7 @@ export class RemoteModel {
         const inbox = binding.session.projections.faceOf('inbox').getSnapshot();
         const matches = source => source?.kind === 'user' && source.rpcId === pending.requestId;
         const received = acceptedRequestId === pending.requestId
-          || binding.eventSource.getSnapshot().entries.some(entry => entry.type === 'event'
+          || (binding.history?.original ?? binding).eventSource.getSnapshot().entries.some(entry => entry.type === 'event'
             && entry.event.type === 'user/message' && matches(entry.event.data.source))
           || ['next-turn', 'next-step'].some(key => inbox?.[key]?.some(item => matches(item.source)));
         if (!received) return;

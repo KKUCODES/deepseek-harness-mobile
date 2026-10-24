@@ -1,5 +1,9 @@
 # 手机端模块地图
 
+[历史窗口](../../../src/remote-history-window.mjs)装饰公开Session binding，将实时尾部和历史查阅分开限制；[虚拟列表](../../../src/ui/RemoteHistoryList.jsx)只挂载可见组，[统一节点分页](../../../src/ui/RemotePagedNode.jsx)覆盖原内置正文与思考。[阅读位置](../../../src/remote-reading-memory.mjs)只保存身份隔离的游标，[原生恢复](../../../android/app/src/main/java/dev/dshmobile/validation/RendererRecovery.kt)重建失效WebView；不重放写操作。[当前实现与验证限制](../../integration/remote-history-window-current.md)。维护：手机端维护者，核验2026-10-24。
+
+[Remote统一Markdown外链](../../../src/remote-markdown-links.jsx)在会话/面板共享作用域同时连接源码与已发布SDK的Markdown上下文；显式处理函数仍优先，文件委托不继承网页能力。[原生ExternalLinks](../../../android/app/src/main/java/dev/dshmobile/validation/ExternalLinks.kt)由普通聊天和Remote桥复用，限制HTTP(S)并交系统浏览器，不放宽WebView导航。[规则、真实入口回归与未发布状态](../../integration/remote-links-diagnosis.md)。维护：手机端维护者，核验2026-10-24。
+
 软件更新共用[面板](../../../src/ui/AppUpdates.jsx)和[选择规则](../../../src/update-presentation.mjs)，普通/Remote保存屏障通过受限更新桥交给独立进程重启；[当前实现、旧桥兼容及本地验收范围](../../integration/unified-updates-current.md)。
 
 页面资源更新由Application共享的[WebUpdates](../../../android/app/src/main/java/dev/dshmobile/validation/WebUpdates.kt)协调固定来源下载，[签名清单/安全解压](../../../android/app/src/main/java/dev/dshmobile/validation/WebResourceManifest.kt)与[进程固定世代/回退存储](../../../android/app/src/main/java/dev/dshmobile/validation/WebResourceStore.kt)分工；两个Activity继续使用原HTTPS来源和更新桥，StartupScreen提供健康确认及原生恢复。只操作独立资源目录，未迁移数据。[打包签名工具](../../../scripts/web-update-package.mjs)和[资源工作流](../../../.github/workflows/web-resources.yml)独立于APK签名。维护：手机端维护者，核验2026-10-24；[状态、验收与未发布边界](../../integration/web-resource-updates-current.md)。

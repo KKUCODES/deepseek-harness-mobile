@@ -1,4 +1,7 @@
 import { isProfileDshVersion } from './remote-dsh-version.mjs';
+import { RemoteMarkdownLinks } from './remote-markdown-links.jsx';
+import { RemotePagedNode } from './ui/RemotePagedNode.jsx';
+import { RemoteErrorBoundary } from './ui/RemoteRecovery.jsx';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { SlotRegistry } from '../../deepseek-harness/packages/client/ui-renderer/src/client/registry.ts';
 import { createSlotRenderer } from '../../deepseek-harness/packages/client/ui-renderer/src/client/scoped-slots.tsx';
@@ -572,22 +575,23 @@ export function RemoteHeaderAncestors({ model }) {
 
 /** 复用原节点可见性和按会话保存的折叠状态，只替换最终内容的手机回退布局。 */
 function MobileChatNodeSeat({ node, dispatchNode, children, useSession, ...props }) {
+  const host = useContext(PluginSlots);
   const historyIncomplete = useSession(snapshot => snapshot.hasMore);
   const t = useTranslate();
   const renderNode = useCallback((name, owner, options) => {
-    const content = dispatchNode(name, owner, {
+    const content = <RemoteErrorBoundary resetKey={owner.node.key} message="这段记录暂时无法显示，可以重试。"><RemotePagedNode owner={owner} session={host.reference.binding.session} render={view => dispatchNode(name, view, {
       ...options,
       fallback: owner.node.kind === 'turn-process'
         ? <TurnProcessNodeView node={owner.node} turnProcess={owner.turnProcess} t={props.t}/>
-        : React.cloneElement(children, { turnProcess: owner.turnProcess }),
-    });
+        : React.cloneElement(children, { node: view.node, turnProcess: owner.turnProcess }),
+    })}/></RemoteErrorBoundary>;
     if (owner.node.kind !== 'tool-call') return content;
     return <div className="remote-tool-entry">{content}
       {/* 保留独立的工具详情入口，放在行尾，避免每条记录多占一行。 */}
       <button type="button" className="remote-tool-inspect" data-tool-details aria-label={t('工具详情')} title={t('工具详情')}
         onClick={() => owner.inspectCall(owner.node.data.root.callId)}><IconEllipsisOutline16/></button>
     </div>;
-  }, [dispatchNode, children, props.t, t]);
+  }, [dispatchNode, children, props.t, t, host.reference]);
   return <ChatNodeSeat {...props} {...chatSeatProps} nodeKey={node.key} historyIncomplete={historyIncomplete} compactTranscript renderSlot={renderNode}/>;
 }
 
@@ -643,7 +647,7 @@ export function RemotePluginScope({ model, children }) {
   const state = useSyncExternalStore(model.subscribeView, model.getSnapshot);
   // retain() 的 reference 在 ready 之前没有 binding；此时不得交给原 SessionProvider。
   const reference = state.session ? model.reference : undefined;
-  return model.pluginSlots.render({ reference, children, model });
+  return <RemoteMarkdownLinks model={model}>{model.pluginSlots.render({ reference, children, model })}</RemoteMarkdownLinks>;
 }
 
 /** 每个当前会话只挂载一次；只读子会话也需要原插件的反馈弹窗。 */

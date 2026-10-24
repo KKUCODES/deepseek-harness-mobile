@@ -6,7 +6,7 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 
 ## 安装与准备
 
-从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。`0.1.0-preview.5` 加入普通聊天自定义供应商与模型；Remote 继续配套电脑插件 `0.1.85-latest.0`，支持官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`；不要直接混用任意新版 DSH 与旧手机包。各功能的实际验证范围保留在对应记录，构建、签名和下载说明见[安装包指南](./releases.md)。
+从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。当前preview.12保留普通聊天自定义供应商与模型；Remote配套插件 `0.1.87-latest.0`，核心支持范围为官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`。不要直接混用任意新版 DSH 与旧手机包，实际验证范围及安装说明见[安装包指南](./releases.md)。
 
 普通聊天只需要 DSHM 和所选模型服务的 API Key，默认可使用 DeepSeek。Remote 另需电脑上的官方 DSH、DSHM 插件及手机和电脑都能连接的中转地址。候选安装与版本核对见[配套安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)；从源码构建见[开发指南](./development.md)。
 
@@ -89,6 +89,10 @@ DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可�
 | 撤销设备授权 | Remote 断开，该设备无法继续访问电脑；普通聊天仍独立可用。 |
 
 文件格式、大小、转换依赖和异常范围以[当前兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)及对应专项为准。手机不提供电脑命令输入，也不转发电脑 localhost 网站。
+
+preview.12修复Remote正文与Markdown文件预览中的网页链接：HTTP/HTTPS交系统浏览器，返回后保留Remote；项目文件仍在原预览中打开。无法打开时显示原因。需要升级APK，不能仅更新旧版页面资源。详见[外链处理与验证范围](./integration/remote-links-diagnosis.md)。
+
+长聊天可继续「加载更早的消息」「加载较新的消息」或「返回最新消息」，电脑原历史不删除。手机只保留当前窗口，长回复/思考和输出可逐段查看；翻页不停止电脑任务和待审批。单条显示出错可点「重新显示」，渲染进程退出时App尝试自动恢复。见[预算、恢复与验证限制](./integration/remote-history-window-current.md)。
 
 ## 连接问题
 

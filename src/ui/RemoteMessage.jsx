@@ -77,7 +77,7 @@ function RemoteAssistantMessage({ node, turnProcess, renderContent, openFile, op
   const t = useTranslate(), data = node.data;
   const label = React.useCallback(path => t('打开文件：{path}', { path }), [t]);
   const mentions = useRemoteFileMentions(node, openFile, label);
-  const contentOptions = React.useMemo(() => ({ fileMentions: mentions }), [mentions]);
+  const contentOptions = React.useMemo(() => ({ fileMentions: mentions, contentKey: node.key }), [mentions, node.key]);
   const reasoningHidden = turnProcess?.foldable && turnProcess.spec.answerStep === data.step && turnProcess.spec.inlineReasoning && !turnProcess.open;
   const reveal = React.useCallback(() => turnProcess?.setOpen(true), [turnProcess?.setOpen]);
   const blocks = data.blocks ?? [], active = data.status === 'running', interrupted = data.status === 'interrupted';
@@ -86,7 +86,7 @@ function RemoteAssistantMessage({ node, turnProcess, renderContent, openFile, op
   const body = [];
   for (let index = 0; index < blocks.length; index++) {
     const block = blocks[index], key = index;
-    if (block.kind === 'text') body.push(<React.Fragment key={key}>{renderContent(block.text, active, contentOptions)}</React.Fragment>);
+    if (block.kind === 'text') body.push(<React.Fragment key={key}>{renderContent(block.text, active, { ...contentOptions, contentKey: `${node.key}:${index}` })}</React.Fragment>);
     else if (block.kind === 'reasoning') body.push(<RemoteReasoning key={key} text={block.text} active={active && index === blocks.length - 1} hidden={Boolean(reasoningHidden)} reveal={reveal} renderContent={renderContent}/>);
     else if (block.kind === 'image') {
       const images = [{ type: 'image', attachment: block.attachment }];

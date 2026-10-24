@@ -21,6 +21,8 @@ class ValidationActivity : Activity() {
     private lateinit var updates: AppUpdateBridge
     private var pendingAppearance = false
     private var startup: StartupScreen? = null
+    private val rendererRecovery by lazy { RendererRecovery(this) }
+    private var rendererGone = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,9 +41,14 @@ class ValidationActivity : Activity() {
             // 网页仍只能加载本地资源；模型联网由原生受限请求桥负责。
             webViewClient = object : WebViewClient() {
                 override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    android.util.Log.w("DSHMRenderer", if (detail.didCrash()) "Chat renderer crashed" else "Chat renderer reclaimed")
+                    rendererGone = true
+                    if (::ordinary.isInitialized) ordinary.close()
+                    if (::updates.isInitialized) updates.close()
                     startup?.rendererFailed()
                     (view.parent as? android.view.ViewGroup)?.removeView(view)
                     view.destroy()
+                    rendererRecovery.rendererGone()
                     return true
                 }
                 override fun onPageFinished(view: WebView, url: String?) { deliverAppearanceNavigation() }
@@ -79,7 +86,7 @@ class ValidationActivity : Activity() {
         if (!MobileWebWindow.install(this, webView)) setContentView(webView)
         stopWindowAppearance = MobileWebWindow.observeAppearance(this)
         val entry = if (BuildConfig.DEBUG && intent.getBooleanExtra("diagnostics", false)) "index.html" else "mobile.html"
-        if (entry == "mobile.html") startup = StartupScreen(this, webView)
+        if (entry == "mobile.html") startup = StartupScreen(this, webView, reopen = { rendererRecovery.reopen() })
         webView.loadUrl("https://appassets.androidplatform.net/assets/web/$entry")
     }
 
@@ -94,7 +101,7 @@ class ValidationActivity : Activity() {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(OPEN_APPEARANCE, false)) pendingAppearance = true
         intent.removeExtra(OPEN_APPEARANCE)
-        if (webView.progress == 100) deliverAppearanceNavigation()
+        if (!rendererGone && webView.progress == 100) deliverAppearanceNavigation()
     }
 
     private fun deliverAppearanceNavigation() {
@@ -107,11 +114,11 @@ class ValidationActivity : Activity() {
     override fun onDestroy() {
         startup?.close()
         stopWindowAppearance?.invoke()
-        ordinary.close()
-        updates.close()
-        webView.destroy()
+        if (!rendererGone) { ordinary.close(); updates.close(); webView.destroy() }
         super.onDestroy()
     }
+    override fun onResume() { super.onResume(); rendererRecovery.onResume() }
+    override fun onPause() { rendererRecovery.onPause(); super.onPause() }
 
     @Deprecated("Platform activity result bridge")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -120,6 +127,7 @@ class ValidationActivity : Activity() {
 
     @Deprecated("Handled by the local page navigation stack")
     override fun onBackPressed() {
+        if (rendererGone) { moveTaskToBack(true); return }
         webView.evaluateJavascript("window.dshmHandleBack ? window.dshmHandleBack() : false") { handled ->
             if (handled != "true") moveTaskToBack(true)
         }

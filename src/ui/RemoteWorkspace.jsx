@@ -6,7 +6,6 @@ import { useLocale, useTranslate } from './locale.jsx';
 import { RemoteComposer } from './RemoteComposer.jsx';
 import { RemoteBoundHero, RemoteActivePreset } from './RemoteConversationHero.jsx';
 import { UserMessage } from './ChatMessage.jsx';
-import { OrdinaryMarkdown } from '../ordinary-rendering.jsx';
 import { unwrap } from '../remote-model.mjs';
 import { responseFailures } from '../remote-response-errors.mjs';
 import { RemoteMessage, RemoteFiles, fileSize, contentText } from './RemoteMessage.jsx';
@@ -48,6 +47,8 @@ import { observeRemoteReadingContext } from '../remote-reading-context.mjs';
 import { RemoteMainConversationBody, RemoteMainConversationFrame } from '../remote-sidebar-chat.jsx';
 import { SurfacePresence, useSceneMotion, RemoteFlowMotion } from './motion.jsx';
 import { createChatFlowMotion } from '@dshm/chat-presentation';
+import { RemoteHistoryList } from './RemoteHistoryList.jsx';
+import { RemoteLongMarkdown } from './RemoteLongMarkdown.jsx';
 
 export function RemoteWorkspace({ model, onBack, onConnection, embedded = false, renderConversation }) {
   const t = useTranslate();
@@ -61,6 +62,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [search, setSearch] = useState(null), [searchAttempt, retrySearch] = useState(0);
   const [settingsTarget, setSettingsTarget] = useState({ id: 'models', revision: 0 });
   const [notice, setNotice] = useState(''), [actionBusy, setBusy] = useState(false);
+  const contentPages = useRef(new Map());
   const [cordisTarget, setCordisTarget] = useState(null);
   const [inputBusy, setInputBusy] = useState(false);
   const busy = actionBusy || inputBusy || model.draftTransfers.has(state.selected);
@@ -146,7 +148,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   }, [busy]);
   const selected = state.selected, chat = state.list?.byId[selected];
   const connected = state.connectionState === 'connected';
-  const loadOlder = async () => {
+  const loadHistory = async (direction) => {
     if (!connected || busy || state.session?.loadingOlder || historyRequest.current || !scroll.current) return;
     const container = scroll.current, reference = model.reference;
     const generation = model.connection.generation.getSnapshot(), request = {};
@@ -154,7 +156,8 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     historyRequest.current = request; bottom.current = false; setNotice('');
     try {
       // 分页仅锁住自己的按钮；用户离开时由原会话引用释放来取消请求。
-      await loadEarlierHistory({ container, load: () => loadRemoteHistory(reference.binding, { isCurrent }), isCurrent });
+      await loadEarlierHistory({ container, load: () => direction === 'newer'
+        ? reference.binding.history.newer() : loadRemoteHistory(reference.binding, { isCurrent }), isCurrent });
     } catch (error) { if (isCurrent()) setNotice(t(error.message)); }
     finally { if (historyRequest.current === request) historyRequest.current = null; }
   };
@@ -204,7 +207,12 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   } }, [selected, model]);
   const openCommand = useCallback((nodeId, callId) => setCommand({ sessionId: selected, nodeId, callId }), [selected]);
   const forkTurn = useCallback(nodeId => void act(() => model.forkTurn(nodeId, selected)), [act, model, selected]);
-  const renderContent = useCallback((text, streaming, options) => <OrdinaryMarkdown text={text} streaming={streaming} onOpenFile={openFile} fileMentions={options?.fileMentions}/>, [openFile]);
+  const renderContent = useCallback((text, streaming, options) => <RemoteLongMarkdown text={text} streaming={streaming}
+    memory={contentPages.current} contentKey={options?.contentKey} onOpenFile={openFile} fileMentions={options?.fileMentions}/>, [openFile]);
+  const renderHistoryNode = useCallback(node => <RemoteMessage node={node} renderContent={renderContent} openFile={openFile}
+    openAttachment={openAttachment} openChanges={openChanges} openCommand={openCommand} onFork={forkTurn}
+    forkDisabled={!connected || busy || turnForkAnchor(model.getSnapshot().conversation, node.key) === null}/>,
+  [model, renderContent, openFile, openAttachment, openChanges, openCommand, forkTurn, connected, busy]);
   useEffect(() => {
     const controller = new AbortController();
     setSearch(null);
@@ -260,6 +268,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     {selected && <><RemoteHeaderAncestors model={model}/><RemoteHeaderExtensions/></>}
     {(notice || state.error) && <div className="remote-error" role="alert">{t(responseFailures[notice || state.error] ?? (notice || state.error))}</div>}
     <RemoteOfflineStatus model={model}/>
+    {state.session?.history?.error && !notice && <p className="remote-error" role="alert">{t(state.session.history.error)}</p>}
     {!!state.endpointRecoveries?.length && <p className="remote-offline-status" role="status">
       {t('有服务地址保存结果尚未确认，请打开对应设置重新读取地址。')}
     </p>}
@@ -296,14 +305,19 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         {state.session?.openError && <><p role="alert">{t(subagentReadError(state.session.openError))}</p>
           <Button disabled={!connected || busy || state.subagentServiceAvailable === false && !!childAccess.address}
             onClick={() => void act(() => model.select(state.selectedTarget, { trail: state.selectionTrail }))}>{t('重试读取')}</Button></>}
-        {state.session?.hasMore && <Button data-history-loader disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadOlder()}>{t("加载更早的消息")}</Button>}
-        {state.conversation?.order.map(key => <RemoteMessage key={key} node={state.conversation.nodes.get(key)} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment} openChanges={openChanges} openCommand={openCommand}
-          onFork={forkTurn} forkDisabled={!connected || busy || turnForkAnchor(state.conversation, key) === null}/>)}
+        {state.session?.hasMore && <Button data-history-loader disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadHistory('older')}>{t("加载更早的消息")}</Button>}
+        <RemoteHistoryList key={`${selected}:${state.selectionRevision}`} conversation={state.conversation} container={scroll}
+          history={model.reference?.binding.history} renderNode={renderHistoryNode} following={bottom} sessionKey={selected}
+          reading={model.reading} target={state.selectedTarget} resume={model.readingResume}/>
         {state.inbox?.['next-step']?.map(item => <UserMessage key={item.id} attachments={<RemoteFiles content={item.content} openAttachment={openAttachment}/>}>{contentText(item.content)}<small className="muted">{t("等待引导…")}</small></UserMessage>)}
         {state.session?.pendingSubmissions.filter(item => item.placement !== 'queued').map(item => <UserMessage key={item.requestId} attachments={<RemoteFiles pending={item.attachments} openAttachment={openAttachment}/>}>{item.text}<small className="muted">{t("正在发送…")}</small></UserMessage>)}
         <RemoteRunningStatus/>
       </div>
     </section>
+    {state.session?.history?.hasNewer && <div className="remote-history-navigation">
+      <Button disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadHistory('newer')}>{t('加载较新的消息')}</Button>
+      <Button onClick={() => { bottom.current = true; model.reference.binding.history.latest(); followBottom(); }}>{t('返回最新消息')}</Button>
+    </div>}
   </>;
   return <RemoteFlowMotion.Provider value={flowMotion}>{!embedded && <RemoteSettingsOnboarding model={model} openSection={id => {
     setSettingsTarget(before => ({ id, revision: before.revision + 1 })); setSheet('settings');

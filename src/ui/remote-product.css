@@ -1,4 +1,14 @@
 .remote-runtime { height: 100dvh; display: flex; flex-direction: column; min-width: 0; overflow: clip; }
+.remote-app .messages > .remote-history-list { margin: 0; flex: none; }
+.remote-history-group { display: flex; flex-direction: column; padding-bottom: 12px; box-sizing: border-box; }
+.remote-history-group > [data-slot="dshm.chat.node"] { display: contents; }
+.remote-history-group > [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty)
+  ~ [data-chat-flow-key]:not([hidden]):not(:empty),
+.remote-history-group > [data-slot="dshm.chat.node"]:has(> [data-chat-flow-key]:not([hidden]):not(:empty))
+  ~ [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty) { margin-top: var(--dsh-chat-flow-gap, 6px); }
+.remote-history-navigation { display: flex; justify-content: center; gap: 12px; padding: 8px 16px; flex: none; }
+.remote-render-recovery { padding: 16px; font-size: 14px; line-height: 1.6; }
+.remote-render-recovery p { margin: 0 0 8px; }
 .remote-app .messages { font-size: var(--dsh-content-font-size, 14px); gap: 0; }
 /* until-found 保留搜索能力，但隐藏节点仍是 flex 项，不能用 gap 为它们留空。 */
 .remote-app .messages > :not([data-slot]) { margin-bottom: 24px; }

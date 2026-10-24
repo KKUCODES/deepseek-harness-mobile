@@ -6,7 +6,7 @@
 
 **DSHM** is a community-developed Android client for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Chat directly with DeepSeek or synchronize DSH conversations from your computer. Away from your desk, you can keep sending messages, viewing execution results, switching models, and handling approvals; the computer runs the tasks.
 
-[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.11/DSHM-0.1.0-preview.11.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
+[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.12/DSHM-0.1.0-preview.12.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
@@ -66,13 +66,17 @@ The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTT
 
 ## Current status
 
+**preview.12** adds bounded history windows, bidirectional browsing, viewport rendering and recovery. Computer history is retained. See the [implementation and validation limits (Chinese)](./docs/integration/remote-history-window-current.md).
+
+Web links in Remote chat and Markdown file previews open through the system browser while project files keep their in-app previews. See the [validation scope (Chinese)](./docs/integration/remote-links-diagnosis.md). These fixes require an APK update; older page resources do not include the new native capabilities.
+
 **preview.11** unifies software updates into one status card and primary action for downloading, installing or “Restart and apply.” Notes and technical details are collapsible; drafts are saved before restarting. See the [implementation and validation scope (Chinese)](./docs/integration/unified-updates-current.md).
 
 Development preview; not an app-store release. Core Remote features passed local Web + MuMu validation with **official DSH `0.2.1-alpha.2` + plugin `0.1.80-latest.0` + the matching Android app**. See the [compatibility report (Chinese)](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md) for the supported scope.
 
 Supports [signed full page-resource updates (Chinese)](./docs/integration/web-resource-updates-current.md): compatibility checks, full launch activation, rollback and native recovery. Native changes still require an APK. This release publishes the APK only; r2 is deferred. Earlier back-gesture, in-app update and large-response fixes remain. Users on preview.8 or newer can update in the app; earlier versions need a manual installation.
 
-[0.1.0-preview.11](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.11) retains custom direct-chat providers, models, existing DeepSeek settings and chats. See [provider details (Chinese)](./docs/integration/ordinary-providers-current.md). Remote requires desktop plugin `0.1.87-latest.0`; core connections were tested with official DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`; see the [validation scope (Chinese)](./docs/integration/market-baseline.md). The identity and signature are unchanged: install over preview.1–preview.10 or local preview.11-dev/code13 to retain local data. No additional plugin or relay upgrade is required.
+[0.1.0-preview.12](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.12) retains custom direct-chat providers, models, existing DeepSeek settings and chats. See [provider details (Chinese)](./docs/integration/ordinary-providers-current.md). Remote requires desktop plugin `0.1.87-latest.0`; core connections were tested with official DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`; see the [validation scope (Chinese)](./docs/integration/market-baseline.md). Version code15 retains the existing identity and signature: install over preview.1–preview.11 to keep local data. No additional plugin or relay upgrade is required.
 
 - Android only for the first version. Physical devices, the complete public-network path, and other versions, plugins, and models still need validation.
 - Keep the computer and DSH running. Install the standalone plugin; no DSH core modifications are needed.

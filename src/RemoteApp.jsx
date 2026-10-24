@@ -13,6 +13,7 @@ import { installRemotePluginSlots, RemotePluginScope } from './remote-plugin-slo
 import { RemotePlugins } from './remote-plugins.jsx';
 import { captureRemoteResume } from './remote-resume.mjs';
 import { RemoteSyncCache } from './remote-sync-cache.mjs';
+import { takeReadingRecovery } from './remote-reading-memory.mjs';
 import { pairingServerOf } from './remote-pair-link.mjs';
 import { RemoteDraftStore } from './remote-drafts.mjs';
 import { ThemePresenter } from '../../deepseek-harness/packages/client/ui-layout/src/client/theme-presenter.ts';
@@ -155,12 +156,21 @@ function RemoteConnection({ client, language, appearanceReady }) {
         setStage('loading');
         await next.start();
         if (runtime.current !== next || !mounted.current || !client.connected) { await next.dispose(); return; }
+        const nativeRecovery = await client.call('recovery.resume').catch(() => ({ restore: false }));
+        if (!resume && (takeReadingRecovery() || nativeRecovery.restore)) {
+          const reading = next.reading.read();
+          if (reading) resume = { selected: reading.selected, selectedTarget: reading.target, reading };
+        }
         if (resume) {
-          next.publish({ drafts: resume.drafts, draftEditors: resume.draftEditors, attachments: resume.attachments });
+          if (resume.drafts) next.publish({ drafts: resume.drafts, draftEditors: resume.draftEditors, attachments: resume.attachments });
           next.workspaceResume = resume.workspace;
           next.panelMemory?.restore(resume.panels);
           if (resume.selected) await next.select(resume.selectedTarget ?? resume.selected, { trail: resume.selectionTrail ?? [] }).catch(failure => next.fail(failure));
           if (next.getSnapshot().selected === resume.selected) {
+            if (resume.reading?.selected === resume.selected) {
+              await next.reference?.binding.history?.through(resume.reading.seq).catch(failure => next.fail(failure));
+              next.readingResume = resume.reading;
+            }
             next.jobOutputResume = resume.jobOutput;
             next.commandResume = resume.command;
           }

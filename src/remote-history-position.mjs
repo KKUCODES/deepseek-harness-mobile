@@ -1,5 +1,9 @@
 /** 跟踪已有消息的位置，避免尾部流式输出或投影合并被误算为前插高度。 */
 export async function loadEarlierHistory({ container, load, isCurrent }) {
+  if (container.querySelector('[data-history-count]')) {
+    // 虚拟列表按稳定回合键维护锚点；不能再以外层占位盒子的高度重复补偿。
+    await load(); await new Promise(resolve => requestAnimationFrame(resolve)); return;
+  }
   const top = container.getBoundingClientRect().top;
   // 插槽外壳使用 display:contents，本身没有位置；只取原 ChatNodeSeat 的实体行。
   const rows = container.querySelector('.messages').querySelectorAll(

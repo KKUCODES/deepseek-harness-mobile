@@ -30,6 +30,8 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
     @Volatile private var closed = false
     private var pending = 0
     private var pairLink: String? = null
+    private var readingRecovery = false
+    internal fun offerReadingRecovery() { readingRecovery = true }
     private val scanner = RemotePairScanner(activity) {
         !closed && !identity.paired() && !html.isActive && webView.url == ORIGIN + "/assets/web/remote.html"
     }
@@ -90,6 +92,17 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
                 UUID.fromString(id)
                 val data = request.optJSONObject("data") ?: JSONObject()
                 when (request.getString("op")) {
+                    "links.open" -> {
+                        if (webView.url != ORIGIN + "/assets/web/remote.html") throw Failure("unsupported_operation")
+                        if (data.keys().asSequence().toSet() != setOf("url")) throw Failure("invalid_request")
+                        ExternalLinks.open(activity, data.get("url"))
+                        respond(reply, id, JSONObject())
+                    }
+                    "recovery.resume" -> {
+                        if (webView.url != ORIGIN + "/assets/web/remote.html" || data.length() != 0) throw Failure("unsupported_operation")
+                        respond(reply, id, JSONObject().put("restore", readingRecovery))
+                        readingRecovery = false
+                    }
                     "app.info" -> {
                         if (data.length() != 0 || html.isActive || webView.url != ORIGIN + "/assets/web/remote.html") throw Failure("unsupported_operation")
                         respond(reply, id, AppInfo.read())
@@ -199,7 +212,11 @@ class RemoteBridge(private val activity: Activity, private val webView: WebView,
             } catch (error: Exception) { respond(reply, id, error = code(error)) }
         }
     }
-    private fun code(error: Exception) = if (error is Failure) error.code else "remote_operation_failed"
+    private fun code(error: Exception) = when (error) {
+        is Failure -> error.code
+        is ExternalLinks.Failure -> error.code
+        else -> "remote_operation_failed"
+    }
     private fun respond(reply: JavaScriptReplyProxy, id: String, data: JSONObject? = null, error: String? = null) {
         if (closed || !WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
         val value = JSONObject().put("id", id)

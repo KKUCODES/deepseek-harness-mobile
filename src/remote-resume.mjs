@@ -2,7 +2,9 @@ import { attachmentDrafts, restoreAttachmentDrafts } from './remote-attachment-d
 
 export function captureConversationResume(model) {
   const { selected, selectedTarget, selectionTrail } = model.getSnapshot();
+  const reading = model.reading?.read();
   return { selected, selectedTarget, selectionTrail,
+    ...(reading ? { reading } : {}),
     workspace: model.captureWorkspace?.(), jobOutput: model.captureJobOutput?.(), command: model.captureCommand?.() };
 }
 

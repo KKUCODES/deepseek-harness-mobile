@@ -22,6 +22,8 @@ import { checkDesktopApps } from './check-desktop-apps.mjs';
 import { checkManagementStatus } from './check-management-status.mjs';
 import { checkRemoteMotion } from './check-remote-motion.mjs';
 import { checkRemoteBackNavigation } from './check-remote-back-navigation.mjs';
+import { checkRemoteLinks } from './check-remote-links.mjs';
+import { checkRemoteHistoryWindow } from './check-remote-history-window.mjs';
 import { checkRemoteToolLayout } from './check-remote-tool-layout.mjs';
 import { checkRemoteFileLayout } from './check-remote-file-layout.mjs';
 import { checkRemoteFileListLayout } from './check-remote-file-list-layout.mjs';
@@ -74,8 +76,10 @@ const builtinPanelsOnly = process.argv.includes('--builtin-panels');
 const runningOnly = process.argv.includes('--running-status');
 const forkActionsOnly = process.argv.includes('--fork-actions');
 const backNavigationOnly = process.argv.includes('--back-navigation');
-const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly;
-const layoutSdk = backNavigationOnly && !process.argv.includes('--official-alpha2')
+const linksOnly = process.argv.includes('--links');
+const historyOnly = process.argv.includes('--history-window');
+const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly || linksOnly || historyOnly;
+const layoutSdk = (backNavigationOnly || linksOnly || historyOnly) && !process.argv.includes('--official-alpha2')
   ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-rc.2' }) : layoutOnly && process.argv.includes('--official-alpha2')
   ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-alpha.2' }) : null;
 const documentOnly = process.argv.includes('--documents');
@@ -95,12 +99,15 @@ const exportOnly = process.argv.includes('--export-status');
 const managementOnly = process.argv.includes('--management-status');
 const directory = resolve(root, 'artifacts/tests/remote-plugin-slots');
 await mkdir(directory, { recursive: true });
-await prepareClientEntries();
+if (!linksOnly && !historyOnly) await prepareClientEntries();
 await build({ absWorkingDir: root,
   ...(layoutOnly ? { stdin: { contents: "import {model} from './tests/fixtures/remote-plugin-slots.jsx'; import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css'; import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';" + (builtinPanelsOnly ? "import {builtinPanelFixture} from './tests/fixtures/builtin-panel-layout.jsx'; Object.assign(window.fixture,builtinPanelFixture(model));" : ''), resolveDir: root, loader: 'jsx' } }
     : { entryPoints: ['tests/fixtures/remote-plugin-slots.jsx'] }),
   outfile: resolve(directory, 'test.js'), bundle: true, format: 'esm', platform: 'browser', jsx: 'automatic', logLevel: 'silent',
-  plugins: [...(layoutSdk ? [layoutSdk.resolver] : []), mobileApprovalAccessibility()],
+  plugins: [...(historyOnly ? [{ name: 'history-fault-regression', setup(builder) {
+    builder.onLoad({ filter: /[\\/]RemotePagedNode\.jsx$/ }, async ({ path }) => ({ loader: 'jsx', contents: (await readFile(path, 'utf8'))
+      .replace('const t = useTranslate(), node = owner.node;', "if (window.__historyFault) throw Error('HistoryRenderFixture'); const t = useTranslate(), node = owner.node;") }));
+  } }] : []), ...(layoutSdk ? [layoutSdk.resolver] : []), mobileApprovalAccessibility()],
   loader: { '.module.css': 'local-css', '.svg': 'file', '.png': 'file', '.woff2': 'file', '.woff': 'file', '.ttf': 'file' }, nodePaths: [...(layoutSdk ? [resolve(layoutSdk.runtime, 'node_modules')] : []), resolve(root, 'node_modules')],
   alias: { ...remoteSourceAliases(root, layoutSdk ?? {}), '@upstream': resolve(root, '../deepseek-harness/packages/client'), react: dirname(require.resolve('react/package.json')),
     'node:module': resolve(root, '../deepseek-harness/apps/web/src/node-module-stub.ts'),
@@ -130,7 +137,7 @@ try {
   page = await browser.newPage({ viewport: { width: 375, height: 667 }, hasTouch: forkActionsOnly });
   page.setDefaultTimeout(8000);
   page.on('pageerror', error => report.errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') report.errors.push(message.text()); });
+  page.on('console', message => { if (message.type() === 'error' && !(historyOnly && message.text().includes('HistoryRenderFixture'))) report.errors.push(message.text()); });
   await page.route('https://remote.dshm.invalid/plugins/**', async route => {
     const url = route.request().url();
     let body;
@@ -143,8 +150,20 @@ try {
     } else throw new Error(`Unexpected bundle URL: ${url}`);
     await route.fulfill({ status: 200, contentType: 'text/javascript', body });
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : builtinPanelsOnly ? '?documents&builtin' : fileListOnly ? '?documents&files' : fileLayoutOnly || documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly ? '?documents' : ''}`);
-  if (backNavigationOnly) {
+  await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : builtinPanelsOnly ? '?documents&builtin' : fileListOnly ? '?documents&files' : fileLayoutOnly || documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly || linksOnly ? '?documents' : ''}`);
+  if (historyOnly) {
+    for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
+    report.history = await checkRemoteHistoryWindow(page);
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, `artifacts/remote-history-window-${layoutSdk.version}.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (linksOnly) {
+    for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
+    report.links = await checkRemoteLinks(page);
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, `artifacts/remote-links-${layoutSdk.version}-web.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (backNavigationOnly) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
     report.backNavigation = await checkRemoteBackNavigation(page);
     assert.deepEqual(report.errors, []);
@@ -1298,5 +1317,11 @@ try {
   await writeFile(resolve(root, 'artifacts/remote-plugin-slots-web.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report));
   }
-} catch (error) { console.error(JSON.stringify({ ...report, plugins: await page?.evaluate(() => window.fixture?.plugins()), body: await page?.locator('body').innerText() })); throw error; }
+} catch (error) {
+  if (historyOnly && page) {
+    await writeFile(resolve(root, 'artifacts/remote-history-window-failure.html'), await page.content());
+    console.error(JSON.stringify({ ...report, history: await page.evaluate(() => window.fixture?.longHistoryState()) }));
+  } else { if (linksOnly && page) await writeFile(resolve(root, 'artifacts/remote-links-failure.html'), await page.content()); console.error(JSON.stringify({ ...report, plugins: await page?.evaluate(() => window.fixture?.plugins()), body: await page?.locator('body').innerText() })); }
+  throw error;
+}
 finally { await browser.close(); server.close(); }

@@ -112,7 +112,7 @@ export class RemoteSessionView {
         void model.reconcileSubmission?.(id, binding);
       }
     };
-    this.releases.push(binding.eventSource.subscribe(reconcile), binding.session.projections.faceOf('inbox').subscribe(reconcile));
+    this.releases.push((binding.history?.original ?? binding).eventSource.subscribe(reconcile), binding.session.projections.faceOf('inbox').subscribe(reconcile));
     reconcile();
     const conversation = model.conversations.binding(binding).target('chat');
     const sources = { session: binding.session, conversation };

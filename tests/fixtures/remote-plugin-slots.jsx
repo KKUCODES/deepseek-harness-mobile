@@ -2,6 +2,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { RemoteModel } from '../../src/remote-model.mjs';
+import { RemoteClient } from '../../src/remote-client.mjs';
+import { RemoteHistoryReplay } from './remote-history-replay.mjs';
 import { loadTestRemotes } from './remote-core.mjs';
 import workspaceFilesRemote from './generated/workspace-files-remote.mjs';
 import sessionReferenceRemote from './generated/session-reference-remote.mjs';
@@ -44,7 +46,7 @@ import { renderFailureProbe } from './remote-render-failure.jsx';
 
 // 独立测试协议回放，不进入 APK；消息仍经过原 ClientSessions/UiConversation。
 const channels = new Map();
-const documentMode = new URL(location.href).searchParams.has('documents');
+const documentMode = new URL(location.href).searchParams.has('documents') || window.__dshmLinkDocuments === true;
 const fileListMode = new URL(location.href).searchParams.has('files');
 const fileListRoot = 'Q:/Tanxian/LToys/dsh-mobile/plugin/artifacts/official-dsh-alpha2/home/official-remote-test-project/2ea87817';
 const documentReads = [];
@@ -74,6 +76,8 @@ const settingsRequests = [];
 const commandOutputRequests = [];
 const keyNativeCalls = [];
 const appearanceNavigationCalls = [];
+const externalLinkCalls = [];
+let externalLinkFailure, nativeLinkClient;
 let keyConfigured = true, heldKeyRead, heldKeyNative;
 let heldProviderCardRead;
 let readiness = 'credential-missing';
@@ -99,6 +103,7 @@ let jobStopWrites = 0;
 let scheduleSeq = 500, planSeq = 500, planWrites = [], modelSeq = 500;
 let workflowSeq = 0;
 let historyReply, historyTesting = false;
+const historyReplay = new RemoteHistoryReplay();
 let listRefreshGate, releaseListRefresh;
 let createProbe;
 let lineageTesting = false;
@@ -131,6 +136,7 @@ const transport = {
     if (fileListMode && endpoint === 'workspaceFiles/list') return { ok: true, value: { path: '.', absolutePath: payload.args.path,
       entries: payload.args.path.endsWith('/folder') ? [{ name: 'nested.txt', type: 'file' }]
         : [{ name: 'folder', type: 'directory' }, ...Array.from({ length: 90 }, (_, index) => ({ name: `approval-${String(index).padStart(3, '0')}.txt`, type: 'file' }))], truncated: false } };
+    if (endpoint === 'session/page' && historyReplay.active && payload.args.request.address.sessionId === 'one') return historyReplay.page(payload.args.request);
     if (endpoint === 'session/page' && historyTesting && payload.args.request.address.sessionId === 'one') {
       historyRequests.push(payload.args.request);
       return new Promise(resolve => { historyReply = resolve; });
@@ -231,7 +237,7 @@ const transport = {
     if (endpoint === '$events') yield { type: 'ready', clientId: 'fixture', host: { home: '/fixture' } };
     if (endpoint === 'session/follow') yield { type: 'snapshot', header: { version: 1, id: key, createdAt: 0, isSeeded: false }, cursor: historyTesting && key === 'one' ? 10 : -1,
       records: historyTesting && key === 'one' ? [{ type: 'event', event: { type: 'turn/start', seq: 10, time: 1, data: { turn: 1 } } }] : [], hasMore: historyTesting && key === 'one',
-      projections: { asOfSeq: -1, values: { agentPreset: 'standard' } }, assistantStream: { revision: 0 } };
+      projections: { asOfSeq: -1, values: { agentPreset: 'standard' } }, assistantStream: { revision: 0 }, ...(historyReplay.active && key === 'one' ? historyReplay.snapshot() : {}) };
     const abort = () => wake?.(); signal.addEventListener('abort', abort);
     try { while (!signal.aborted) { if (frames.length) yield frames.shift(); else await new Promise(resolve => { wake = resolve; }); } }
     finally { signal.removeEventListener('abort', abort); channels.delete(key); }
@@ -356,6 +362,11 @@ const client = { subscribe() { return () => {}; }, request(operation, onEvent, o
   }
   throw new Error(`Unexpected fixture operation: ${operation.method}`);
 }, async call(op, data) {
+  if (op === 'links.open') {
+    externalLinkCalls.push(data.url);
+    if (externalLinkFailure) throw Error(externalLinkFailure);
+    return nativeLinkClient ? nativeLinkClient.call(op, data) : {};
+  }
   if (op === 'appearance.settings') { appearanceNavigationCalls.push({ op, data }); return {}; }
   if (op === 'notifications.context') { readingContexts.push(data.sessionId); return {}; }
   if (op === 'notifications.status') return { status: 'listening' };
@@ -478,6 +489,19 @@ let cordisCards;
 let managementCapabilities;
 let releasePanelSelection, pendingPanelSelection, panelSelectionNotices;
 window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = desktopAppsReplay(model); }, ...factoryChecks(model), ...navigationChecks(model), ...composerChecks(model), checkRemoteInput, checkViewInputs: () => checkViewInputs(model), sidebarState: () => ({ selected: model.snapshot.selected, drafts: model.snapshot.drafts, prompts: sidebarPrompts }), inputDraft: () => model.getSnapshot().drafts[model.getSnapshot().selected], enable, disable: () => plugin.dispose(), select: id => model.select(id), emitTurn,
+  externalLinks: { calls: () => externalLinkCalls, fail: code => { externalLinkFailure = code; }, native: () => { nativeLinkClient = new RemoteClient(window.DSHMRemote); }, raw: data => nativeLinkClient.call('links.open', data) },
+  linkFile: () => model.documentFiles?.get(sessionFileAddress('two', 'links.md')),
+  legacyLinkPreview: text => {
+    const legacyModel = Object.assign(Object.create(model), { documentPreviews: undefined, files: { text: async () => text } });
+    root.render(<RemotePluginScope model={model}><RemoteFilePreview file={{ sessionId: 'two', path: 'legacy-links.md' }} model={legacyModel} onClose={() => {}}/></RemotePluginScope>);
+  },
+  linkToolTurn: () => {
+    const emit = (seq, type, data) => channels.get('two')({ type: 'event', event: { seq, time: seq, type, data, ...(type === 'tool/result' ? { surfaceOp: 'append' } : {}) } });
+    emit(5, 'turn/start', { turn: 2 }); emit(6, 'step/start', { turn: 2, step: 1 });
+    emit(7, 'tool/call', { turn: 2, step: 1, callId: 'link-read', name: 'read', arguments: '{"path":"links.md"}' });
+    emit(8, 'tool/result', { turn: 2, step: 1, message: { id: 'link-read-result', role: 'tool', source: { kind: 'tool', callId: 'link-read' }, content: [{ type: 'text', text: '[工具网页](https://example.com/tool)' }] } });
+    emit(9, 'step/end', { turn: 2, step: 1 }); emit(10, 'turn/end', { turn: 2, reason: { kind: 'completed' } });
+  },
   appearanceNavigationCalls: () => appearanceNavigationCalls,
   backNavigationProject: () => model.workspaces.replaceBaseline({ items: [
     { workspaceId: 'back-test', title: '返回验证项目', sessionIds: ['one'], path: '/fixture/back',
@@ -993,6 +1017,38 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
   shortenLineFile: () => { lineFileText = 'shortened file'; },
   emptyLineFile: () => { lineFileText = ''; },
   historyRequests: () => historyRequests.length,
+  longHistory: options => historyReplay.setup(options),
+  historyPlugin: async () => {
+    const plugin = model.ctx.plugin({ name: 'history-generic-state', inject: ['slots'], apply(ctx) {
+      ctx.slots.inject('conversation.input.overlay', () => ctx.slots.register({ name: 'conversation.input.overlay', id: 'history-state' }, () => {
+        const [count, setCount] = React.useState(0);
+        return <button data-testid="history-plugin-state" onClick={() => setCount(count + 1)}>plugin-state:{count}</button>;
+      }));
+    } });
+    await plugin.await();
+  },
+  longHistoryFail: value => { historyReplay.fail = value; },
+  longHistoryParagraphs: value => { historyReplay.paragraphs = value; },
+  // 专门验证输出面板的呈现预算；目录为固定输入，输出正文仍经过原Session事件与工具投影。
+  historyOutputRows: (sessionId, rows) => {
+    const snapshot = { rows: { [sessionId]: rows } };
+    model.jobs = { state: { getSnapshot: () => snapshot }, watchRows: () => () => {} };
+    model.publish();
+  },
+  longHistoryState: () => {
+    const binding = model.reference.binding, entries = binding.eventSource.getSnapshot().entries;
+    return { ...binding.session.getSnapshot().history, calls: historyReplay.calls,
+      first: entries[0]?.event.seq, last: entries.at(-1)?.event.seq,
+      liveRecords: (binding.history?.original ?? binding).eventSource.getSnapshot().entries.length,
+      groups: [...document.querySelectorAll('[data-history-group]')].map(node => node.dataset.historyGroup) };
+  },
+  longHistoryLive: () => { const first = historyReplay.latest + 1; historyReplay.latest += 5;
+    for (const frame of historyReplay.records(first, historyReplay.latest)) channels.get('one')(frame);
+  },
+  longHistoryReconnect: () => { const entries = historyReplay.snapshot();
+    // 生产会话的原可变事件窗口接收权威重连基线；不重建插件树或伪造审批结果。
+    const binding = model.reference.binding; (binding.history?.original ?? binding).eventSource.replace(entries.records, entries.hasMore);
+  },
   historyTesting: value => { historyTesting = value; },
   historyPage: page => historyReply({ ok: true, value: page }),
   historyReply: success => historyReply(success ? { ok: true, value: { records: [], hasMore: false } }
@@ -1257,14 +1313,15 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
   holdListRefresh: () => { listRefreshGate = new Promise(resolve => { releaseListRefresh = resolve; }); },
   releaseListRefresh: () => { releaseListRefresh(); listRefreshGate = undefined; },
   resolveSearch: (index, value) => searchRequests[index].resolve(value),
-  jobOutput: (id, finished) => {
+  jobOutput: (id, finished, text = '\u001b[32mRECORDED_JOB_OUTPUT\u001b[0m\n[status: completed]') => {
     const emit = (seq, type, data, extra = {}) => channels.get(id)({ type: 'event', event: { seq, time: 2000 + seq, type, data, ...extra } });
     if (!finished) {
       emit(0, 'turn/start', { turn: 2 }); emit(1, 'step/start', { turn: 2, step: 1 });
       emit(2, 'tool/call', { turn: 2, step: 1, callId: 'job-read', name: 'job_output', arguments: JSON.stringify({ job_id: 'live' }) });
     } else {
       emit(3, 'tool/result', { turn: 2, step: 1, message: { id: 'job-read-result', role: 'tool', source: { kind: 'tool', callId: 'job-read' },
-        content: [{ type: 'tool-result', content: [{ type: 'text', text: '\u001b[32mRECORDED_JOB_OUTPUT\u001b[0m\n[status: completed]' }] }] } }, { surfaceOp: 'append' });
+        content: ['0.2.1-alpha.2', '0.2.1-rc.2'].includes(DSHM_MOBILE_SDK_VERSION) ? [{ type: 'text', text }]
+          : [{ type: 'tool-result', content: [{ type: 'text', text }] }] } }, { surfaceOp: 'append' });
       emit(4, 'step/end', { turn: 2, step: 1 }); emit(5, 'turn/end', { turn: 2, reason: { kind: 'completed' } });
     }
   },

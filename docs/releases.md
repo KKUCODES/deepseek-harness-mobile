@@ -4,15 +4,15 @@
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.11 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.11/DSHM-0.1.0-preview.11.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.11)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
+直接下载 [DSHM 0.1.0-preview.12 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.12/DSHM-0.1.0-preview.12.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.12)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，可覆盖 preview.1–preview.10及本地preview.11-dev/code13。不要卸载旧版来更新，以免删除本地数据。preview.8起可在App内检查新版；更早的公开版没有更新入口，请手动下载本版覆盖安装。普通聊天使用你自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，配套电脑插件仍为 `0.1.87-latest.0`；本版不要求额外升级插件或中转。此前大响应分块仍要求中转包含提交 `94183d0`。
+当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，code15可覆盖preview.1–preview.11。不要卸载旧版来更新，以免删除本地数据。preview.8起可在App内检查新版；更早的公开版请手动下载覆盖安装。普通聊天使用自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，配套电脑插件仍为 `0.1.87-latest.0`；本版不要求额外升级插件或中转。此前大响应分块仍要求中转包含提交 `94183d0`。
 
 ## 自动构建与发布
 
-`0.1.0-preview.11`（versionCode 14）加入[统一更新界面与一键重启](./integration/unified-updates-current.md)：资源下载后保存草稿并自动重启，恢复内置页也无需系统强停。保留[签名资源加载器](./integration/web-resource-updates-current.md)、返回手势与此前能力。身份与签名保持，历史发行及附件不覆盖。本次只发布APK，不投放r2。
+`0.1.0-preview.12`（versionCode 15）加入[长聊天有界窗口与故障恢复](./integration/remote-history-window-current.md)、[Remote聊天和Markdown预览网页外链](./integration/remote-links-diagnosis.md)，保留[统一更新与一键重启](./integration/unified-updates-current.md)、[签名资源加载器](./integration/web-resource-updates-current.md)和此前能力。身份与签名保持，不覆盖历史发行及附件。只发布APK，不投放r2。云端签名和公开下载的实际结果补充在下方验收记录。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。

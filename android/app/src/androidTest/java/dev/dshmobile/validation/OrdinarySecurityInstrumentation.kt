@@ -23,9 +23,11 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
     private var providersOnly = false
     private var compatibilityOnly = false
     private var updatesOnly = false
+    private var linksOnly = false
     private var webUpdatesOnly = false
     private var webUpdateLive: String? = null
     override fun onCreate(arguments: Bundle?) {
+        linksOnly = arguments?.getString("linksOnly") == "true"
         updatesOnly = arguments?.getString("updatesOnly") == "true"
         webUpdatesOnly = arguments?.getString("webUpdatesOnly") == "true"
         webUpdateLive = arguments?.getString("webUpdateLive")
@@ -37,6 +39,17 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
         super.onCreate(arguments); noticeEpochSession = arguments?.getString("noticeEpochSession"); notificationsOnly = arguments?.getString("notificationsOnly") == "true"; appearanceOnly = arguments?.getString("appearanceOnly") == "true"; computerKeyOnly = arguments?.getString("computerKeyOnly") == "true"; resourcesOnly = arguments?.getString("resourcesOnly") == "true"; saveOnly = arguments?.getString("saveOnly") == "true"; saveWriteOnly = arguments?.getString("saveWriteOnly") == "true"; saveDeathOnly = arguments?.getString("saveDeathOnly") == "true"; shareDeathOnly = arguments?.getString("shareDeathOnly") == "true"; shareOnly = arguments?.getString("shareOnly") == "true"; start()
     }
     override fun onStart() {
+        if (linksOnly) {
+            val result = Bundle()
+            try {
+                var failure: Exception? = null
+                runOnMainSync { try { ExternalLinkChecks.run() } catch (error: Exception) { failure = error } }
+                failure?.let { throw it }
+                result.putString("result", "PASS: HTTP(S) URLs, rejected protocols and credentials, external browser Intent, missing browser and denied launch"); finish(Activity.RESULT_OK, result)
+            }
+            catch (error: Exception) { result.putString("result", "FAIL: external links"); result.putString("detail", error.message); result.putString("location", error.stackTrace.take(3).joinToString()); finish(Activity.RESULT_CANCELED, result) }
+            return
+        }
         webUpdateLive?.let { mode ->
             val result = Bundle()
             try { WebUpdateLiveChecks.run(this, mode); result.putString("result", "PASS: resource $mode") ; finish(Activity.RESULT_OK, result) }

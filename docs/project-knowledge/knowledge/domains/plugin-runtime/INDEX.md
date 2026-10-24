@@ -1,5 +1,7 @@
 # 普通聊天插件验证
 
+Remote 长聊天本地实现从[有界窗口与恢复](../../../../integration/remote-history-window-current.md)进入，数据和插件控制状态分离；连续历史和Android故障验收范围见该文档。
+
 固定官方alpha.2的[接口/历史依赖/交付入口审查](../../../../../../plugin/compatibility/latest-upstream/official-interface-audit.md)：只读官方源码与手机自身渲染适配分别记录；手机候选使用专用构建命令，默认命令仍为旧基线。插件0.1.80已清理两个遗留预设管理协议声明，实际管理请求在转发前拒绝，核心真实Android复验通过。
 
 - 状态：技术验证中，正式手机应用未交付。
