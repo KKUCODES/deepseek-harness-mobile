@@ -2,7 +2,12 @@ import React, { useSyncExternalStore } from 'react';
 import { RemotePanelMemory } from '../../src/remote-panel-memory.mjs';
 
 // 仅隔离测试RemoteApp的装配/释放时序；不是鉴权、Host或实际网络验收，不进入APK。
-const state = { models: [], next: window.initialRemotePlan ?? '', calls: [], clients: [] };
+const state = { models: [], next: window.initialRemotePlan ?? '', calls: [], clients: [], paired: !window.initialPairing, approval: window.initialPairing ? 'pending' : 'active' };
+const pairInfo = () => ({ paired: state.paired, origin: 'https://fixture.invalid', deviceId: 'fixture', fingerprint: 'fixture' });
+const pairLink = 'https://fixture.invalid/pair#key=' + 'A'.repeat(43);
+const diagnosticRecords = [];
+const socketDiagnostic = { id: '941861a0-b7bf-42ad-9837-c47e7f886bc8', at: Date.now(), source: 'remote', phase: 'websocket', code: 'http_404', httpStatus: 404,
+  exceptions: [{ type: 'java.net.ProtocolException', frames: ['at okhttp3.internal.ws.RealWebSocket.checkUpgradeSuccess(RealWebSocket.kt:224)'] }] };
 export class RemoteClient {
   connected = false;
   listeners = new Set();
@@ -11,8 +16,31 @@ export class RemoteClient {
   subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   async call(op, data = {}) {
     state.calls.push(op);
-    if (op === 'binding.info') return { paired: true, origin: 'http://fixture.invalid', deviceId: 'fixture', fingerprint: 'fixture' };
-    if (op === 'binding.status') return { status: 'active' };
+    if (op === 'diagnostics.read') return { records: diagnosticRecords.map(record => ({ ...record })) };
+    if (op === 'diagnostics.record') {
+      const record = { id: crypto.randomUUID(), at: Date.now(), source: 'remote', code: data.code, phase: data.phase,
+        exceptions: data.stack.length ? [{ type: 'JavaScriptError', frames: data.stack }] : [] };
+      diagnosticRecords.unshift(record); return { record };
+    }
+    if (op === 'diagnostics.recovered') { for (const record of diagnosticRecords) record.resolvedAt ??= Date.now(); return {}; }
+    if (op === 'clipboard.write') { state.copied = data.text; return {}; }
+    if (op === 'binding.info') return pairInfo();
+    if (op === 'binding.status') return { status: state.approval };
+    if (op === 'binding.claim') {
+      if (state.claimError) throw Error(state.claimError);
+      state.paired = true; return pairInfo();
+    }
+    if (op === 'binding.forget') { state.paired = false; return {}; }
+    if (op === 'binding.paste') {
+      if (state.pasteHold) await new Promise(resolve => { state.releasePaste = resolve; });
+      if (state.pasteError) throw Error(state.pasteError);
+      return { link: pairLink };
+    }
+    if (op === 'binding.scan') {
+      state.scanSource = data.source;
+      if (state.scanError) throw Error(state.scanError);
+      return { link: pairLink };
+    }
     if (op === 'notifications.take') {
       const target = state.notification ?? {};
       if (state.notificationMode === 'take-hold') await new Promise(resolve => { state.releaseTake = resolve; });
@@ -22,7 +50,13 @@ export class RemoteClient {
       (state.acknowledged ??= []).push(data.id);
       if (state.notification?.id === data.id) state.notification = null;
     }
-    if (op === 'socket.connect') { this.connected = true; this.publish({ type: 'ready' }); }
+    if (op === 'socket.connect') {
+      if (state.next === 'socket-404') {
+        this.connected = false; if (!diagnosticRecords.includes(socketDiagnostic)) diagnosticRecords.unshift(socketDiagnostic);
+        this.publish({ type: 'closed', diagnostic: socketDiagnostic }); return {};
+      }
+      this.connected = true; this.publish({ type: 'ready' });
+    }
     return {};
   }
   async disconnect() { this.connected = false; this.publish({ type: 'closed', reason: 'user_disconnect' }); }
@@ -41,6 +75,11 @@ export class RemoteModel {
   subscribe = listener => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
   publish(patch) { this.snapshot = { ...this.snapshot, ...patch }; for (const listener of this.listeners) listener(); }
   async start() {
+    if (this.plan === 'hold-read' || this.plan === 'read-error') {
+      this.publish({ connectionState: 'connected' });
+      if (this.plan === 'read-error') throw Error('request_timeout_outcome_unknown');
+      await new Promise(resolve => { state.finishRead = resolve; });
+    }
     if (['unsupported_remote_version', 'unsupported_dsh_version'].includes(this.plan)) throw Error(this.plan);
     if (this.plan === 'fail') throw Error('remote_bundle_unavailable');
     if (this.plan === 'host_offline') throw Error('host_offline');
@@ -84,7 +123,16 @@ export const Surface = ({ title, children }) => <section role="dialog" aria-labe
 export const IconChevronLeftOutline14 = () => null;
 export const IconCloseOutline16 = () => null;
 export const IconEllipsisOutline16 = () => null;
+export const IconChevronRightOutline14 = () => null;
 window.fixture = {
+  approve() { state.approval = 'active'; },
+  readReady() { state.finishRead(); },
+  paste(hold, error) { state.pasteHold = hold; state.pasteError = error; },
+  releasePaste() { state.releasePaste(); },
+  scanError(value) { state.scanError = value; },
+  claimError(value) { state.claimError = value; },
+  diagnostics() { return { records: diagnosticRecords, copied: state.copied }; },
+  recoverSocket() { state.next = ''; },
   seed() {
     const model = state.models.at(-1);
     model.publish({ selected: 'test', drafts: { test: '保留草稿' },

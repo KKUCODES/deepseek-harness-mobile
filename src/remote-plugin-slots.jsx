@@ -1,7 +1,10 @@
 import { isProfileDshVersion } from './remote-dsh-version.mjs';
+import { MobileInterfacePlugins, REMOTE_HOME_SLOT } from './mobile-interface-plugins.mjs';
+import { phonePluginsFor, PhonePluginHost } from './phone-plugins.mjs';
 import { RemoteMarkdownLinks } from './remote-markdown-links.jsx';
 import { RemotePagedNode } from './ui/RemotePagedNode.jsx';
 import { RemoteErrorBoundary } from './ui/RemoteRecovery.jsx';
+import './ui/system/system.css';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { SlotRegistry } from '../../deepseek-harness/packages/client/ui-renderer/src/client/registry.ts';
 import { createSlotRenderer } from '../../deepseek-harness/packages/client/ui-renderer/src/client/scoped-slots.tsx';
@@ -160,6 +163,8 @@ class MobileSlotRegistry extends SlotRegistry {
     if (id === '@deepseek-ai/dsh-client-ui-message-feedback' && options.name === 'conversation.chat.assistant-actions' && options.id === 'feedback') {
       options = syncFeedbackSlot(options, this.model);
     }
+    // 页面槽承载手机布局，不按桌面局部组件缩放；规则按槽类型，不能按插件包名特化。
+    if (options.name === REMOTE_HOME_SLOT) return register(options, component);
     if (!id || this.ctx.fiber === this.rootOwner || isRemoteSidebarComposition(options, component)
       || isRemoteDocumentComposition(options, component)) return register(options, component);
     if (id === '@deepseek-ai/dsh-client-ui-agent-preset' && options.name === 'conversation.hero.agentPreset') {
@@ -367,6 +372,7 @@ export function installRemotePluginSlots(model) {
     } };
   } });
   slots.register({ name: 'root', children: {
+    [REMOTE_HOME_SLOT]: { kind: 'single', scope: 'root' },
     'dshm.chat.node': { kind: 'single', scope: 'session' },
     'dshm.chat.running': { kind: 'single', scope: 'session' },
     'dshm.sidebar': { kind: 'single', scope: 'session' },
@@ -406,6 +412,23 @@ export function installRemotePluginSlots(model) {
     ...(chatPresentation ? { inject: () => ({ hooks: { presentation: chatPresentation } }) } : {}),
   }, MobileChatNodeSeat);
   slots.register({ name: 'dshm.chat.running', locale: chatNS, inject: () => ({ model }) }, MobileChatRunningStatus);
+  const registry = phonePluginsFor('remote');
+  const controller = model.interfacePlugins = new MobileInterfacePlugins(ctx, () => registry.catalog, { autoStart: false });
+  const runtime = model.interfaceHost = new PhonePluginHost(registry, entry => async enabled => {
+    if (entry.group !== REMOTE_HOME_SLOT) throw Error('incompatible');
+    if (enabled) {
+      await controller.select(entry.id);
+      const state = controller.getSnapshot();
+      if (state.status !== 'active') throw Error(state.error ?? 'load');
+    } else if (controller.getSnapshot().selected === entry.id) await controller.select(null);
+  });
+  const offInterface = controller.subscribe(() => {
+    const state = controller.getSnapshot();
+    if (state.status === 'failed' && state.selected) void runtime.fail(state.selected, state.error ?? 'render').catch(() => {});
+  });
+  void runtime.ready.catch(() => controller.fail('storage'));
+  ctx.effect(() => () => { offInterface(); return runtime.dispose(); }, 'DSHM: remote plugin runtime');
+  // 可选界面不能阻塞 Remote 核心就绪；加载期间由同一首页契约提供默认界面。
   const ready = Promise.all([installRemoteInteractionPlugins(model), ...(configForms ? [configForms.await()] : [])]);
   return { layout, locale, imageLoader, ready, render: props => slots.renderSlot('root', { model, ...props, rootModel: model }) };
 }
@@ -649,6 +672,23 @@ export function RemotePluginScope({ model, children }) {
   const reference = state.session ? model.reference : undefined;
   return <RemoteMarkdownLinks model={model}>{model.pluginSlots.render({ reference, children, model })}</RemoteMarkdownLinks>;
 }
+
+/** 页面扩展与会话/审批宿主同级；外观切换只替换首页，不重建会话作用域。 */
+export function RemoteHomeExtension({ home, fallback }) {
+  const host = useContext(PluginSlots);
+  const controller = host?.model.interfacePlugins;
+  const state = useSyncExternalStore(controller?.subscribe ?? emptySubscribe, controller?.getSnapshot ?? defaultInterface);
+  let content = fallback;
+  if (host && state.status === 'active') {
+    const { SessionProvider, renderSlot } = host;
+    content = <SessionProvider session={undefined} empty={() => renderSlot(REMOTE_HOME_SLOT, { home }, { fallback })}/>;
+  }
+  // 页面槽共享手机色板；电脑皮肤的全局别名仍保留在聊天、局部插槽和面板中。
+  return <div className="dshm-phone-colors dshm-phone-surface" data-dshm-surface="remote.home">{content}</div>;
+}
+const emptySubscribe = () => () => {};
+const defaultInterfaceValue = { status: 'default' };
+const defaultInterface = () => defaultInterfaceValue;
 
 /** 每个当前会话只挂载一次；只读子会话也需要原插件的反馈弹窗。 */
 export function RemoteInputExtensions() {

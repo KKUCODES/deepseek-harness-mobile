@@ -10,6 +10,12 @@ object RemotePairLinkChecks {
         check(RemotePairLink.parse(http)?.canonical == http)
         val custom = "dshm://pair?server=" + URLEncoder.encode("http://127.0.0.1:8787", "UTF-8") + "#$fragment"
         check(RemotePairLink.parse(custom)?.canonical == http)
+        check(RemotePairClipboard.read(android.content.ClipData.newPlainText("pair", http)) == http)
+        check(RemotePairClipboard.read(android.content.ClipData.newPlainText("pair", custom)) == http)
+        check(RemotePairClipboard.read(null) == null)
+        check(RemotePairClipboard.read(android.content.ClipData.newPlainText("private", "unrelated clipboard content")) == null)
+        check(RemotePairClipboard.read(android.content.ClipData.newPlainText("large", "A".repeat(4097))) == null)
+        check(RemotePairClipboard.read(android.content.ClipData.newRawUri("uri", android.net.Uri.parse("content://private/item"))) == null)
         check(RemotePairLink.parse("https://example.com/pair#$fragment")?.origin == "https://example.com")
         check(RemotePairLink.parse("http://[::1]:8787/pair#$fragment")?.origin == "http://[::1]:8787")
         listOf("https://user:pass@example.com/pair#$fragment", "file:///pair#$fragment", "https://example.com/p%61ir#$fragment",

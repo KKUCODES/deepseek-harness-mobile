@@ -1,0 +1,11 @@
+{
+  "name": "@dshm/plugin-sdk",
+  "version": "0.1.0",
+  "description": "Build independently installable DSHM Remote home plugins",
+  "type": "module",
+  "bin": { "dshm-plugin-build": "./build.mjs" },
+  "exports": { ".": { "types": "./index.d.ts" }, "./build": "./build.mjs" },
+  "files": ["build.mjs", "package.mjs", "index.d.ts", "README.md"],
+  "dependencies": { "esbuild": "0.25.12" },
+  "engines": { "node": ">=20" }
+}

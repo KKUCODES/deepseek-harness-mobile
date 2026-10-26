@@ -6,6 +6,12 @@
 
 [返回项目首页](../README.md) · [使用指南](./usage.md) · [知识库总目录](./project-knowledge/catalog.md)
 
+手机界面扩展从[外部插件开发指南](./plugins/development.md)、[Remote 首页公开 API](./plugins/remote-home-api.md)与[独立示例包](../packages/remote-home-design/README.md)进入。用 SDK 构建完整 `.dshm-plugin` 文件，从手机插件页安装/更新；不随插件重打APK，也不依赖此前独立 npm 适配分支。当前为本地开发预览，公开旧APK不具备外部安装器。
+
+源码[preinstalled-plugins](../preinstalled-plugins/README.md)中的完整包作为APK资产预装；空目录不装，错误包或重复ID使构建失败。Gradle默认读取此目录，可用`-PpreinstalledPluginsDir=<路径>`构建其他发行组合。目录切换会同步删除上次残留包，不影响手机上已经安装的副本。首次安装、用户卸载与恢复规则见[预装专题](./integration/preinstalled-phone-plugins-current.md)。
+
+普通聊天与界面插件共用[手机插件目录、管理器和运行契约](./integration/phone-plugin-management-current.md)。新增条目声明宿主、可选互斥组和配置能力；管理页不按插件名分支。运行成功必须由实际宿主激活确认。
+
 公开自动构建从[GitHub Actions 与下载说明](./releases.md)进入；下文保留原本地候选环境的构建方法。CI 自动安装锁定的已发布 SDK 和固定只读源码，不需要准备本机验收材料。
 
 ## 环境准备

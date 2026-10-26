@@ -1,5 +1,25 @@
 # 普通聊天插件验证
 
+2026-10-26：[插件Session历史读取兼容](../../../../integration/remote-history-api-current.md)。公开loadOlder/loadThrough与内部严格分页分层；两SDK载体/断层/真实插件按钮/手机重试专项、各24批自动加载和596项Node、全量插槽脚本通过。未安装发布。维护：手机端维护者；KKC-107。
+
+2026-10-26：[历史分页负面用例与公共API错误行为](../../../../integration/remote-history-gap-diagnosis.md)。原脚本拒绝未捕获及手机loadOlder比官方多抛异常均已复现；三基线最小回放、两SDK连续24批与重试通过。本轮只诊断，接口兼容修复待实施。维护：手机端维护者；KKC-106。
+
+2026-10-26：[手机主题/弹窗色板与独立首页原SVG修复](../../../../integration/remote-theme-current.md)。公开色板与组件行为隔离，保留插件焦点样式；公共SDK按原字节base64封装SVG。首页0.3.1与原签名非调试code21已在MuMu真实连接验证，未发布。维护：手机端维护者；KKC-105。下方KKC-104保留修复前原因。
+
+2026-10-26：[Remote 主题与图标诊断](../../../../integration/remote-theme-diagnosis.md)。手机浅色偏好与电脑公共色板发生覆盖，圆按钮混合两种主题依据；Figma资产拆分回归亦已核验。仅诊断，修复待实施，临时探测已恢复。维护：手机端维护者；KKC-104。
+
+2026-10-26：[预装包目录与恢复安装](../../../../integration/preinstalled-phone-plugins-current.md)、[目录规则](../../../../../preinstalled-plugins/README.md)。预装与外部包共用安装和加载，首次仅初始化无记录ID，持久保留卸载墓碑与用户版本；真实APK升级/恢复/外部更新及最终非调试MuMu通过。维护：手机端维护者；KKC-103。下方“不含首页APK实现”属于KKC-102外部分发阶段，当前改为APK携带完整独立包，宿主JS仍不导入首页源码。
+
+2026-10-26：[外部手机首页插件与固定APK验收](../../../../integration/external-phone-plugins-current.md)、[独立开发指南](../../../../plugins/development.md)、[SDK](../../../../../packages/plugin-sdk/README.md)与[API v1](../../../../plugins/remote-home-api.md)。真实文件选择/确认、v1→v2独立更新、启停/实际卸载、故障默认回退、第二插件与重启重连均有证据；通用停止失败状态已修复。本地开发预览未发布，维护：手机端维护者；KKC-102。下方审计/随包实现保持历史日期与范围。
+
+2026-10-25审计快照：[66项产品能力、承诺检查及优先级](../../../../integration/product-capability-audit-2026-10-25.md)。当时确认统一管理器在停止失败时显示已停用/未安装，后续状态修复见上方KKC-102；不否定下方正常流程通过的历史证据。维护：手机端维护者；任务KKC-101。
+
+2026-10-25当前管理机制：[统一目录、安装/卸载/启停、配置声明、真实运行状态与原生记录](../../../../integration/phone-plugin-management-current.md)，任务KKC-100；界面加载器仅负责加载/释放，旧KKC-99的双状态机制已被替代。维护：手机端维护者。
+
+2026-10-25：手机插件页统一管理「Remote 新版首页」，移除Remote二级菜单；跨来源共享偏好、旧选择迁移、真实状态与失败重试，586项Node、两版页面及MuMu真实连接验证见[KKC-99专题](../../../../integration/mobile-interface-current.md#手机插件页统一管理2026-10-25)。维护：手机端维护者。
+
+Remote 首页独立界面扩展：[宿主与独立包边界及验证](../../../../integration/mobile-interface-current.md)、[公开首页 API v1](../../../../plugins/remote-home-api.md)。本地实现，默认界面兜底；不等于通用 npm 安装器。
+
 Remote 长聊天本地实现从[有界窗口与恢复](../../../../integration/remote-history-window-current.md)进入，数据和插件控制状态分离；连续历史和Android故障验收范围见该文档。
 
 preview.13已公开支持[触顶自动加载](../../../../integration/remote-history-window-current.md#触顶自动加载)：主聊天与旁栏共用，保留原锚点/预算及手动兜底，云端签名与公开下载验收由专题记录。

@@ -22,8 +22,10 @@ import { checkDesktopApps } from './check-desktop-apps.mjs';
 import { checkManagementStatus } from './check-management-status.mjs';
 import { checkRemoteMotion } from './check-remote-motion.mjs';
 import { checkRemoteBackNavigation } from './check-remote-back-navigation.mjs';
+import { checkRemoteHomeDesign } from './check-remote-home-design.mjs';
 import { checkRemoteLinks } from './check-remote-links.mjs';
 import { checkRemoteHistoryWindow } from './check-remote-history-window.mjs';
+import { checkRemoteHistoryContract } from './check-remote-history-contract.mjs';
 import { checkRemoteToolLayout } from './check-remote-tool-layout.mjs';
 import { checkRemoteFileLayout } from './check-remote-file-layout.mjs';
 import { checkRemoteFileListLayout } from './check-remote-file-list-layout.mjs';
@@ -78,8 +80,10 @@ const forkActionsOnly = process.argv.includes('--fork-actions');
 const backNavigationOnly = process.argv.includes('--back-navigation');
 const linksOnly = process.argv.includes('--links');
 const historyOnly = process.argv.includes('--history-window');
-const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly || linksOnly || historyOnly;
-const layoutSdk = (backNavigationOnly || linksOnly || historyOnly) && !process.argv.includes('--official-alpha2')
+const historyContractOnly = process.argv.includes('--history-contracts');
+const designHomeOnly = process.argv.includes('--design-home');
+const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly || linksOnly || historyOnly || historyContractOnly || designHomeOnly;
+const layoutSdk = (backNavigationOnly || linksOnly || historyOnly || historyContractOnly || designHomeOnly) && !process.argv.includes('--official-alpha2')
   ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-rc.2' }) : layoutOnly && process.argv.includes('--official-alpha2')
   ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-alpha.2' }) : null;
 const documentOnly = process.argv.includes('--documents');
@@ -99,7 +103,7 @@ const exportOnly = process.argv.includes('--export-status');
 const managementOnly = process.argv.includes('--management-status');
 const directory = resolve(root, 'artifacts/tests/remote-plugin-slots');
 await mkdir(directory, { recursive: true });
-if (!linksOnly && !historyOnly) await prepareClientEntries();
+if (!linksOnly && !historyOnly && !historyContractOnly) await prepareClientEntries();
 await build({ absWorkingDir: root,
   ...(layoutOnly ? { stdin: { contents: "import {model} from './tests/fixtures/remote-plugin-slots.jsx'; import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css'; import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';" + (builtinPanelsOnly ? "import {builtinPanelFixture} from './tests/fixtures/builtin-panel-layout.jsx'; Object.assign(window.fixture,builtinPanelFixture(model));" : ''), resolveDir: root, loader: 'jsx' } }
     : { entryPoints: ['tests/fixtures/remote-plugin-slots.jsx'] }),
@@ -151,7 +155,13 @@ try {
     await route.fulfill({ status: 200, contentType: 'text/javascript', body });
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : builtinPanelsOnly ? '?documents&builtin' : fileListOnly ? '?documents&files' : fileLayoutOnly || documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly || linksOnly ? '?documents' : ''}`);
-  if (historyOnly) {
+  if (historyContractOnly) {
+    await page.waitForFunction(() => !!window.fixture);
+    report.historyContract = await checkRemoteHistoryContract(page, [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css'].map(file => resolve(root, file)));
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, `artifacts/history-contract-${layoutSdk.version}.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (historyOnly) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
     report.history = await checkRemoteHistoryWindow(page);
     assert.deepEqual(report.errors, []);
@@ -162,6 +172,12 @@ try {
     report.links = await checkRemoteLinks(page);
     assert.deepEqual(report.errors, []);
     await writeFile(resolve(root, `artifacts/remote-links-${layoutSdk.version}-web.json`), JSON.stringify(report, null, 2));
+    console.log(JSON.stringify(report));
+  } else if (designHomeOnly) {
+    for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
+    report.designHome = await checkRemoteHomeDesign(page, resolve(root, 'artifacts/tests/remote-design'));
+    assert.deepEqual(report.errors, []);
+    await writeFile(resolve(root, 'artifacts/tests/remote-design/home-report.json'), JSON.stringify(report, null, 2));
     console.log(JSON.stringify(report));
   } else if (backNavigationOnly) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
@@ -492,10 +508,11 @@ try {
   await page.getByRole('alert').filter({ hasText: '未能加载更早的记录，请重试。' }).waitFor();
   assert.equal(await earlier.isEnabled(), true);
   assert.equal(await historyInput.innerText(), '历史读取失败保留草稿');
-  const pluginHistory = page.evaluate(() => window.fixture.conversationLoadOlder());
+  const pluginHistory = page.evaluate(() => window.fixture.conversationLoadOlder()).then(
+    value => ({ completed: true, value }), error => ({ completed: false, message: error.message }));
   await page.waitForFunction(() => window.fixture.historyRequests() === 2);
   await page.evaluate(() => window.fixture.historyPage({ records: [{ type: 'event', event: { type: 'turn/start', seq: 5, time: 5, data: { turn: 0 } } }], hasMore: false }));
-  await pluginHistory;
+  assert.deepEqual(await pluginHistory, { completed: true, value: undefined }, '公开插件读取失败也完成，由历史状态提示而非抛出');
   await page.getByRole('alert').filter({ hasText: '未能加载更早的记录，请重试。' }).waitFor();
   assert.equal(await earlier.isEnabled(), true, '断层不能隐藏分页入口');
   await page.evaluate(() => window.fixture.jobs('one', [{ id: 'history-job', kind: 'pwsh', label: '历史读取回放', status: 'completed', startedAt: 0 }]));
@@ -540,10 +557,10 @@ try {
   await page.getByRole('button', { name: '刷新会话', exact: true }).click();
   await page.getByRole('button', { name: '关闭窗口', exact: true }).click();
   await page.getByRole('dialog', { name: 'Remote 选项', exact: true }).waitFor({ state: 'detached' });
-  assert.ok(await page.locator('.remote-session-row').count() > 0);
-  assert.ok((await page.locator('.remote-session-row').evaluateAll(rows => rows.map(row => row.disabled))).every(Boolean));
+  assert.ok(await page.locator('.remote-session-row, [data-remote-home-session]').count() > 0);
+  assert.ok((await page.locator('.remote-session-row, [data-remote-home-session]').evaluateAll(rows => rows.map(row => row.disabled))).every(Boolean));
   await page.evaluate(() => window.fixture.releaseListRefresh());
-  await page.waitForFunction(() => [...document.querySelectorAll('.remote-session-row')].every(row => !row.disabled));
+  await page.waitForFunction(() => [...document.querySelectorAll('.remote-session-row, [data-remote-home-session]')].every(row => !row.disabled));
   report.listRefreshBusy = { disabledDuringRefresh: true, enabledAfterRefresh: true };
   const searchInput = page.getByRole('textbox', { name: '搜索远程聊天', exact: true });
   await searchInput.fill('older');
@@ -562,7 +579,7 @@ try {
   await page.waitForFunction(() => window.fixture.searchQueries().length === 3);
   await page.evaluate(() => window.fixture.resolveSearch(2, { ok: false, error: { code: 'fixture/search', message: 'fixture failure' } }));
   await page.getByRole('button', { name: '重新搜索', exact: true }).waitFor();
-  assert.equal(await page.locator('.remote-session-row').count(), 1);
+  assert.equal(await page.locator('.remote-session-row, [data-remote-home-session]').count(), 1);
   await page.getByRole('button', { name: '重新搜索', exact: true }).click();
   await page.waitForFunction(() => window.fixture.searchQueries().length === 4);
   await page.evaluate(() => window.fixture.resolveSearch(3, { ok: true, value: { items: [], hasMore: false } }));
@@ -577,12 +594,12 @@ try {
   await searchInput.fill('');
   await page.evaluate(() => window.fixture.resolveSearch(5, { ok: true, value: { items: [{ sessionId: 'one', snippet: 'cancel 迟到结果' }], hasMore: false } }));
   assert.equal(await page.locator('.remote-search-snippet').count(), 0);
-  assert.equal(await page.locator('.remote-session-row').count(), 2);
+  assert.equal(await page.locator('.remote-session-row, [data-remote-home-session]').count(), 2);
   await searchInput.fill('one');
   await page.waitForFunction(() => window.fixture.searchQueries().length === 7);
   await page.evaluate(() => window.fixture.resolveSearch(6, { ok: false, error: { code: 'gateway/internal', message: 'session search failed: SessionQueryError: session search is disabled: this deployment configures the session-query index with openAt "never"' } }));
   await page.getByText('电脑尚未开启聊天内容搜索，当前仅搜索标题。', { exact: true }).waitFor();
-  assert.equal(await page.locator('.remote-session-row').count(), 1);
+  assert.equal(await page.locator('.remote-session-row, [data-remote-home-session]').count(), 1);
   await searchInput.fill('');
   await searchInput.fill('bounded');
   await page.waitForFunction(() => window.fixture.searchQueries().length === 8);
@@ -1252,7 +1269,7 @@ try {
   assert.equal(await page.locator('style[data-plugin="@fixture/partial"]').count(), 0);
   assert.equal(await page.evaluate(() => typeof window.__ModuleLoader__), 'undefined');
   await page.evaluate(() => window.fixture.forgetDraftBinding());
-  await page.getByRole('heading', { name: '等待电脑批准', exact: true }).waitFor();
+  await page.getByTestId('remote-state').filter({ hasText: '等待批准' }).waitFor();
   await page.getByRole('button', { name: '连接选项', exact: true }).click();
   await page.getByText('移除本机绑定', { exact: true }).click();
   assert.equal((await page.evaluate(() => window.fixture.forgetState())).forgotten, false);

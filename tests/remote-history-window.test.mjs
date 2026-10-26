@@ -72,6 +72,51 @@ test('读取失败保留窗口，重试可继续，发送和控制仍交给原 S
   assert.equal(f.history.session.cancel(), 'cancelled'); f.dispose();
 });
 
+for (const method of ['loadOlder', 'loadThrough']) {
+  test(`公开${method}保留官方失败行为，错误状态/窗口/控制与有效重试仍保留`, async () => {
+    const f = fixture(), originalRead = f.history.read;
+    const read = () => method === 'loadOlder' ? f.history.session.loadOlder() : f.history.session.loadThrough(50);
+    try {
+      for (const failure of ['remote', 'throw', 'discontinuous']) {
+        const before = f.history.feed.getSnapshot();
+        f.history.read = async () => {
+          if (failure === 'throw') throw Error('transport failed');
+          if (failure === 'remote') return { ok: false, error: Error('remote failed') };
+          return { ok: true, value: { records: method === 'loadOlder' ? records(90, 9) : [records(0, 1)[0], records(2, 1)[0]], hasMore: true } };
+        };
+        assert.equal(await read(), undefined, '官方公开读取失败也应完成，不向插件抛出');
+        assert.equal(f.history.feed.getSnapshot(), before, '坏页不替换原窗口');
+        const state = f.history.getSnapshot();
+        assert.equal(state.loadingOlder, false);
+        assert.equal(state.hasMore, true);
+        assert.equal(state.history.error, '未能加载更早的记录，请重试。');
+        assert.equal(state.running, true);
+        assert.deepEqual(state.pendingSubmissions, [{ requestId: 'pending' }]);
+        assert.equal(f.history.session.projections, f.projections);
+      }
+      f.history.read = originalRead;
+      await read();
+      assert.equal(f.history.getSnapshot().history.error, null);
+      assert.ok(f.history.feed.getSnapshot().entries[0].event.seq < 100, '同一接口可重试恢复');
+    } finally { f.dispose(); }
+  });
+}
+
+test('公开读取完成不代表坏页成功，内部严格读取仍拒绝断层且可重试', async () => {
+  const f = fixture(), originalRead = f.history.read;
+  try {
+    const before = f.history.feed.getSnapshot();
+    f.history.read = async () => ({ ok: true, value: { records: records(90, 9), hasMore: true } });
+    await assert.rejects(f.history.older(), /remote_history_page_discontinuous/);
+    assert.equal(f.history.feed.getSnapshot(), before);
+    assert.equal(f.history.getSnapshot().loadingOlder, false);
+    f.history.read = originalRead;
+    await f.history.older();
+    assert.equal(f.history.getSnapshot().history.error, null);
+    assert.equal(f.history.feed.getSnapshot().entries[0].event.seq, 90);
+  } finally { f.dispose(); }
+});
+
 test('过时分页不覆盖返回最新或已释放窗口', async () => {
   const f = fixture(); let release; f.hold(new Promise(resolve => { release = resolve; }));
   const pending = f.history.older(); await new Promise(resolve => setTimeout(resolve, 5));

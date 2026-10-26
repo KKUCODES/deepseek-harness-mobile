@@ -4,15 +4,15 @@
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.13 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.13/DSHM-0.1.0-preview.13.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.13)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
+直接下载 [DSHM 0.1.0-preview.14 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.14/DSHM-0.1.0-preview.14.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.14)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，code16可覆盖preview.1–preview.12。不要卸载旧版来更新，以免删除本地数据。preview.8起可在App内检查新版；更早的公开版请手动下载覆盖安装。普通聊天使用自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，配套电脑插件仍为 `0.1.87-latest.0`；本版不要求额外升级插件或中转。此前大响应分块仍要求中转包含提交 `94183d0`。
+当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，code22可覆盖此前公开预览及本地code21候选。不要卸载旧版来更新，以免删除本地数据。preview.8起可在App内检查新版；更早的公开版请手动下载覆盖安装。普通聊天使用自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，配套电脑插件仍为 `0.1.87-latest.0`；本版不要求额外升级插件或中转。此前大响应分块仍要求中转包含提交 `94183d0`。
 
 ## 自动构建与发布
 
-`0.1.0-preview.13`（versionCode 16）加入[触顶自动加载历史](./integration/remote-history-window-current.md#触顶自动加载)，保留长聊天有界窗口、网页外链、[统一更新与一键重启](./integration/unified-updates-current.md)、[签名资源加载器](./integration/web-resource-updates-current.md)和此前能力。原身份与签名、历史发行及附件保持；仅发布APK，不投放r2。云端与公开下载核验通过，由[KKC-93](https://linear.app/kkcodes/issue/KKC-93)记录。
+`0.1.0-preview.14`（versionCode 22）纳入[独立与预装首页插件](./integration/preinstalled-phone-plugins-current.md)、[主题与原图标](./integration/remote-theme-current.md)和[插件历史接口兼容](./integration/remote-history-api-current.md)，保留触顶加载、长聊天窗口、网页外链、统一更新与签名资源加载器。完整内容见[双语发行说明](../ci/release-notes/0.1.0-preview.14.md)。仅发布APK，不投放r2；发行验证由[KKC-108](https://linear.app/kkcodes/issue/KKC-108)记录，结果见下方已核验范围。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。

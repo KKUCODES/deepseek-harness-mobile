@@ -1,0 +1,114 @@
+/* Figma 基础变量只作用于 DSHM 自有组件，不重置电脑插件和聊天正文。 */
+.dshm-design, .dshm-phone-colors {
+  --dshm-bg: #fff; --dshm-subtle: #eef1f7; --dshm-text: #15171e; --dshm-secondary: #626875; --dshm-muted: #68707c;
+  --dshm-border: #e2e6ee; --dshm-primary: #405de6; --dshm-primary-pressed: #324bc4; --dshm-on-primary: #fff;
+  --dshm-soft: #edf1ff; --dshm-success: #177245; --dshm-success-soft: #e9f6ee; --dshm-error: #b42318; --dshm-error-soft: #feeceb;
+  --dshm-disabled: #8a909b; --dshm-scrim: rgb(0 0 0 / 24%);
+  --dshm-space-4: 4px; --dshm-space-8: 8px; --dshm-space-12: 12px; --dshm-space-16: 16px; --dshm-space-20: 20px; --dshm-space-24: 24px;
+  --dshm-radius-8: 8px; --dshm-radius-12: 12px; --dshm-radius-16: 16px; --dshm-radius-20: 20px; --dshm-radius-24: 24px;
+  --dshm-type-caption: 400 12px/18px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --dshm-type-small: 400 14px/22px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --dshm-type-body: 400 16px/24px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --dshm-type-label: 500 16px/24px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --dshm-type-heading: 500 18px/28px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --dshm-type-section: 700 22px/32px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --dshm-type-title: 700 28px/40px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --dshm-shadow-dialog: 0 12px 32px rgb(15 23 41 / 16%);
+  color: var(--dshm-text); font: var(--dshm-type-body);
+}
+body[data-ds-dark-theme] .dshm-design, body[data-ds-dark-theme] .dshm-phone-colors {
+  --dshm-bg: #1b1d24; --dshm-subtle: #272b35; --dshm-text: #f3f5fa; --dshm-secondary: #a7aebd; --dshm-muted: #969fb2;
+  --dshm-border: #3b414f; --dshm-primary: #93a6ff; --dshm-primary-pressed: #b1beff; --dshm-on-primary: #111318;
+  --dshm-soft: #262f51; --dshm-success: #78d8a2; --dshm-success-soft: #203e31; --dshm-error: #ff958b; --dshm-error-soft: #4a282c;
+  --dshm-disabled: #969fb2; --dshm-scrim: rgb(0 0 0 / 48%);
+}
+:where(.dshm-design) :is(button, input) { font: inherit; }
+/* 兼容已有页面插件的 DSH 别名，只在手机页面槽内映射，不能改写 body 或插件全局样式。 */
+.dshm-phone-colors {
+  --dsw-alias-bg-base: var(--dshm-bg); --dsw-alias-bg-layer-1: var(--dshm-bg); --dsw-alias-bg-layer-2: var(--dshm-bg); --dsw-alias-bg-layer-3: var(--dshm-subtle);
+  --dsw-alias-label-primary: var(--dshm-text); --dsw-alias-label-secondary: var(--dshm-secondary); --dsw-alias-label-tertiary: var(--dshm-muted);
+  --dsw-alias-border-l1: var(--dshm-border); --dsw-alias-border-l2: var(--dshm-border); --dsw-alias-border-l3: var(--dshm-border);
+  --dsw-alias-interactive-bg-hover: var(--dshm-subtle); --dsw-alias-interactive-bg-active: var(--dshm-border);
+  color-scheme: light; color: var(--dshm-text); background: var(--dshm-bg);
+}
+body[data-ds-dark-theme] .dshm-phone-colors { color-scheme: dark; }
+.dshm-phone-surface { display: flex; flex: 1; min-height: 0; min-width: 0; flex-direction: column; }
+.dshm-design button { cursor: pointer; }
+.dshm-design button:disabled { cursor: default; }
+.dshm-design :is(button, input):focus-visible { outline: 2px solid var(--dshm-primary); outline-offset: 3px; }
+.dshm-icon { display: inline-block; flex: none; background: currentColor; mask-size: contain; mask-position: center; mask-repeat: no-repeat; -webkit-mask-size: contain; -webkit-mask-position: center; -webkit-mask-repeat: no-repeat; }
+.dshm-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--dshm-space-8); min-height: 52px; padding: var(--dshm-space-12) var(--dshm-space-16); border: 1px solid transparent; border-radius: var(--dshm-radius-16); font: var(--dshm-type-label); text-align: center; overflow-wrap: anywhere; }
+.dshm-button--primary { background: var(--dshm-primary); color: var(--dshm-on-primary); }
+.dshm-button--primary:active:not(:disabled) { background: var(--dshm-primary-pressed); }
+.dshm-button--secondary { background: var(--dshm-subtle); color: var(--dshm-text); }
+.dshm-button--ghost { background: transparent; color: var(--dshm-primary); }
+.dshm-button--destructive { background: var(--dshm-error); color: var(--dshm-bg); }
+.dshm-button:disabled { background: var(--dshm-subtle); color: var(--dshm-disabled); }
+.dshm-button[aria-busy="true"] { background: var(--dshm-primary); color: var(--dshm-on-primary); }
+.dshm-icon-button { display: inline-flex; justify-content: center; align-items: center; width: 44px; min-width: 44px; height: 44px; border: 0; padding: 8px; border-radius: 50%; background: var(--dshm-subtle); color: var(--dshm-text); }
+.dshm-icon-button:active { background: var(--dshm-border); }
+.dshm-app-bar { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; flex: none; min-height: 56px; gap: 12px; padding: 6px 16px; background: var(--dshm-bg); }
+.dshm-app-bar-slot { display: flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; }
+.dshm-app-bar h1 { margin: 0; font: var(--dshm-type-heading); letter-spacing: 0; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dshm-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.dshm-field-label { color: var(--dshm-secondary); font: var(--dshm-type-caption); }
+.dshm-field-control { display: flex; gap: 12px; align-items: center; min-height: 58px; padding: 0 16px; border: 1px solid var(--dshm-border); border-radius: 12px; background: var(--dshm-bg); color: var(--dshm-secondary); }
+.dshm-field-control:focus-within { outline: 2px solid var(--dshm-primary); outline-offset: 1px; }
+.dshm-field-control.is-error { border-color: var(--dshm-error); }
+.dshm-field-control input { width: 100%; min-width: 0; height: 54px; padding: 0; border: 0; outline: none !important; background: transparent; color: var(--dshm-text); }
+.dshm-field-control input::placeholder { color: var(--dshm-muted); opacity: 1; }
+.dshm-field-action { flex: none; min-height: 44px; padding: 0 0 0 var(--dshm-space-8); border: 0; background: transparent; color: var(--dshm-primary); font: var(--dshm-type-small); }
+.dshm-field-hint { margin: 0; color: var(--dshm-secondary); font: var(--dshm-type-small); }
+.dshm-action-card { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 64px; padding: 16px 20px; border: 0; border-radius: 20px; background: var(--dshm-subtle); color: var(--dshm-text); text-align: left; }
+.dshm-action-card > span:nth-child(2) { flex: 1; min-width: 0; }
+.dshm-action-card strong { display: block; font: var(--dshm-type-heading); }
+.dshm-action-card small { display: block; font: var(--dshm-type-small); }
+.dshm-action-card.is-primary { min-height: 88px; padding-block: 18px; background: var(--dshm-primary); color: var(--dshm-on-primary); }
+.dshm-action-card:active:not(:disabled) { filter: brightness(.95); }
+.dshm-action-card:disabled { opacity: .5; }
+.dshm-list-item { display: flex; align-items: center; width: 100%; min-width: 0; min-height: 76px; gap: 12px; padding: 16px; border: 0; border-radius: 12px; background: transparent; color: var(--dshm-text); text-align: left; }
+.dshm-list-item:active:not(:disabled), .dshm-list-item:hover:not(:disabled) { background: var(--dshm-subtle); }
+.dshm-list-item:disabled { opacity: .55; }
+.dshm-list-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.dshm-list-title { font: var(--dshm-type-body); overflow-wrap: anywhere; }
+.dshm-list-description { font: var(--dshm-type-small); color: var(--dshm-secondary); overflow-wrap: anywhere; }
+.dshm-list-value { flex: none; max-width: 32%; font-size: 12px; line-height: 18px; color: var(--dshm-secondary); overflow-wrap: anywhere; }
+.dshm-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; padding: 5px 12px; border-radius: 999px; background: var(--dshm-subtle); color: var(--dshm-secondary); font-size: 12px; line-height: 18px; }
+.dshm-badge--success { background: var(--dshm-success-soft); color: var(--dshm-success); }
+.dshm-inline-alert { display: flex; gap: 8px; padding: 12px; border-radius: 12px; background: var(--dshm-error-soft); color: var(--dshm-error); font-size: 14px; line-height: 22px; overflow-wrap: anywhere; }
+.dshm-inline-alert p { margin: 0; }
+.dshm-inline-alert--info { color: var(--dshm-secondary); background: var(--dshm-subtle); }
+.dshm-status-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 162px; padding: 24px; border-radius: 24px; background: var(--dshm-soft); text-align: center; color: var(--dshm-primary); }
+.dshm-status-card h2 { margin: 0; color: var(--dshm-text); font: var(--dshm-type-section); }
+.dshm-status-card p { margin: 0; color: var(--dshm-secondary); font: var(--dshm-type-small); overflow-wrap: anywhere; }
+.dshm-status-card--success { background: var(--dshm-success-soft); color: var(--dshm-success); }
+.dshm-status-card--error { background: var(--dshm-error-soft); color: var(--dshm-error); }
+.dshm-skeletons { display: flex; flex-direction: column; gap: 16px; padding: 4px 0; }
+.dshm-skeleton-row { display: flex; align-items: start; gap: 12px; animation: dshm-pulse 1.8s ease-in-out infinite alternate; }
+.dshm-skeleton-row > span { width: 40px; height: 40px; border-radius: 12px; background: var(--dshm-subtle); flex: none; }
+.dshm-skeleton-row > div { display: flex; flex: 1; flex-direction: column; gap: 12px; min-width: 0; }
+.dshm-skeleton-row > div > span { display: block; height: 12px; border-radius: 8px; background: var(--dshm-subtle); }
+.dshm-skeleton-row > div > span:last-child { width: 60%; max-width: 160px; }
+.dshm-empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 16px; color: var(--dshm-muted); text-align: center; }
+.dshm-empty-state h2 { margin: 0; font-size: 18px; line-height: 28px; color: var(--dshm-text); }
+.dshm-empty-state p { margin: 0; font-size: 14px; line-height: 22px; }
+.dshm-dialog.sheet { inset: 0; height: fit-content; margin: auto; width: min(342px, calc(100% - 48px)); max-height: calc(100dvh - 48px); padding: 24px; border: 1px solid var(--dshm-border); border-radius: 24px; background: var(--dshm-bg); overflow: auto; }
+.dshm-dialog h2 { font-size: 22px; line-height: 32px; margin: 0 0 12px; }
+.dshm-dialog p { font-size: 14px; line-height: 22px; color: var(--dshm-secondary); }
+.dshm-dialog-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
+.dshm-toast-host { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; pointer-events: none; }
+.dshm-toast-host.has-mask { background: var(--dshm-scrim); }
+.dshm-toast-layer { display: contents; }
+.dshm-toast-layer .surface-exit-backdrop { background: transparent; }
+.dshm-toast-layer.has-mask .surface-exit-backdrop { background: var(--dshm-scrim); }
+.dshm-toast { display: flex; flex-direction: column; align-items: center; gap: var(--dshm-space-12); width: 160px; padding: var(--dshm-space-20); border: 1px solid var(--dshm-border); border-radius: var(--dshm-radius-20); background: var(--dshm-bg); box-shadow: var(--dshm-shadow-dialog); color: var(--dshm-primary); text-align: center; }
+.dshm-toast p { color: var(--dshm-text); font-size: 14px; line-height: 22px; margin: 0; overflow-wrap: anywhere; }
+.dshm-toast--success { color: var(--dshm-success); }
+.dshm-toast--error { color: var(--dshm-error); }
+.dshm-toast-modal.sheet { inset: 0; width: fit-content; height: fit-content; margin: auto; padding: 0; background: transparent; border-radius: 20px; overflow: visible; }
+.dshm-toast-modal::backdrop { background: transparent; }
+.dshm-toast-modal.has-mask::backdrop { background: var(--dshm-scrim); }
+.dshm-spinner { animation: dshm-spin .8s linear infinite; }
+@keyframes dshm-spin { to { transform: rotate(360deg); } }
+@keyframes dshm-pulse { from { opacity: .55; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dshm-spinner, .dshm-skeleton-row { animation: none; } }

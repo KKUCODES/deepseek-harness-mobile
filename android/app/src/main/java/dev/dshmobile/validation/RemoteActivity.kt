@@ -21,6 +21,7 @@ class RemoteActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var bridge: RemoteBridge
     private lateinit var updates: AppUpdateBridge
+    private lateinit var mobilePlugins: MobilePluginBridge
     private lateinit var files: RemoteFileChooser
     private var stopWindowAppearance: (() -> Unit)? = null
     private var startup: StartupScreen? = null
@@ -31,6 +32,7 @@ class RemoteActivity : Activity() {
         super.onCreate(savedInstanceState)
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         val assets = WebViewAssetLoader.Builder().setDomain("remote.dshm.invalid")
+            .addPathHandler("/phone-plugins/") { (application as DshmApplication).phonePluginPackages.resource("/phone-plugins/$it") }
             .addPathHandler("/assets/", (application as DshmApplication).webUpdates.pathHandler()).build()
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true; settings.domStorageEnabled = true
@@ -41,6 +43,7 @@ class RemoteActivity : Activity() {
                     rendererGone = true
                     if (::files.isInitialized) files.cancel()
                     if (::updates.isInitialized) updates.close()
+                    if (::mobilePlugins.isInitialized) mobilePlugins.close()
                     if (::bridge.isInitialized) bridge.close()
                     startup?.rendererFailed()
                     (view.parent as? android.view.ViewGroup)?.removeView(view)
@@ -78,6 +81,7 @@ class RemoteActivity : Activity() {
         if (intent.getBooleanExtra("dshm.private.restoreReading", false)) bridge.offerReadingRecovery()
         intent.removeExtra("dshm.private.restoreReading")
         updates = AppUpdateBridge(this, webView, RemoteBridge.ORIGIN, "remote.html").also { it.install() }
+        mobilePlugins = MobilePluginBridge(this, webView, RemoteBridge.ORIGIN, "remote.html").also { it.install() }
         (application as DshmApplication).notices.accept(intent)
         acceptPairLink(intent)
         files = RemoteFileChooser(this, bridge::connectionGeneration)
@@ -97,7 +101,7 @@ class RemoteActivity : Activity() {
     override fun onPause() { rendererRecovery.onPause(); super.onPause() }
     override fun onDestroy() {
         startup?.close(); stopWindowAppearance?.invoke()
-        if (!rendererGone) { files.cancel(); updates.close(); bridge.close(); webView.destroy() }
+        if (!rendererGone) { files.cancel(); updates.close(); mobilePlugins.close(); bridge.close(); webView.destroy() }
         super.onDestroy()
     }
 

@@ -1,5 +1,9 @@
 # Remote 长聊天窗口与恢复
 
+公开插件读取的失败兼容已在本地修复：[Session/Conversation接口边界与双SDK回归](./remote-history-api-current.md)。内部连续性校验、手机错误提示及重试保留；尚未发布，下面的诊断条目保留其当时状态。
+
+2026-10-26新增[历史断层用例诊断](./remote-history-gap-diagnosis.md)：普通手机入口保留记录并可重试，两SDK连续24批复验通过；公开给插件的`loadOlder()`比官方多向外抛异常，存在待修复兼容差异。诊断未修改产品或既有测试代码，不把该问题简化为仅测试脚本错误。
+
 - 状态：2026-10-24 已随[preview.12/code15](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.12)公开发布；[Actions40082470843](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40082470843)构建/lint/原签名和APK及附件匿名下载核验通过。源码固定783e979；[发行证据](../releases.md#已核验范围)。旧preview.11不含本轮修复。
 - 维护角色：DSHM 协作 Agent。
 - 需求：[KKC-89](https://linear.app/kkcodes/issue/KKC-89)。只修改手机端，不改 DSH、插件、中转，不合入插件适配分支。

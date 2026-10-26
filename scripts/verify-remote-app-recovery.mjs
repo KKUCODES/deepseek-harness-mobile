@@ -5,19 +5,27 @@ import { resolve } from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+import { latestMobileBuild } from './latest-mobile-build.mjs';
 
 const root = process.cwd(), directory = resolve('artifacts/tests/remote-app-recovery');
 await mkdir(directory, { recursive: true });
 const fixture = resolve('tests/fixtures/remote-app-recovery.jsx');
+const sdk = latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-rc.2' });
 const seams = /^(?:\.\/remote-(?:client|model|plugins|plugin-slots|drafts)\.(?:mjs|jsx)|\.\/ordinary-clipboard\.mjs|\.\/ui\/(?:RemoteWorkspace|Surface)\.jsx|@upstream\/ui-primitives\/src\/(?:Button\.tsx|icons\/index\.tsx))$/;
 await build({ stdin: { contents: "import React from 'react'; import {createRoot} from 'react-dom/client'; import {RemoteApp} from './src/RemoteApp.jsx'; createRoot(document.getElementById('app')).render(<RemoteApp/>);", resolveDir: root, loader: 'jsx' },
   outfile: resolve(directory, 'test.js'), bundle: true, format: 'esm', platform: 'browser', logLevel: 'silent',
-  plugins: [{ name: 'lifecycle-test-seams', setup(build) { build.onResolve({ filter: seams }, () => ({ path: fixture })); } }],
+  plugins: [{ name: 'lifecycle-test-seams', setup(build) { build.onResolve({ filter: seams }, () => ({ path: fixture })); } }, sdk.resolver],
+  alias: sdk.alias, nodePaths: [resolve(sdk.runtime, 'node_modules'), resolve(root, 'node_modules')],
+  loader: { '.svg': 'file', '.module.css': 'local-css', '.woff2': 'file', '.woff': 'file', '.ttf': 'file', '.png': 'file' },
   define: { 'process.env.NODE_ENV': '"production"' },
 });
 const server = createServer(async (req, res) => {
-  if (req.url === '/') return res.setHeader('Content-Type', 'text/html').end('<div id="app"></div><script type="module" src="/test.js"></script>');
+  if (req.url === '/') return res.setHeader('Content-Type', 'text/html').end('<meta name="viewport" content="width=device-width,initial-scale=1"><div id="app"></div><link rel="stylesheet" href="/test.css"><script type="module" src="/test.js"></script>');
   if (req.url === '/test.js') return res.setHeader('Content-Type', 'text/javascript').end(await readFile(resolve(directory, 'test.js')));
+  if (/^\/[A-Za-z0-9_.~-]+\.(svg|css|png|woff2?|ttf)$/.test(req.url)) {
+    try { return res.setHeader('Content-Type', req.url.endsWith('.svg') ? 'image/svg+xml' : req.url.endsWith('.css') ? 'text/css' : 'application/octet-stream').end(await readFile(resolve(directory, req.url.slice(1)))); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   res.writeHead(404).end();
 });
 server.listen(0, '127.0.0.1'); await once(server, 'listening');
@@ -68,6 +76,7 @@ try {
           ? 'Remote 通信版本不兼容，请更新 App、电脑插件和中转服务后重试。'
           : '电脑 DSH 版本与当前手机端不兼容，请使用配套版本后重试。';
         await page.getByRole('alert').filter({ hasText: expected }).waitFor();
+        await page.getByText('设备公钥指纹', { exact: true }).click();
         assert.equal(await page.getByTestId('remote-fingerprint').innerText(), 'fixture');
         assert.equal(await page.getByRole('heading', { name: '连接授权已失效' }).count(), 0);
       }

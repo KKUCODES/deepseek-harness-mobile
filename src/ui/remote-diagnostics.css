@@ -1,0 +1,31 @@
+.dshm-diagnostic-link { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 44px; padding: 4px 8px; border: 0; background: transparent; color: #405de6; font: inherit; font-size: 14px; line-height: 22px; cursor: pointer; }
+body[data-ds-dark-theme] .dshm-diagnostic-link { color: #93a6ff; }
+.dshm-diagnostic-link:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.remote-offline-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.remote-offline-main > span { flex: 1; min-width: 0; }
+.remote-offline-main > .dshm-diagnostic-link { flex: none; white-space: nowrap; }
+.remote-diagnostic-sheet.sheet { display: flex; flex-direction: column; gap: 12px; width: min(100%, 528px); max-height: calc(100dvh - 24px); margin: auto auto 0; padding: 12px 24px max(16px, env(safe-area-inset-bottom)); border: 0; border-radius: 24px 24px 0 0; background: var(--dshm-bg); color: var(--dshm-text); overflow: hidden; box-sizing: border-box; }
+.remote-diagnostic-handle { width: 32px; height: 4px; min-height: 4px; align-self: center; border-radius: 4px; background: var(--dshm-border); }
+.remote-diagnostic-sheet > header { display: flex; align-items: center; gap: 12px; flex: none; margin: 0; }
+.remote-diagnostic-sheet h2 { flex: 1; min-width: 0; font-size: 22px; line-height: 32px; margin: 0; }
+.remote-diagnostic-content { overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; overscroll-behavior: contain; }
+.remote-diagnostic-sheet p { margin: 0; font-size: 16px; line-height: 24px; overflow-wrap: anywhere; }
+.remote-diagnostic-sheet .remote-diagnostic-time { margin: 0; font-size: 14px; line-height: 22px; color: var(--dshm-secondary); overflow-wrap: anywhere; }
+.remote-diagnostic-summary { padding: 16px; border-radius: 16px; background: var(--dshm-error-soft); }
+.remote-diagnostic-summary h3 { margin: 0 0 8px; font-size: 18px; line-height: 28px; font-weight: 500; }
+.remote-diagnostic-summary p { color: var(--dshm-secondary); font-size: 14px; line-height: 22px; }
+.remote-diagnostic-sheet dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; font-size: 14px; line-height: 22px; }
+.remote-diagnostic-sheet dt { color: var(--dshm-secondary); }
+.remote-diagnostic-sheet dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.remote-diagnostic-toggle { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--dshm-text); font-size: 16px; line-height: 24px; text-align: left; }
+.remote-diagnostic-toggle span { color: var(--dshm-primary); font-size: 14px; }
+.remote-diagnostic-code { color: var(--dshm-secondary); font-size: 14px; line-height: 22px; overflow-wrap: anywhere; }
+.remote-diagnostic-stack { box-sizing: border-box; margin: 0; min-height: 72px; max-height: min(28dvh, 220px); padding: 12px; border-radius: 12px; background: var(--dshm-subtle); white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; overscroll-behavior: contain; font: 14px/22px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--dshm-text); }
+.remote-diagnostic-sheet > footer { display: flex; flex-direction: column; gap: 8px; flex: none; }
+.remote-diagnostic-records { display: flex; flex-direction: column; gap: 8px; }
+.remote-diagnostic-records button { display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 12px 8px; border: 0; background: transparent; text-align: left; color: var(--dshm-text); }
+.remote-diagnostic-records button > span:first-child { flex: 1; min-width: 0; }
+.remote-diagnostic-records strong { display: block; font-size: 16px; line-height: 24px; font-weight: 500; }
+.remote-diagnostic-records small { display: block; font-size: 14px; line-height: 22px; color: var(--dshm-secondary); overflow-wrap: anywhere; }
+.remote-diagnostic-resolved { color: var(--dshm-success); font-size: 14px; }
+.remote-diagnostic-feedback { color: var(--dshm-primary); text-align: center; }

@@ -6,7 +6,7 @@ export function IconButton({ label, children, ...props }) {
   return <Button className="icon-button" aria-label={label} title={label} {...props}>{children}</Button>;
 }
 
-export function Surface({ kind, title, onClose, children, className = '', open = true }) {
+export function Surface({ kind, title, onClose, children, className = '', open = true, phoneTheme = false }) {
   const ref = useRef(null);
   const { mounted, present } = useSurfaceMotion(ref, open, kind, className);
   useLayoutEffect(() => {
@@ -27,7 +27,7 @@ export function Surface({ kind, title, onClose, children, className = '', open =
   }, [present, mounted]);
   if (!mounted) return null;
   return <><div className="surface-exit-backdrop" hidden={present} aria-hidden="true"/>
-    <dialog ref={ref} className={`${kind === 'drawer' ? 'drawer' : 'sheet'} ${className}`} aria-label={title}
+    <dialog ref={ref} className={`${kind === 'drawer' ? 'drawer' : 'sheet'} ${className}${phoneTheme ? ' dshm-phone-colors' : ''}`} aria-label={title}
     onKeyDown={event => { if (event.key === 'Escape') event.stopPropagation(); }}
     onCancel={event => { event.preventDefault(); if (present) onClose(); }}
     onClick={event => {

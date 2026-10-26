@@ -99,8 +99,8 @@ export class RemoteHistoryWindow {
     this.session = new Proxy(binding.session, { get: (target, key) => {
       if (key === 'getSnapshot') return this.getSnapshot;
       if (key === 'subscribe') return this.subscribe;
-      if (key === 'loadOlder') return this.older;
-      if (key === 'loadThrough') return this.through;
+      if (key === 'loadOlder') return this.loadOlder;
+      if (key === 'loadThrough') return this.loadThrough;
       if (key === 'prompt') {
         if (!methods.has(key)) methods.set(key, (...args) => { this.latest(); return target.prompt(...args); });
         return methods.get(key);
@@ -169,6 +169,14 @@ export class RemoteHistoryWindow {
     this.epoch++; this.readRequest?.abort(); this.loading = false; this.browsing = false; this.error = null;
     const window = this.original.eventSource.getSnapshot();
     this.feed.publish(window.entries, this.trimmed || this.rawHasMore); this.publish();
+  };
+  // 官方 Session 的公开读取会消化失败。page 已发布友好错误并保留窗口/重试状态；
+  // 这里只完成插件调用，手机自身仍使用下面的严格方法，不能靠公开 Promise 判断分页成功。
+  loadOlder = async () => {
+    try { await this.older(); } catch { /* 保持官方失败行为，错误仍由 history 状态呈现。 */ }
+  };
+  loadThrough = async seq => {
+    try { await this.through(seq); } catch { /* 内部严格读取继续负责校验与错误状态。 */ }
   };
   older = async () => {
     if (this.loading || !this.feed.getSnapshot().hasMore) return;

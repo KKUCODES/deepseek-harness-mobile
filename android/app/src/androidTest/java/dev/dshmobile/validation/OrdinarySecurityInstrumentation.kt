@@ -24,9 +24,13 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
     private var compatibilityOnly = false
     private var updatesOnly = false
     private var linksOnly = false
+    private var diagnosticsOnly = false
+    private var mobilePluginsOnly = false
     private var webUpdatesOnly = false
     private var webUpdateLive: String? = null
     override fun onCreate(arguments: Bundle?) {
+        mobilePluginsOnly = arguments?.getString("mobilePluginsOnly") == "true"
+        diagnosticsOnly = arguments?.getString("diagnosticsOnly") == "true"
         linksOnly = arguments?.getString("linksOnly") == "true"
         updatesOnly = arguments?.getString("updatesOnly") == "true"
         webUpdatesOnly = arguments?.getString("webUpdatesOnly") == "true"
@@ -39,6 +43,18 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
         super.onCreate(arguments); noticeEpochSession = arguments?.getString("noticeEpochSession"); notificationsOnly = arguments?.getString("notificationsOnly") == "true"; appearanceOnly = arguments?.getString("appearanceOnly") == "true"; computerKeyOnly = arguments?.getString("computerKeyOnly") == "true"; resourcesOnly = arguments?.getString("resourcesOnly") == "true"; saveOnly = arguments?.getString("saveOnly") == "true"; saveWriteOnly = arguments?.getString("saveWriteOnly") == "true"; saveDeathOnly = arguments?.getString("saveDeathOnly") == "true"; shareDeathOnly = arguments?.getString("shareDeathOnly") == "true"; shareOnly = arguments?.getString("shareOnly") == "true"; start()
     }
     override fun onStart() {
+        if (mobilePluginsOnly) {
+            val result = Bundle()
+            try { MobilePluginPreferenceChecks.run(targetContext); result.putString("result", "PASS: unified install/uninstall/enable/disable, migration, groups, host leases, persistence and validation"); finish(Activity.RESULT_OK, result) }
+            catch (error: Exception) { result.putString("result", "FAIL: mobile plugins"); result.putString("location", error.stackTrace.take(3).joinToString()); finish(Activity.RESULT_CANCELED, result) }
+            return
+        }
+        if (diagnosticsOnly) {
+            val result = Bundle()
+            try { RemoteDiagnosticsChecks.run(targetContext); result.putString("result", "PASS: real HTTP404 WebSocket failure, safe traces, bounded storage, restart, recovery and no-stack close"); finish(Activity.RESULT_OK, result) }
+            catch (error: Exception) { result.putString("result", "FAIL: diagnostics"); result.putString("location", error.stackTrace.take(3).joinToString()); finish(Activity.RESULT_CANCELED, result) }
+            return
+        }
         if (linksOnly) {
             val result = Bundle()
             try {

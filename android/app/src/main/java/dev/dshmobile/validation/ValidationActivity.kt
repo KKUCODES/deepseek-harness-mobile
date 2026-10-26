@@ -19,6 +19,7 @@ class ValidationActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var ordinary: OrdinaryBridge
     private lateinit var updates: AppUpdateBridge
+    private lateinit var mobilePlugins: MobilePluginBridge
     private var pendingAppearance = false
     private var startup: StartupScreen? = null
     private val rendererRecovery by lazy { RendererRecovery(this) }
@@ -31,6 +32,7 @@ class ValidationActivity : Activity() {
         intent.removeExtra(OPEN_APPEARANCE)
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
         val assets = WebViewAssetLoader.Builder()
+            .addPathHandler("/phone-plugins/") { (application as DshmApplication).phonePluginPackages.resource("/phone-plugins/$it") }
             .addPathHandler("/assets/", (application as DshmApplication).webUpdates.pathHandler())
             .build()
         webView = WebView(this).apply {
@@ -45,6 +47,7 @@ class ValidationActivity : Activity() {
                     rendererGone = true
                     if (::ordinary.isInitialized) ordinary.close()
                     if (::updates.isInitialized) updates.close()
+                    if (::mobilePlugins.isInitialized) mobilePlugins.close()
                     startup?.rendererFailed()
                     (view.parent as? android.view.ViewGroup)?.removeView(view)
                     view.destroy()
@@ -83,6 +86,7 @@ class ValidationActivity : Activity() {
         ordinary = OrdinaryBridge(this, webView)
         ordinary.install()
         updates = AppUpdateBridge(this, webView, OrdinaryBridge.ORIGIN, "mobile.html").also { it.install() }
+        mobilePlugins = MobilePluginBridge(this, webView, OrdinaryBridge.ORIGIN, "mobile.html").also { it.install() }
         if (!MobileWebWindow.install(this, webView)) setContentView(webView)
         stopWindowAppearance = MobileWebWindow.observeAppearance(this)
         val entry = if (BuildConfig.DEBUG && intent.getBooleanExtra("diagnostics", false)) "index.html" else "mobile.html"
@@ -114,6 +118,7 @@ class ValidationActivity : Activity() {
     override fun onDestroy() {
         startup?.close()
         stopWindowAppearance?.invoke()
+        mobilePlugins.close()
         if (!rendererGone) { ordinary.close(); updates.close(); webView.destroy() }
         super.onDestroy()
     }
@@ -122,7 +127,7 @@ class ValidationActivity : Activity() {
 
     @Deprecated("Platform activity result bridge")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (!ordinary.onActivityResult(requestCode, resultCode, data)) super.onActivityResult(requestCode, resultCode, data)
+        if (!mobilePlugins.onActivityResult(requestCode, resultCode, data) && !ordinary.onActivityResult(requestCode, resultCode, data)) super.onActivityResult(requestCode, resultCode, data)
     }
 
     @Deprecated("Handled by the local page navigation stack")

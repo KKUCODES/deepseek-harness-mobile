@@ -1054,6 +1054,13 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     const binding = model.reference.binding; (binding.history?.original ?? binding).eventSource.replace(entries.records, entries.hasMore);
   },
   historyTesting: value => { historyTesting = value; },
+  historyState: () => {
+    const binding = model.reference.binding, state = binding.session.getSnapshot();
+    return { seq: binding.eventSource.getSnapshot().entries.map(entry => entry.event.seq),
+      loading: state.loadingOlder, hasMore: state.hasMore, error: state.history.error, request: historyRequests.at(-1) };
+  },
+  historyStrictOlder: () => model.reference.binding.history.older(),
+  historyLoadThrough: seq => model.reference.binding.session.loadThrough(seq),
   historyPage: page => historyReply({ ok: true, value: page }),
   historyReply: success => historyReply(success ? { ok: true, value: { records: [], hasMore: false } }
     : { ok: false, error: { code: 'gateway/internal', message: 'fixture read failed', details: {} } }),

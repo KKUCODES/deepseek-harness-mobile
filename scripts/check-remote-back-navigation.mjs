@@ -10,14 +10,14 @@ export async function checkRemoteBackNavigation(page) {
   const systemBack = async () => assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
   const waitSelected = id => page.waitForFunction(value => window.fixture.sidebarState().selected === value, id);
   const enter = async () => {
-    await main.locator('.remote-session-row').filter({ hasText: 'one' }).click();
+    await main.locator('.remote-session-row, [data-remote-home-session]').filter({ hasText: 'one' }).click();
     await waitSelected('one');
     await page.waitForFunction(() => !document.querySelector('.remote-topbar button').disabled);
   };
 
   await page.evaluate(() => window.fixture.holdSelection());
   try {
-    await main.locator('.remote-session-row').filter({ hasText: 'one' }).click();
+    await main.locator('.remote-session-row, [data-remote-home-session]').filter({ hasText: 'one' }).click();
     await waitSelected('one');
     assert.equal(await back.isDisabled(), true);
     await systemBack();
@@ -92,7 +92,7 @@ export async function checkRemoteBackNavigation(page) {
 
   await systemBack();
   await waitSelected(null);
-  assert.equal(await main.locator('.remote-heading').innerText(), '返回验证项目', '聊天返回原项目列表');
+  assert.equal(await main.locator('.remote-heading, .dhp-bar h1').innerText(), '返回验证项目', '聊天返回原项目列表');
   await enter();
   assert.equal(await main.getByRole('textbox', { name: '消息', exact: true }).innerText(), '返回验证草稿');
   await systemBack();

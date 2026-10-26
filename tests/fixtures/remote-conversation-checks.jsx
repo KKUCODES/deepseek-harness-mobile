@@ -16,6 +16,7 @@ export function conversationChecks(model, transport) {
           return <div data-testid="conversation-probe" style={{ position: 'absolute', bottom: '100%' }}>
             <output>{sessionId}:{String(current === model.conversations.binding(sessionId).snapshot.getSnapshot())}</output>
             <button onClick={() => target().focus()}>聚焦消息</button>
+            <button onClick={() => { void scoped().loadOlder(); }}>插件加载更早历史</button>
           </div>;
         });
         ctx.effect(() => () => { for (const id of ['one', 'two']) ctx.conversation.blocks.set(id, undefined); });

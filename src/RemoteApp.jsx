@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
-import { IconChevronLeftOutline14, IconCloseOutline16, IconEllipsisOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
+import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Surface, IconButton } from './ui/Surface.jsx';
 import { SurfacePresence } from './ui/motion.jsx';
 import { RemoteClient } from './remote-client.mjs';
@@ -23,8 +23,13 @@ import { SupportDiagnostics } from './ui/SupportDiagnostics.jsx';
 import { AppUpdateEntry, AppUpdateNotice, AppUpdatePanel } from './ui/AppUpdates.jsx';
 import { responseFailures } from './remote-response-errors.mjs';
 import { registerUpdatePreparation } from './update-preparation.mjs';
+import { RemoteConnectionPage } from './ui/RemoteConnectionPage.jsx';
+import { DesignButton, DesignDialog } from './ui/system/Primitives.jsx';
+import { LoadingToast } from './ui/system/LoadingToast.jsx';
+import { RemoteDiagnostics } from './remote-diagnostics.mjs';
+import { RemoteDiagnosticsContext, RemoteDiagnosticSheet } from './ui/RemoteDiagnostics.jsx';
+import { phonePluginsFor } from './phone-plugins.mjs';
 
-const stages = { negotiating: '正在确认电脑能力…', loading: '正在读取电脑会话…', ready: '已连接', connecting: '正在连接电脑…', disconnected: '连接已断开' };
 const scanFailures = { scan_unavailable: '暂时无法打开扫码，请粘贴配对链接。', scan_busy: '扫码窗口已打开，请先完成或返回。', scan_timeout: '扫码已超时，请重新尝试。', scan_camera_permission: '未获得相机权限，可从图片识别或粘贴配对链接。', scan_image_invalid: '无法读取这张图片，请选择其他图片。', scan_image_too_large: '图片过大，请裁剪二维码后重试。', scan_qr_not_found: '未识别到二维码，请使用清晰的二维码图片。' };
 const failures = { pairing_unavailable: '链接已过期或已被领取，请在电脑上生成新链接。', device_pending: '请先在电脑端核对指纹并批准连接。', device_revoked: '电脑已撤销这台手机，请重新配对。', http_401: '连接授权已失效，请移除本机绑定后重新配对。', permissions_changed: '电脑已调整这台手机的权限，请重新连接。', host_offline: '电脑暂时离线，请检查 DSH 是否正在运行。', host_upgrade_required: '请先更新电脑端 DSH Mobile 插件，再重新连接。',
   unsupported_remote_version: 'Remote 通信版本不兼容，请更新 App、电脑插件和中转服务后重试。',
@@ -36,6 +41,7 @@ const failures = { pairing_unavailable: '链接已过期或已被领取，请在
 export function RemoteApp() {
   const [client] = useState(() => new RemoteClient());
   const [language, setLanguage] = useState('zh');
+  useEffect(() => { void phonePluginsFor('remote').start().catch(() => {}); }, []);
   const [appearanceReady, setAppearanceReady] = useState(false);
   useEffect(() => watchPhoneAppearance(client, new ThemePresenter(), { onLanguage: setLanguage, onReady: () => setAppearanceReady(true) }), [client]);
   return <LocaleProvider locale={language}><RemoteConnection client={client} language={language} appearanceReady={appearanceReady}/></LocaleProvider>;
@@ -53,6 +59,10 @@ function RemoteConnection({ client, language, appearanceReady }) {
   const [link, setLink] = useState(''), [name, setName] = useState('DSHM Android');
   const pairingServer = pairingServerOf(link);
   const [status, setStatus] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false), [menu, setMenu] = useState(false);
+  const [leaving, setLeaving] = useState(false), [feedback, setFeedback] = useState(null), [pasteHint, setPasteHint] = useState('');
+  const [watchApproval, setWatchApproval] = useState(true);
+  const pairingIntent = useRef(0);
+  const feedbackTimer = useRef(null), retryLoad = useRef(null), retryBinding = useRef(null), claimPending = useRef(false);
   const runtime = useRef(null), operation = useRef(Promise.resolve()), cleanup = useRef(Promise.resolve());
   const recovery = useRef({ resume: null, timer: null, attempt: 0, epoch: 0, stopped: true });
   const [model, setModel] = useState(null);
@@ -61,7 +71,31 @@ function RemoteConnection({ client, language, appearanceReady }) {
     await model?.prepareUpdate();
   }), [model]);
   const [diagnostics, setDiagnostics] = useState(false);
+  const [diagnosticStore] = useState(() => new RemoteDiagnostics(client));
+  const diagnosticRecords = useSyncExternalStore(diagnosticStore.subscribe, diagnosticStore.getSnapshot);
+  const [diagnosticSelection, setDiagnosticSelection] = useState(null);
+  useEffect(() => {
+    if (!model) return;
+    let connected = false;
+    const observe = () => {
+      const next = model.getSnapshot().connectionState === 'connected';
+      if (next && !connected) void diagnosticStore.recovered();
+      connected = next;
+    };
+    observe();
+    return model.subscribe(observe);
+  }, [model, diagnosticStore]);
+  const diagnosticStage = useRef(stage); diagnosticStage.current = stage;
+  useEffect(() => {
+    const refresh = () => void diagnosticStore.refresh();
+    refresh(); window.addEventListener('dshm-diagnostics-change', refresh);
+    const unsubscribe = client.subscribe(frame => {
+      if (frame.diagnostic) diagnosticStore.publish([frame.diagnostic, ...diagnosticStore.records.filter(item => item.id !== frame.diagnostic.id)]);
+    });
+    return () => { window.removeEventListener('dshm-diagnostics-change', refresh); unsubscribe(); };
+  }, [client, diagnosticStore]);
   const [updatesOpen, setUpdatesOpen] = useState(false);
+  useEffect(() => () => clearTimeout(feedbackTimer.current), []);
   useEffect(() => { model?.pluginSlots?.locale?.setLocale(language); }, [model, language]);
   useEffect(() => {
     let active = true;
@@ -73,7 +107,16 @@ function RemoteConnection({ client, language, appearanceReady }) {
     return () => { active = false; window.removeEventListener('dshm-pair-link', takeLink); };
   }, [client]);
   const mounted = useRef(true);
-  const report = failure => { if (failure.message === 'scan_cancelled') return; if (mounted.current) { setError(failure.message === 'invalid_pair_link' ? '配对链接无效，请使用电脑生成的完整链接。' : scanFailures[failure.message] ?? failures[failure.message] ?? '连接未完成，请重试。'); if (failure.message === 'http_401') setStatus('invalid'); } console.error('[Remote]', failure.message); };
+  const report = (failure, phase) => {
+    if (failure.message === 'scan_cancelled') return;
+    if (mounted.current) {
+      setError(failure.message === 'invalid_pair_link' ? '配对链接无效，请使用电脑生成的完整链接。' : scanFailures[failure.message] ?? failures[failure.message] ?? '连接未完成，请重试。');
+      if (failure.message === 'http_401') setStatus('invalid');
+      // 原始异常不进入日志；只将固定错误码和自有资源的栈位置交给诊断存储。
+      if (!failure.message.startsWith('scan_') && failure.message !== 'invalid_pair_link')
+        void diagnosticStore.capture(failure, phase ?? (['loading', 'reading'].includes(diagnosticStage.current) ? 'reading' : 'unknown'));
+    }
+  };
   const run = async action => { setBusy(true); setError(''); try { await action(); } catch (failure) { report(failure); } finally { if (mounted.current) setBusy(false); } };
   const stop = () => {
     const current = runtime.current; runtime.current = null;
@@ -91,6 +134,7 @@ function RemoteConnection({ client, language, appearanceReady }) {
     catch (failure) { if (!runtime.current?.presented) setStage('disconnected'); throw failure; }
   };
   const disconnect = () => {
+    pairingIntent.current++; setWatchApproval(false);
     const recover = recovery.current;
     clearTimeout(recover.timer); recover.timer = null; recover.epoch++; recover.stopped = true; recover.resume = null;
     return client.disconnect();
@@ -154,7 +198,11 @@ function RemoteConnection({ client, language, appearanceReady }) {
           await next.pluginSlots.ready;
         };
         setStage('loading');
-        await next.start();
+        // 原连接真正就绪后才显示“已连接”；中转 socket 连通不代表电脑服务可用。
+        const offProgress = next.subscribe(() => {
+          if (runtime.current === next && mounted.current && next.getSnapshot().connectionState === 'connected') setStage('reading');
+        });
+        try { await next.start(); } finally { offProgress(); }
         if (runtime.current !== next || !mounted.current || !client.connected) { await next.dispose(); return; }
         const nativeRecovery = await client.call('recovery.resume').catch(() => ({ restore: false }));
         if (!resume && (takeReadingRecovery() || nativeRecovery.restore)) {
@@ -181,15 +229,18 @@ function RemoteConnection({ client, language, appearanceReady }) {
         next.presented = true;
         setError(''); setModel(next); setStage('ready');
       } catch (failure) {
-        await stop(); setStage('disconnected');
+        const readFailed = client.connected && runtime.current?.getSnapshot().connectionState === 'connected'
+          && !failure.message.startsWith('unsupported_');
+        await stop(); setStage(readFailed ? 'read-error' : 'disconnected');
         // 取消或撤销已给出最终状态；旧装配的网络失败不能覆盖该提示。
         if (recover.stopped) return;
-        report(failure);
+        report(failure, readFailed ? 'reading' : 'negotiating');
         if (['http_401', 'device_revoked', 'permissions_changed'].includes(failure.message)) cancelRecovery(true);
         // 自动恢复取决于连接意图；首次装配尚没有聊天快照，也必须恢复只读加载。
         else if (!recover.stopped && (!client.connected || isRemoteHostDisconnect(failure) || failure.message === 'remote_generation_changed')) scheduleRecovery();
       }
     };
+    retryLoad.current = () => load(recover.resume);
     const unsubscribe = client.subscribe(frame => {
       if (frame.type === 'closed') {
         cancelRecovery();
@@ -222,17 +273,62 @@ function RemoteConnection({ client, language, appearanceReady }) {
         }
       });
     });
-    void client.call('binding.info').then(info => {
-      if (!mounted.current) return;
+    const readBinding = async () => {
+      const initialIntent = pairingIntent.current;
+      const info = await client.call('binding.info');
+      if (!mounted.current || initialIntent !== pairingIntent.current) return;
       setBinding(info);
-      if (info.paired) void run(async () => {
-        const device = await client.call('binding.status'); setStatus(device.status);
+      if (info.paired) {
+        const device = await client.call('binding.status');
+        if (!mounted.current || initialIntent !== pairingIntent.current) return;
+        setStatus(device.status);
         if (device.status === 'active') await connect();
-      });
-    }).catch(report).finally(() => { if (mounted.current) setBindingReady(true); });
-    return () => { mounted.current = false; cancelRecovery(true); unsubscribe(); void stop(); void client.release().catch(() => {}); };
+      }
+    };
+    retryBinding.current = readBinding;
+    void run(readBinding).finally(() => { if (mounted.current) setBindingReady(true); });
+    return () => { mounted.current = false; retryLoad.current = null; retryBinding.current = null; cancelRecovery(true); unsubscribe(); void stop(); void client.release().catch(() => {}); };
   }, [client]);
-  const back = () => void run(() => client.call('ordinary.open'));
+  // 已领取后只轮询只读状态；批准由电脑完成，手机不自动重放领取或任何写操作。
+  useEffect(() => {
+    if (!binding?.paired || status !== 'pending' || error || !watchApproval) return;
+    let active = true, timer;
+    const intent = pairingIntent.current;
+    const poll = async () => {
+      if (!active) return;
+      if (document.hidden) { timer = setTimeout(poll, 2000); return; }
+      try {
+        const device = await client.call('binding.status');
+        if (!active || intent !== pairingIntent.current) return;
+        if (device.status === 'active') {
+          setStatus('active');
+          await run(() => connect());
+          return;
+        }
+        if (device.status !== 'pending') { setStatus('invalid'); setError(failures.device_revoked); return; }
+        timer = setTimeout(poll, 2000);
+      } catch (failure) { if (active && intent === pairingIntent.current) report(failure); }
+    };
+    void poll();
+    return () => { active = false; clearTimeout(timer); };
+  }, [client, binding, status, error, watchApproval]);
+  const leave = () => void run(async () => { await disconnect(); setLeaving(false); await client.call('ordinary.open'); });
+  const back = () => {
+    if (status === 'pending' || claimPending.current || ['connecting', 'negotiating', 'loading', 'reading'].includes(stage)) setLeaving(true);
+    else void run(() => client.call('ordinary.open'));
+  };
+  useEffect(() => {
+    if (stage === 'ready') return;
+    const handle = () => {
+      if (leaving) { setLeaving(false); return true; }
+      if (updatesOpen) { setUpdatesOpen(false); return true; }
+      if (diagnostics) { setDiagnostics(false); return true; }
+      if (menu) { setMenu(false); return true; }
+      back(); return true;
+    };
+    window.dshmHandleBack = handle;
+    return () => { if (window.dshmHandleBack === handle) delete window.dshmHandleBack; };
+  }, [stage, status, leaving, updatesOpen, diagnostics, menu]);
   useEffect(() => {
     if (!model || stage !== 'ready') return;
     let active = true, opening = false, pending = null, revision = 0;
@@ -279,51 +375,72 @@ function RemoteConnection({ client, language, appearanceReady }) {
     const result = await client.call('binding.scan', { source }, 130000);
     if (mounted.current && result.link) setLink(result.link);
   });
-  return <>
-    <main className="app remote-app" hidden={stage === 'ready'} data-testid="remote-page">
-      <header className="topbar remote-topbar"><IconButton label={t('返回普通聊天')} onClick={back}><IconChevronLeftOutline14/></IconButton><div className="remote-heading"><strong>Remote</strong></div><IconButton label={t('连接选项')} onClick={() => setMenu(true)}><IconEllipsisOutline16/></IconButton></header>
-      <section className="remote-scroll connect-page">
-        {error && <p className="remote-error" role="alert">{t(error)}</p>}
-        {!binding ? <p role="status">{t('正在读取连接信息…')}</p> : !binding.paired ? <>
-          <h1>{t('连接你的电脑')}</h1><p>{t('在电脑 DSH 的 Mobile 插件中生成二维码或配对链接，扫描或粘贴后连接。')}</p>
-          <div className="remote-pair-actions"><Button disabled={busy} onClick={() => scan('camera')}>{t('扫描二维码')}</Button><Button disabled={busy} onClick={() => scan('image')}>{t('从图片识别')}</Button></div>
-          <label className="remote-field">{t('配对链接')}<input type="text" autoComplete="off" aria-label={t('一次性配对链接')} value={link} onChange={event => setLink(event.target.value)}/></label>
-          <label className="remote-field">{t('设备名称')}<input value={name} maxLength={80} onChange={event => setName(event.target.value)}/></label>
-          {pairingServer && <p>{t('服务器：{address}', { address: pairingServer })}</p>}
-          {pairingServer?.startsWith('http:') && <p>{t('HTTP 连接未加密，建议使用 HTTPS。')}</p>}
-          <Button variant="primary" disabled={busy || !link.trim() || !name.trim()} onClick={() => void run(async () => {
-            const submitted = link; setLink('');
-            const info = await client.call('binding.claim', { link: submitted, name: name.trim() });
-            setBinding(info); setStatus('pending'); setStage('idle');
-          })}>{t('继续配对')}</Button>
-        </> : <>
-          <h1>{t(status === 'pending' ? '等待电脑批准' : status === 'invalid' ? '连接授权已失效' : stages[stage] ?? '连接电脑')}</h1>
-          <p>{t(status === 'pending' ? '在电脑插件页核对这台手机的指纹，再批准连接。' : status === 'invalid' ? '从右上角连接选项移除本机绑定，再使用新的配对链接。' : '电脑与 DSH 保持运行时，可以重新连接。')}</p>
-          <div className="device-card"><strong>{binding.origin}</strong><small>{t('设备公钥指纹')}</small><code data-testid="remote-fingerprint">{binding.fingerprint}</code></div>
-          {binding.origin.startsWith('http:') && <p>{t('HTTP 连接未加密，凭据及聊天内容可能被窃听或篡改。')}</p>}
-          <p role="status" data-testid="remote-state">{t(stages[stage] ?? (status === 'pending' ? '等待批准' : ''))}</p>
-          <Button variant="primary" disabled={busy || ['connecting', 'negotiating', 'loading'].includes(stage)} onClick={() => void run(async () => {
-            const info = await client.call('binding.status'); setStatus(info.status);
-            if (info.status === 'active') { recovery.current.stopped = false; await connect(); }
-            else if (info.status !== 'pending') setError('连接授权已失效，请移除本机绑定后重新配对。');
-          })}>{t(status === 'pending' ? '我已在电脑批准' : '重新连接')}</Button>
-        </>}
-      </section>
-    </main>
+  const paste = () => void run(async () => {
+    clearTimeout(feedbackTimer.current); setFeedback({ state: 'loading', message: '正在读取配对链接…' }); setPasteHint('');
+    try {
+      const value = await client.call('binding.paste');
+      if (!mounted.current) return;
+      if (!value.link) throw Error('clipboard_pair_link_missing');
+      setLink(value.link); setFeedback({ state: 'success', message: '已粘贴配对链接' });
+      feedbackTimer.current = setTimeout(() => setFeedback(null), 1100);
+    } catch {
+      // 旧 APK 没有受限粘贴桥时仍可使用系统粘贴，不扩大通用剪贴板权限。
+      if (mounted.current) { setFeedback(null); setPasteHint('请长按输入框，粘贴电脑生成的配对链接。'); }
+    }
+  });
+  const claim = () => {
+    if (claimPending.current) return;
+    void run(async () => {
+      const intent = pairingIntent.current;
+      claimPending.current = true;
+      try {
+        const submitted = link;
+        const info = await client.call('binding.claim', { link: submitted, name: name.trim() });
+        if (!mounted.current) return;
+        setLink(''); setBinding(info); setStatus('pending'); setStage('idle');
+        if (intent === pairingIntent.current) setWatchApproval(true);
+      } finally { claimPending.current = false; }
+    });
+  };
+  const retry = () => {
+    if (!binding) { void run(() => retryBinding.current?.()); return; }
+    // 等待批准只有一个读取循环，重试按钮不能与轮询同时发起两次连接。
+    if (status === 'pending') { setError(''); setWatchApproval(true); return; }
+    void run(async () => {
+      const info = await client.call('binding.status'); setStatus(info.status);
+      if (info.status === 'active') await connect();
+      else if (info.status === 'pending') setWatchApproval(true);
+      else setError(failures.http_401);
+    });
+  };
+  const diagnosticContext = { store: diagnosticStore, records: diagnosticRecords,
+    latest: diagnosticRecords.find(item => item.source === 'remote'), open: setDiagnosticSelection };
+  return <RemoteDiagnosticsContext.Provider value={diagnosticContext}>
+    <RemoteConnectionPage binding={binding} stage={stage} status={status} watchApproval={watchApproval} busy={busy} error={error} link={link} name={name} pairingServer={pairingServer}
+      onLink={setLink} onName={setName} onScan={scan} onPaste={paste} onClaim={claim} onRetry={retry} pasteHint={pasteHint}
+      onRetryRead={() => void run(() => { operation.current = operation.current.then(() => retryLoad.current?.()); return operation.current; })} onBack={back} onMore={() => setMenu(true)}/>
+    {feedback && <LoadingToast state={feedback.state} message={t(feedback.message)}/>}
+    <SurfacePresence>{leaving && <DesignDialog title={t('暂时离开配对？')} description={t('本次连接会暂停，已领取的配对信息会保留。')} onClose={() => setLeaving(false)}>
+      <DesignButton onClick={() => setLeaving(false)}>{t('继续连接')}</DesignButton><DesignButton kind="secondary" onClick={leave}>{t('暂时离开')}</DesignButton>
+    </DesignDialog>}</SurfacePresence>
     <AppUpdateNotice/>
     <SurfacePresence>{updatesOpen && <AppUpdatePanel onClose={() => setUpdatesOpen(false)}/>}</SurfacePresence>
     {stage === 'ready' && model && <RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={back} onConnection={() => setMenu(true)}/></RemotePluginScope>}
-    <SurfacePresence>{menu && <Surface title={t('电脑连接')} onClose={() => setMenu(false)}><header><h2>{t('电脑连接')}</h2><IconButton label={t('关闭窗口')} onClick={() => setMenu(false)}><IconCloseOutline16/></IconButton></header>
-      <Button className="option" onClick={() => { setMenu(false); setDiagnostics(true); }}>{t('问题诊断')}</Button>
+    <SurfacePresence>{menu && <Surface phoneTheme title={t('电脑连接')} onClose={() => setMenu(false)}><header><h2>{t('电脑连接')}</h2><IconButton label={t('关闭窗口')} onClick={() => setMenu(false)}><IconCloseOutline16/></IconButton></header>
+      <Button className="option" onClick={() => { setMenu(false); setDiagnosticSelection('recent'); void diagnosticStore.refresh(); }}>{t('问题诊断')}</Button>
       <AppUpdateEntry buttonClass="option" onOpen={() => { setMenu(false); setUpdatesOpen(true); }}/>
       <p>{binding?.origin ?? t('尚未连接电脑')}</p>
       {binding?.paired && <><Button className="option" onClick={() => void run(async () => { setMenu(false); await disconnect(); })}>{t('断开连接')}</Button>
-        <details><summary>{t('移除本机绑定')}</summary><p>{t('移除后清理这台电脑的本机草稿，需要重新配对；电脑上的设备记录仍可在电脑端撤销。')}</p><Button onClick={() => void run(async () => { await model?.transport.syncCache?.clear(); await disconnect(); await stop(); const drafts = await RemoteDraftStore.open(binding); try { await drafts.clear(); } finally { drafts.close(); } await client.call('binding.forget'); setBinding({ paired: false }); setStatus(''); setMenu(false); })}>{t('确认移除')}</Button></details></>}
+        <details><summary>{t('移除本机绑定')}</summary><p>{t('移除后清理这台电脑的本机草稿，需要重新配对；电脑上的设备记录仍可在电脑端撤销。')}</p><Button onClick={() => void run(async () => { await model?.transport.syncCache?.clear(); await disconnect(); await stop(); const drafts = await RemoteDraftStore.open(binding); try { await drafts.clear(); } finally { drafts.close(); } await client.call('binding.forget'); diagnosticStore.publish([]); setBinding({ paired: false }); setStatus(''); setMenu(false); })}>{t('确认移除')}</Button></details></>}
     </Surface>}</SurfacePresence>
     {diagnostics && <SupportDiagnostics read={async () => {
       const info = await client.call('app.info');
       return { info, mode: 'remote', stage: model?.getSnapshot().connectionState ?? stage, binding,
         capabilities: model?.transport.capabilities, plugins: model?.getSnapshot().plugins };
     }} copy={text => client.call('clipboard.write', { text })} onClose={() => setDiagnostics(false)}/>}
-  </>;
+    {diagnosticSelection !== null && <RemoteDiagnosticSheet store={diagnosticStore} records={diagnosticRecords} selection={diagnosticSelection}
+      onSelect={setDiagnosticSelection} onClose={() => setDiagnosticSelection(null)}
+      onEnvironment={() => { setDiagnosticSelection(null); setDiagnostics(true); }}/>
+    }
+  </RemoteDiagnosticsContext.Provider>;
 }

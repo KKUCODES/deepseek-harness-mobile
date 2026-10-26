@@ -1,5 +1,31 @@
 # 手机端知识总目录
 
+2026-10-26：preview.14/code22统一发行，纳入下方已完成的插件接口、主题图标、预装/外部首页插件及其安装管理依赖。下列“本地/未发布”描述保留各专题当时的验收阶段，当前交付与公开下载核验以[发行指南](../releases.md)为准。[KKC-108](https://linear.app/kkcodes/issue/KKC-108)。
+
+2026-10-26：[插件历史读取失败兼容](../integration/remote-history-api-current.md)。公开loadOlder/loadThrough保持官方失败行为，内部严格读取继续校验、报错和重试；596项Node、全量插槽脚本、两SDK各六类接口与24批连续历史回归通过。未安装或发布。[KKC-107](https://linear.app/kkcodes/issue/KKC-107)。
+
+2026-10-26：[历史断层用例与插件分页接口诊断](../integration/remote-history-gap-diagnosis.md)。负面脚本未处理拒绝；手机公开loadOlder失败行为与官方不一致，插件忽略Promise会产生未处理异常。普通按钮保留数据/可重试，两SDK连续24批复验通过；只诊断，修复未实施。[KKC-106](https://linear.app/kkcodes/issue/KKC-106)。
+
+2026-10-26：[手机主题边界、首页原图标与SVG打包修复](../integration/remote-theme-current.md)。首页/默认回退/自有弹窗共用手机色板，电脑皮肤保留在聊天和局部界面；独立首页0.3.1携带原SVG，SDK修复data URL引号。593项Node、双SDK专项和MuMu实际主题/菜单/启停通过；原签名非调试code21已安装，未发布。[KKC-105](https://linear.app/kkcodes/issue/KKC-105)。
+
+2026-10-26：[Remote 浅色与圆按钮图标诊断](../integration/remote-theme-diagnosis.md)。手机浅色同步正常，电脑皮肤覆盖公共色板；首页混用色板与暗色标记导致浅底浅图标，拆分另有手写路径替代Figma资产的回归。真实MuMu单变量探测已恢复；仅诊断，未修改产品代码。[KKC-104](https://linear.app/kkcodes/issue/KKC-104)。
+
+2026-10-26：[预装目录、卸载保持与恢复安装](../integration/preinstalled-phone-plugins-current.md)。完整包进入APK资产，经同一安装器/加载器初始化；已安装版本/停用/卸载记录优先。591项Node、Android真实资产隔离专项、空目录清理、MuMu跨code18→19卸载不复活/恢复/外部更新通过；最终原签名非调试code19保留0.2.0和原配对。未发布、不改DSH、不合入旧适配分支。[KKC-103](https://linear.app/kkcodes/issue/KKC-103)。
+
+2026-10-26：[固定APK外部首页插件](../integration/external-phone-plugins-current.md)，系统文件导入、独立更新、启停、实际卸载、默认回退、SDK/模板与[作者指南](../plugins/development.md)。同一code17原签名调试APK下v1/v2与第二款独立工程插件验证通过；停止/卸载失败的状态遮蔽已修复。本地开发预览未发布，不修改DSH、不合入旧npm分支。[KKC-102](https://linear.app/kkcodes/issue/KKC-102)。
+
+2026-10-25：[产品能力与承诺审计](../integration/product-capability-audit-2026-10-25.md)，按已发布/本地候选/历史补丁区分66项能力，记录12项界面/文档发现与后续验收标准；当时确认停用/卸载失败被状态投影遮蔽，后续修复见上方KKC-102。审计本身只新增记录，不修改产品代码。[KKC-101](https://linear.app/kkcodes/issue/KKC-101)。以下功能专题保留各自当时的验证范围。
+
+2026-10-25：[统一手机插件管理](../integration/phone-plugin-management-current.md)，一份目录、通用安装/卸载/启停/配置入口、宿主实际运行状态与租约，替代KKC-99的两套管理状态。两版页面、Android存储及MuMu真实插件页/原电脑连接通过；本地候选未发布。[KKC-100](https://linear.app/kkcodes/issue/KKC-100)。
+
+2026-10-25：[手机插件页管理Remote新版首页](../integration/mobile-interface-current.md#手机插件页统一管理2026-10-25)，跨普通聊天/Remote共享启停与运行状态，保留旧选择；两版页面及MuMu真实连接通过，原签名候选安装，未发布。[KKC-99](https://linear.app/kkcodes/issue/KKC-99)。
+
+Remote 首页界面插件：[独立包、公开页面槽、启停与故障回退](../integration/mobile-interface-current.md)；[作者 API](../plugins/remote-home-api.md)。rc.2/alpha.2页面矩阵及MuMu真实官方alpha.2/公用中转启停、默认回退、Wi-Fi断线自动重连、会话/草稿/阅读位置保持通过；已安装同签名非调试候选，未发布，不混入 npm 安装分支；[实现KKC-97](https://linear.app/kkcodes/issue/KKC-97)、[设备验收KKC-98](https://linear.app/kkcodes/issue/KKC-98)。
+
+Remote连接诊断：[精确原因、安全异常栈、最近记录与验收](../integration/remote-diagnostics-current.md)。只增强已有聊天断线入口，保留插件渲染；本地原签名候选已覆盖安装MuMu，未发布。[KKC-95](https://linear.app/kkcodes/issue/KKC-95)。
+
+Remote Figma 页面：[共享组件、电脑批准后自动进入、读取反馈与验收边界](../integration/remote-design-current.md)。本地实现，未提交/发布；rc.2页面/导航回放、567项Node、Android构建/lint通过。用户追加授权后已在MuMu按原包名/签名覆盖安装 `preview.13-remote-ui`，清理4个旧测试包并打开新版Remote；真实配对及有效材料的原生粘贴仍待验。[KKC-94](https://linear.app/kkcodes/issue/KKC-94)。
+
 触顶自动加载历史：[规则与回归](../integration/remote-history-window-current.md#触顶自动加载)，主聊天/旁栏复用锚点与有界窗口；用户输入触发、一批在途、失败手动重试，不随初次进入或重连连读。[实现KKC-92](https://linear.app/kkcodes/issue/KKC-92)已验；preview.13/code16[发行KKC-93](https://linear.app/kkcodes/issue/KKC-93)构建/lint/原签名及[公开下载核验](../releases.md#已核验范围)通过。
 
 长聊天反复加载历史：[有界数据/渲染、双向查阅与恢复](../integration/remote-history-window-current.md)已随preview.12/code15公开，Actions40082470843构建/lint/原签名及[匿名下载核验](../releases.md#已核验范围)通过；rc.2/alpha.2连续24页、审批/插件输入、局部和Android渲染器恢复已验。用户持续白屏未复现，配对后的崩溃阅读恢复未实测；见[原诊断](../integration/remote-history-white-screen-diagnosis.md)。[实现KKC-89](https://linear.app/kkcodes/issue/KKC-89)已补同步；[发行KKC-90](https://linear.app/kkcodes/issue/KKC-90)。

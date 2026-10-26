@@ -43,7 +43,7 @@ export class OrdinaryInput {
   }
 
   async enable(enabled) {
-    if (this.state.getSnapshot().enabled === enabled) return;
+    if (enabled && this.state.getSnapshot().enabled || !enabled && !this.plugin && !this.resolver) return;
     if (enabled) {
       await this.provider.await();
       this.plugin = this.ctx.plugin(InputPlugin);
@@ -58,8 +58,8 @@ export class OrdinaryInput {
       this.state.set({ ...this.state.getSnapshot(), enabled: false });
       for (const binding of [...this.bindings.values()]) await binding.dispose();
       this.removeSource?.(); this.removeSource = undefined;
-      await this.resolver.dispose();
-      await this.plugin.dispose(); this.service = undefined;
+      await this.resolver?.dispose(); this.resolver = undefined;
+      await this.plugin?.dispose(); this.plugin = undefined; this.service = undefined;
     }
     const previous = this.state.getSnapshot();
     this.state.set({ ...previous, enabled, generation: previous.generation + 1 });

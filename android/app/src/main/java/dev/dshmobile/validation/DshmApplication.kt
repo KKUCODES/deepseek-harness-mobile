@@ -22,6 +22,14 @@ open class DshmApplication : Application(), Application.ActivityLifecycleCallbac
         private set
     internal lateinit var noticeConnection: RemoteNoticeConnection
         private set
+    internal lateinit var remoteDiagnostics: RemoteDiagnostics
+        private set
+    internal lateinit var mobilePlugins: MobilePluginPreferences
+        private set
+    internal lateinit var phonePlugins: PhonePluginStore
+        private set
+    internal lateinit var phonePluginPackages: PhonePluginPackages
+        private set
     internal lateinit var saveJournal: RemoteSaveJournal
         private set
     private lateinit var saveRecovery: RemoteSaveRecovery
@@ -38,9 +46,17 @@ open class DshmApplication : Application(), Application.ActivityLifecycleCallbac
         webUpdates = createWebUpdates()
         updates = createAppUpdates()
         appearance = PhoneAppearance(this)
+        mobilePlugins = MobilePluginPreferences(getSharedPreferences("dshm.mobile-plugins.v1", MODE_PRIVATE))
+        phonePluginPackages = PhonePluginPackages(File(noBackupFilesDir, "phone-plugins-v1"))
+        val preinstalled = runCatching { PhonePreinstalledPlugins(assets) }.getOrElse {
+            android.util.Log.w("DSHMPlugins", "Preinstalled catalog unavailable"); PhonePreinstalledPlugins(emptyList())
+        }
+        phonePlugins = PhonePluginStore(getSharedPreferences("dshm.phone-plugins.v2", MODE_PRIVATE), getSharedPreferences("dshm.mobile-plugins.v1", MODE_PRIVATE), phonePluginPackages, preinstalled)
+        runCatching { phonePlugins.initializePreinstalled() }.onFailure { android.util.Log.w("DSHMPlugins", "Preinstalled initialization incomplete") }
         saveJournal = RemoteSaveJournal(File(noBackupFilesDir, "remote-save-writes"))
         saveRecovery = RemoteSaveRecovery(saveJournal, appearance)
         notices = RemoteNotifications(this, appearance)
+        remoteDiagnostics = RemoteDiagnostics(this)
         noticeConnection = RemoteNoticeConnection(this, notices)
         registerActivityLifecycleCallbacks(this)
         noticeConnection.start()
