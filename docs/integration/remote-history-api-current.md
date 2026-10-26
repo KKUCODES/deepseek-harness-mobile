@@ -1,6 +1,6 @@
 # 插件历史读取的失败兼容
 
-- 状态：实现与下列验收完成，纳入preview.14/code22；公开包结果见[发行核验](../releases.md#已核验范围)。
+- 状态：随preview.14/code22公开发行；Actions构建/lint/原签名与匿名下载通过，[发行核验](../releases.md#已核验范围)。下列功能验收范围保持。
 - 维护：手机端维护者；核验日期：2026-10-26；任务：[KKC-107](https://linear.app/kkcodes/issue/KKC-107)。
 - 原因：[断层用例与公开接口诊断](./remote-history-gap-diagnosis.md)。只修改手机端，不改DSH本体、不合入旧插件适配分支。
 

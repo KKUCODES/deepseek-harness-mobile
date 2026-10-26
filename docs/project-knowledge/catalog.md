@@ -1,6 +1,6 @@
 # 手机端知识总目录
 
-2026-10-26：preview.14/code22统一发行，纳入下方已完成的插件接口、主题图标、预装/外部首页插件及其安装管理依赖。下列“本地/未发布”描述保留各专题当时的验收阶段，当前交付与公开下载核验以[发行指南](../releases.md)为准。[KKC-108](https://linear.app/kkcodes/issue/KKC-108)。
+2026-10-26：preview.14/code22已公开发行，纳入下方已完成的插件接口、主题图标、预装/外部首页插件及其安装管理依赖。[Actions40276885134](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40276885134)构建/lint/原签名/发行及APK与三附件匿名核验通过；预装0.3.1、原身份、资源公钥与r1保持，旧适配分支未混入。下列“本地/未发布”描述保留各专题当时的验收阶段，当前交付与验证范围以[发行指南](../releases.md#已核验范围)为准。[KKC-108](https://linear.app/kkcodes/issue/KKC-108)。
 
 2026-10-26：[插件历史读取失败兼容](../integration/remote-history-api-current.md)。公开loadOlder/loadThrough保持官方失败行为，内部严格读取继续校验、报错和重试；596项Node、全量插槽脚本、两SDK各六类接口与24批连续历史回归通过。未安装或发布。[KKC-107](https://linear.app/kkcodes/issue/KKC-107)。
 
