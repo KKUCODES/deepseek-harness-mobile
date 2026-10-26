@@ -1,5 +1,25 @@
 # 手机端模块地图
 
+2026-10-27当前候选：[preview.15架构与边界](../../integration/preview15-rebuild-current.md)。Session/Conversation与官方历史读取沿用.11，RemoteHistoryList只虚拟化DOM；没有RemoteHistoryWindow代理。独立首页、通用安装器、预装保持和真实运行租约选择性保留。下方历史窗口说明为.12–.14记录，不用于恢复已撤销的阅读限制。
+
+[预装目录](../../../preinstalled-plugins/README.md)由[通用构建检查](../../../scripts/check-preinstalled-plugins.mjs)和Gradle同步至独立APK资产。[原生预装来源](../../../android/app/src/main/java/dev/dshmobile/validation/PhonePreinstalledPlugins.kt)提供完整包和恢复元数据，Application启动经统一Store安装仅缺失记录的包；卸载墓碑持久保留，预装定义不会覆盖用户版本。恢复入口仍交相同PhonePluginPackages和动态加载器，预装原件不属于网页热更新。维护：手机端维护者，2026-10-26；[规则/验收](../../integration/preinstalled-phone-plugins-current.md)。
+
+[统一手机插件目录](../../../src/phone-plugin-catalog.mjs)、[管理器与宿主执行器](../../../src/phone-plugins.mjs)和[管理页](../../../src/ui/PhonePlugins.jsx)共用安装/卸载/启停与真实状态；[Application记录](../../../android/app/src/main/java/dev/dshmobile/validation/PhonePluginStore.kt)跨来源持久化意图、在内存按租约接收运行结果。旧选择只作首次迁移，界面加载器不再维护偏好。维护：手机端维护者，2026-10-25；[KKC-100验证](../../integration/phone-plugin-management-current.md)。
+
+[原生导入器](../../../android/app/src/main/java/dev/dshmobile/validation/PhonePluginImport.kt)经系统文件选择/原生信任确认，交[包存储](../../../android/app/src/main/java/dev/dshmobile/validation/PhonePluginPackages.kt)校验并写入内容地址文件。[动态目录](../../../src/external-phone-plugins.mjs)与内置目录合并后交统一管理器激活；[SDK](../../../packages/plugin-sdk/build.mjs)和[模板](../../../packages/plugin-template/)用于独立构建。安装器不执行npm或提取任意路径，外部脚本只通过两个自有来源的`/phone-plugins/`路由读取。维护：手机端维护者，2026-10-26；[固定APK验收](../../integration/external-phone-plugins-current.md)。
+
+[MobileInterfacePlugins](../../../src/mobile-interface-plugins.mjs)管理独立界面模块的API检查、加载、fiber释放和故障回退；[首页插槽](../../../src/remote-plugin-slots.jsx)承载可预装/外部更新的[设计插件](../../../packages/remote-home-design/index.jsx)与内置[默认首页](../../../src/ui/DefaultRemoteHome.jsx)。设计实现以独立完整包进入APK资产，不直接编译进宿主JS；数据和操作由RemoteWorkspace按[公开契约](../../plugins/remote-home-api.md)投影，选择界面不更换会话宿主。维护：手机端维护者，2026-10-26。
+
+[原生 RemoteDiagnostics](../../../android/app/src/main/java/dev/dshmobile/validation/RemoteDiagnostics.kt)仅持久化有界结构信息；[页面投影](../../../src/remote-diagnostics.mjs)与[独立窗口](../../../src/ui/RemoteDiagnostics.jsx)共用准确摘要和脱敏复制。RemoteApp提供上下文，既有断线/历史失败提示仅增加入口，原插件及输入区保持。[边界与验证](../../integration/remote-diagnostics-current.md)。维护：手机端维护者，2026-10-25。
+
+Remote 的[通用设计组件](../../../src/ui/system/Primitives.jsx)与[加载提示](../../../src/ui/system/LoadingToast.jsx)由[配对及读取页面](../../../src/ui/RemoteConnectionPage.jsx)使用；新版首页已移至独立界面插件，不再把设计类加到整个工作区祖先。[RemoteApp](../../../src/RemoteApp.jsx)保留配对、批准检查、取消及运行环境恢复。[受限粘贴](../../../android/app/src/main/java/dev/dshmobile/validation/RemotePairClipboard.kt)只返回经原解析器校验的配对材料。维护：手机端维护者，2026-10-25；[当前实现与验证范围](../../integration/remote-design-current.md)。
+
+[触顶意图控制器](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/remote-history-auto-load.mjs)由[RemoteWorkspace](../../../src/ui/RemoteWorkspace.jsx)在正文挂载/卸载时统一持有，主聊天和旁栏沿用同一分页请求锁、锚点和有界窗口。触摸一批门槛、惯性意图期限和失败手动重试防止自动连读；[规则与验证](../../integration/remote-history-window-current.md#触顶自动加载)。preview.13已公开，云端签名与下载验收由专题记录；维护：手机端维护者，核验2026-10-24。
+
+[历史窗口](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/remote-history-window.mjs)装饰公开Session binding，将实时尾部和历史查阅分开限制；[虚拟列表](../../../src/ui/RemoteHistoryList.jsx)只挂载可见组，[统一节点分页](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/ui/RemotePagedNode.jsx)覆盖原内置正文与思考。[阅读位置](../../../src/remote-reading-memory.mjs)只保存身份隔离的游标，[原生恢复](../../../android/app/src/main/java/dev/dshmobile/validation/RendererRecovery.kt)重建失效WebView；不重放写操作。[当前实现与验证限制](../../integration/remote-history-window-current.md)。维护：手机端维护者，核验2026-10-24。
+
+[Remote统一Markdown外链](../../../src/remote-markdown-links.jsx)在会话/面板共享作用域同时连接源码与已发布SDK的Markdown上下文；显式处理函数仍优先，文件委托不继承网页能力。[原生ExternalLinks](../../../android/app/src/main/java/dev/dshmobile/validation/ExternalLinks.kt)由普通聊天和Remote桥复用，限制HTTP(S)并交系统浏览器，不放宽WebView导航。[规则、真实入口回归与未发布状态](../../integration/remote-links-diagnosis.md)。维护：手机端维护者，核验2026-10-24。
+
 软件更新共用[面板](../../../src/ui/AppUpdates.jsx)和[选择规则](../../../src/update-presentation.mjs)，普通/Remote保存屏障通过受限更新桥交给独立进程重启；[当前实现、旧桥兼容及本地验收范围](../../integration/unified-updates-current.md)。
 
 页面资源更新由Application共享的[WebUpdates](../../../android/app/src/main/java/dev/dshmobile/validation/WebUpdates.kt)协调固定来源下载，[签名清单/安全解压](../../../android/app/src/main/java/dev/dshmobile/validation/WebResourceManifest.kt)与[进程固定世代/回退存储](../../../android/app/src/main/java/dev/dshmobile/validation/WebResourceStore.kt)分工；两个Activity继续使用原HTTPS来源和更新桥，StartupScreen提供健康确认及原生恢复。只操作独立资源目录，未迁移数据。[打包签名工具](../../../scripts/web-update-package.mjs)和[资源工作流](../../../.github/workflows/web-resources.yml)独立于APK签名。维护：手机端维护者，核验2026-10-24；[状态、验收与未发布边界](../../integration/web-resource-updates-current.md)。

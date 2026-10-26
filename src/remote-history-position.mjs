@@ -1,5 +1,21 @@
 /** 跟踪已有消息的位置，避免尾部流式输出或投影合并被误算为前插高度。 */
 export async function loadEarlierHistory({ container, load, isCurrent }) {
+  if (container.querySelector('[data-history-count]')) {
+    const top = container.getBoundingClientRect().top;
+    const anchor = [...container.querySelectorAll('[data-history-group]')]
+      .find(node => node.getBoundingClientRect().bottom > top);
+    const key = anchor?.dataset.historyGroup, offset = anchor?.getBoundingClientRect().top - top;
+    await load();
+    // 列表先定位到原组，随后按真实像素收尾；最后一页移除顶部按钮会再改变scrollMargin。
+    // 不按虚拟占位总高度补偿，避免把高度估算与真实前插重复计算。
+    for (let frame = 0; frame < 3; frame++) {
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      if (!container.isConnected || !isCurrent()) return;
+      const current = [...container.querySelectorAll('[data-history-group]')].find(node => node.dataset.historyGroup === key);
+      if (current && Number.isFinite(offset)) container.scrollTop += current.getBoundingClientRect().top - container.getBoundingClientRect().top - offset;
+    }
+    return;
+  }
   const top = container.getBoundingClientRect().top;
   // 插槽外壳使用 display:contents，本身没有位置；只取原 ChatNodeSeat 的实体行。
   const rows = container.querySelector('.messages').querySelectorAll(

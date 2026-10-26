@@ -19,7 +19,8 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 
 /** 启动封面只等待本地首屏；不等待模型、Remote连接或网络数据。 */
-internal class StartupScreen(private val activity: Activity, private val webView: WebView, private val page: Page = Page.ORDINARY) {
+internal class StartupScreen(private val activity: Activity, private val webView: WebView, private val page: Page = Page.ORDINARY,
+    private val reopen: (() -> Unit)? = null) {
     enum class Page(val origin: String, val entry: String) {
         ORDINARY("https://appassets.androidplatform.net", "mobile.html"),
         REMOTE(RemoteBridge.ORIGIN, "remote.html");
@@ -64,7 +65,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
         })
         error.addView(Button(context).apply {
             text = if (english) "Try again" else "重新打开"
-            setOnClickListener { loading(); webView.reload() }
+            setOnClickListener { if (rendererGone && reopen != null) reopen.invoke() else { loading(); webView.reload() } }
         })
         error.addView(Button(context).apply {
             text = if (english) "Restore bundled pages" else "恢复内置页面"
@@ -161,9 +162,12 @@ internal class StartupScreen(private val activity: Activity, private val webView
         phase = "loading"
         if (cover.parent == null) content.addView(cover)
         cover.alpha = 1f
-        (error.getChildAt(1) as? Button)?.isEnabled = false
+        rendererGone = true
+        (error.getChildAt(1) as? Button)?.isEnabled = reopen != null
         fail()
     }
+
+    private var rendererGone = false
 
     fun close() {
         phase = "closed"

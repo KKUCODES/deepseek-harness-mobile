@@ -6,7 +6,7 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 
 ## 安装与准备
 
-从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。`0.1.0-preview.5` 加入普通聊天自定义供应商与模型；Remote 继续配套电脑插件 `0.1.85-latest.0`，支持官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2`；不要直接混用任意新版 DSH 与旧手机包。各功能的实际验证范围保留在对应记录，构建、签名和下载说明见[安装包指南](./releases.md)。
+从 [GitHub Releases](https://github.com/KKUCODES/deepseek-harness-mobile/releases) 下载已签名 `.apk`，Android 9 及以上可安装。当前preview.13保留普通聊天自定义供应商与模型；Remote配套插件 `0.1.87-latest.0`，核心支持范围为官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`。不要直接混用任意新版 DSH 与旧手机包，实际验证范围及安装说明见[安装包指南](./releases.md)。
 
 普通聊天只需要 DSHM 和所选模型服务的 API Key，默认可使用 DeepSeek。Remote 另需电脑上的官方 DSH、DSHM 插件及手机和电脑都能连接的中转地址。候选安装与版本核对见[配套安装说明](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-installation.md)；从源码构建见[开发指南](./development.md)。
 
@@ -67,15 +67,25 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 2. 在电脑插件页核对手机的公钥指纹并批准。
 3. 手机点击「我已在电脑批准」，进入工作区和会话列表。
 
+源码中的新版 Remote 已按 Figma 调整，尚未发布：支持点按「粘贴」读取合法配对链接，批准后自动进入，不再需要第3步。旧 APK 可继续长按输入框使用系统粘贴；读取会话失败时点击「重试读取」即可。范围和设备验收边界见[新版界面说明](./integration/remote-design-current.md)。
+
 链接五分钟内有效，领取一次即失效。App 链接与系统分享入口也可进入配对确认；已有二维码时可扫描或从图片识别。当前电脑插件页提供配对链接，未提供二维码展示按钮。
 
 ### 继续工作
 
 打开进行中或历史会话，或在已有工作区创建新会话。手机发送的消息进入同一份电脑会话，当前模型实时同步，手机切换会影响电脑后续回复。
 
+本地preview.15候选恢复点击「加载更早的消息」，已加载记录可连续往返查阅，失败仍可重试；不自动触顶加载。公开preview.13/14仍采用原来的自动加载和双向窗口，preview.12及更早版需点击按钮。
+
 DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可以查看执行过程、命令结果、文件及改动预览。支持的局部插件界面沿用外层缩放规则，用户可以切换自适应设置。
 
 管理电脑插件、工作区和设置需要电脑单独授予管理权限。已有工作区可改名、排序和移除注册；手机不创建新的电脑工作区。内容搜索需要电脑开启相应索引，未开启时仍可搜索标题。
+
+### 手机首页界面（本地开发版）
+
+在普通聊天侧边抽屉打开「插件 → 手机」，所有随包插件共用安装、卸载、启停和状态规则。点「＋」进入安装目录，已卸载的条目可重新安装；卸载保留设置和聊天数据。「已启用」是用户选择，列表只有在对应宿主确认加载成功后才显示「运行中」；否则显示待加载或具体失败。支持配置的插件在详情提供「设置」。
+
+本地候选默认提供完整的「Remote 新版首页」预装包，首次启动安装；已安装版本、停用和卸载选择在 App 升级时保留。停用/卸载后使用默认首页，保留项目、搜索和会话/草稿。预装插件卸载后可在「＋ → 插件详情」确认恢复APK提供的版本；运行副本会删除，APK原件仍占空间。其他外部插件可通过「从文件安装」选择 `.dshm-plugin` 并确认信任，详情提供独立文件更新。内置普通聊天插件仍从「＋」目录重新安装。当前尚未公开发布，也不包含任意 npm 安装器。[预装规则与验证](./integration/preinstalled-phone-plugins-current.md) · [插件开发指南](./plugins/development.md)。
 
 ## 文件、通知与断线
 
@@ -90,13 +100,17 @@ DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可�
 
 文件格式、大小、转换依赖和异常范围以[当前兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)及对应专项为准。手机不提供电脑命令输入，也不转发电脑 localhost 网站。
 
+preview.12修复Remote正文与Markdown文件预览中的网页链接：HTTP/HTTPS交系统浏览器，返回后保留Remote；项目文件仍在原预览中打开。无法打开时显示原因。需要升级APK，不能仅更新旧版页面资源。详见[外链处理与验证范围](./integration/remote-links-diagnosis.md)。
+
+preview.15只限制当前挂载的历史界面，原SDK继续持有已读取的数据，没有「加载较新的消息」栏或正文分段按钮；数据内存仍随阅读增长。局部显示失败可重新显示，渲染进程退出尝试恢复，聊天、审批和插件服务继续由宿主管理。[当前规则与限制](./integration/preview15-rebuild-current.md)。公开preview.12–14的双向窗口说明见[历史实现](./integration/remote-history-window-current.md)。
+
 ## 连接问题
 
 - 中转地址需要手机和电脑都能访问。物理手机上的 `127.0.0.1` 指向手机自身；模拟器验收使用的 ADB 映射不等于公网部署。
 - HTTP 和 HTTPS 都可使用。HTTP 连接未加密，界面会提示；建议使用 HTTPS。
 - 配对等待批准时，先在电脑核对并批准；链接过期后重新生成。
 - 升级 DSH 前核对手机与插件兼容版本。插件安装后未加载时，按提示正常重启 DSH。
-- 可在「设置 → 问题诊断」或「Remote → 电脑连接 → 问题诊断」查看版本与连接状态；诊断用途见[问题诊断说明](./integration/diagnostics-current.md)。
+- 普通聊天可在「设置 → 问题诊断」查看版本与连接状态，见[原诊断说明](./integration/diagnostics-current.md)。本地新版 Remote 在失败提示处提供「查看诊断详情」，「电脑连接 → 问题诊断」可查看最近失败、展开技术详情并复制脱敏信息；版本信息保留在「应用与兼容信息」。[连接诊断与当前安装范围](./integration/remote-diagnostics-current.md)，尚未公开发布。
 
 ## App 更新
 

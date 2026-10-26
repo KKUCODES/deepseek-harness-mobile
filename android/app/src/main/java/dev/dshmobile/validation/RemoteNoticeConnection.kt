@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /** 应用进程内的独立只读连接。只协商并订阅提醒，不加载页面、不发送模型消息，也不唤醒进程。 */
 internal class RemoteNoticeConnection(context: Context, private val notices: RemoteNotifications) {
+    private val diagnostics = (context.applicationContext as? DshmApplication)?.remoteDiagnostics
     private val preferences = context.getSharedPreferences("dshm.remote.notice-connection.v1", Context.MODE_PRIVATE)
     private val identity by lazy { RemoteIdentity(context) }
     private val worker = Executors.newSingleThreadExecutor()
@@ -86,7 +87,9 @@ internal class RemoteNoticeConnection(context: Context, private val notices: Rem
     }
     private fun deadline(owner: Int) {
         timer?.let(main::removeCallbacks)
-        timer = Runnable { if (epoch == owner) failed() }.also { main.postDelayed(it, 35_000) }
+        timer = Runnable { if (epoch == owner) {
+            diagnostics?.failure("notifications", code = "network_timeout", source = "notifications"); failed()
+        } }.also { main.postDelayed(it, 35_000) }
     }
     private fun failed(terminal: String? = null) {
         closeAttempt()
@@ -119,7 +122,10 @@ internal class RemoteNoticeConnection(context: Context, private val notices: Rem
                     open(origin, ticket, owner)
                 }
             } catch (error: Exception) {
-                main.post { if (epoch == owner) failed(if (error is RemoteApi.Failure && error.code in setOf("http_401", "http_403")) "unauthorized" else null) }
+                main.post { if (epoch == owner) {
+                    diagnostics?.failure("ticket", error, httpStatus = (error as? RemoteApi.Failure)?.code?.removePrefix("http_")?.toIntOrNull(), source = "notifications")
+                    failed(if (error is RemoteApi.Failure && error.code in setOf("http_401", "http_403")) "unauthorized" else null)
+                } }
             }
         }
     }
@@ -145,15 +151,18 @@ internal class RemoteNoticeConnection(context: Context, private val notices: Rem
             }
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) { webSocket.cancel() }
             override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                webSocket.close(code, null); ended(owner, reason)
+                webSocket.close(code, null); ended(owner, reason, closeCode = code)
             }
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) = ended(owner, reason)
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) = ended(owner, null)
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) = ended(owner, reason, closeCode = code)
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) = ended(owner, null, t, response?.code)
         })
     }
-    private fun ended(owner: Int, reason: String?) {
+    private fun ended(owner: Int, reason: String?, error: Throwable? = null, httpStatus: Int? = null, closeCode: Int? = null) {
         main.post {
-            if (epoch == owner) failed(if (reason in setOf("device_revoked", "permissions_changed", "credential_expired", "invalid_authentication")) "unauthorized" else null)
+            if (epoch == owner) {
+                diagnostics?.failure(if (stage == "authenticating") "websocket" else "notifications", error, httpStatus, closeCode, reason, source = "notifications")
+                failed(if (reason in setOf("device_revoked", "permissions_changed", "credential_expired", "invalid_authentication")) "unauthorized" else null)
+            }
         }
     }
     private fun send(id: String, operation: JSONObject) {
@@ -163,7 +172,7 @@ internal class RemoteNoticeConnection(context: Context, private val notices: Rem
         val type = frame.getString("type")
         if (stage == "authenticating") {
             require(type == "ready" && frame.get("protocol") == 1 && frame.get("hostOnline") is Boolean)
-            if (!frame.getBoolean("hostOnline")) { failed(); return }
+            if (!frame.getBoolean("hostOnline")) { diagnostics?.failure("notifications", code = "host_offline", source = "notifications"); failed(); return }
             stage = "negotiating"; negotiateId = UUID.randomUUID().toString(); deadline(owner)
             send(negotiateId, JSONObject().put("method", "remote.negotiate").put("version", 2)); return
         }
@@ -196,6 +205,6 @@ internal class RemoteNoticeConnection(context: Context, private val notices: Rem
         ledger.receive(frame.getJSONObject("value"), { notices.baseline(bound, it) }, { notices.resolve(bound, it) },
             { key, session, kind, reason, preview -> notices.push(bound, key, session, kind, reason, preview) }, previews)
         timer?.let(main::removeCallbacks); timer = null
-        stage = "listening"; attempt = 0; publish("listening")
+        stage = "listening"; attempt = 0; diagnostics?.recovered("notifications"); publish("listening")
     }
 }

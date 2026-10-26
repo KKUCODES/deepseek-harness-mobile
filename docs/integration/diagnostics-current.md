@@ -1,5 +1,7 @@
 # 正式问题诊断入口
 
+2026-10-25：本地新版 Remote 已增加[连接诊断与最近记录](./remote-diagnostics-current.md)，原本页说明的版本报告迁到其中「应用与兼容信息」。普通聊天原入口保持。以下为既有功能的历史验收依据，不表示新 Remote 菜单仍直接显示此报告。
+
 - 状态：已实现、安装；MuMu 三个正式入口通过。完整 A06 与 Remote 未完成。
 - 维护角色：项目协作 Agent；核验日期：2026-09-27。
 - 来源：[共享窗口](../../src/ui/SupportDiagnostics.jsx)、[字段投影](../../src/support-diagnostics.mjs)、[原生公开版本](../../android/app/src/main/java/dev/dshmobile/validation/AppInfo.kt)、[实际入口脚本](../../scripts/verify-support-diagnostics-android.mjs)。

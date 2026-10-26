@@ -1,5 +1,9 @@
 # 正式接入清单
 
+当前本地开发入口：[preview.15以.11重建的范围、架构与验收](./preview15-rebuild-current.md)。独立首页安装管理保留，长历史回归原Session连续读取；本轮不改DSH/插件/中转，不含旧npm适配分支。
+
+preview.12已公开[双窗口预算、虚拟渲染、正文分段与原生恢复](./remote-history-window-current.md)及Remote网页外链修复；云端签名与[匿名下载核验](../releases.md#已核验范围)通过，连续历史回归和限制独立记录。
+
 当前优先入口：[未修改官方 DSH 的真实 Android 核心链路](./official-plugin-only.md)。正常 Web 安装/重启、新手机菜单、真实回复、允许/拒绝审批、新建与重连通过；其他扩展继续按纯插件矩阵核验，下方补丁载体仅保留历史。
 
 手机提问回答、完成命令结果和普通后台双流/重读也已有实际证据；[当前功能矩阵](../../../plugin/compatibility/latest-upstream/official-feature-matrix.md)是纯插件范围的逐项入口。

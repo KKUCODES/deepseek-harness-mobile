@@ -87,10 +87,7 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
                     }
                     "links.open" -> {
                         if (data.keys().asSequence().toSet() != setOf("url")) throw Failure("invalid_request")
-                        val value = data.getString("url")
-                        val uri = android.net.Uri.parse(value)
-                        if (value.length > 8192 || uri.scheme !in setOf("http", "https") || uri.host.isNullOrEmpty() || uri.userInfo != null) throw Failure("invalid_link")
-                        activity.startActivity(Intent(Intent.ACTION_VIEW, uri))
+                        ExternalLinks.open(activity, data.get("url"))
                         respond(reply, id, JSONObject())
                     }
                     "cache.clear" -> {
@@ -174,6 +171,7 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
     private fun code(error: Exception) = when (error) {
         is Failure -> error.code
         is OrdinaryProviders.Failure -> error.code
+        is ExternalLinks.Failure -> error.code
         is SocketTimeoutException -> "request_timeout"
         else -> "native_operation_failed" // 不将异常、请求头或上游错误正文传给插件/日志。
     }

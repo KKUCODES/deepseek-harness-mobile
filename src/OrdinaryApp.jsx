@@ -47,7 +47,7 @@ export function OrdinaryApp({ host, renderSlot, SessionProvider }) {
   const selected = selectedModel(state.providers, preferences);
   const model = selected.model;
   const ownBusy = state.busy && state.owner === chat?.id;
-  const renderMessage = (text, streaming) => plugins.record.rendering.enabled && plugins.record.rendering.installed
+  const renderMessage = (text, streaming) => host.phonePlugins.running('rendering')
     ? renderSlot('ordinary.message.content', { text, streaming, onOpenLink: url => act(() => session.openLink(url)) }) : <div className="reply-text">{text}</div>;
   const act = async action => {
     try { return await action(); } catch (error) { setNotice(t(ordinaryError(error))); }

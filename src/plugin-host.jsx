@@ -5,7 +5,7 @@ import { clientStaticModules as seed } from './client-static-modules.jsx';
 import { LocalSettings } from './local-settings.mjs';
 import { ThemePresenter } from '../../deepseek-harness/packages/client/ui-layout/src/client/theme-presenter.ts';
 import { OrdinaryInput } from './ordinary-input.mjs';
-import { PhonePlugins } from './phone-plugins.mjs';
+import { phonePluginsFor, PhonePluginHost } from './phone-plugins.mjs';
 import { mirrorPhoneAppearance } from './phone-appearance.mjs';
 import { ordinaryNative } from './ordinary-native.mjs';
 import { isProfileDshVersion } from './remote-dsh-version.mjs';
@@ -39,8 +39,8 @@ async function setRendering(enabled) {
   if (enabled && !renderingFiber) { renderingFiber = ctx.plugin(OrdinaryRendering); await renderingFiber.await(); }
   else if (!enabled && renderingFiber) { await renderingFiber.dispose(); renderingFiber = null; }
 }
-const phonePlugins = diagnostics ? null : new PhonePlugins(localStorage, (id, enabled) =>
-  id === 'theme' ? setThemeModule(enabled) : id === 'rendering' ? setRendering(enabled) : ordinaryInput.enable(enabled));
+const phonePlugins = diagnostics ? null : phonePluginsFor('ordinary');
+if (phonePlugins) await phonePlugins.start();
 if (phonePlugins) themeEnabled = phonePlugins.enabled('theme');
 const appearance = phonePlugins ? mirrorPhoneAppearance(settings, phonePlugins, ordinaryNative()) : null;
 if (appearance) ctx.effect(() => appearance.dispose);
@@ -114,8 +114,19 @@ async function setThemeModule(enabled) {
     } }, props => <Root {...props} host={host} />);
   } });
   await ctx.loader.await();
-  await ordinaryInput.enable(phonePlugins ? phonePlugins.enabled('input') : true);
-  if (phonePlugins) await setRendering(phonePlugins.enabled('rendering'));
+  if (phonePlugins) {
+    const pluginRuntime = new PhonePluginHost(phonePlugins, {
+      input: enabled => ordinaryInput.enable(enabled),
+      theme: async enabled => {
+        await setThemeModule(enabled);
+        const entry = [...ctx.loader.entries()].find(item => item.options.name === themeId);
+        if (enabled && entry?.fiber?.state !== 2) throw Error('load');
+      },
+      rendering: setRendering,
+    });
+    await pluginRuntime.ready;
+    ctx.effect(() => () => pluginRuntime.dispose(), 'DSHM: ordinary plugin runtime');
+  } else await ordinaryInput.enable(true);
   host = { ctx, settings, ordinaryInput, phonePlugins, appearance, setFixture, setThemeModule, optionalPlugins };
   ctx.uiRenderer.mount(document.getElementById('app'));
   // 只暴露验证读数和生命周期操作，不包含凭据或任意执行入口。

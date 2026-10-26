@@ -1,0 +1,10 @@
+{
+  "name": "@dshm/remote-home-design",
+  "version": "0.3.1",
+  "description": "为 Remote 提供独立首页，聊天和连接状态由 DSHM 保持。",
+  "type": "module",
+  "exports": "./index.jsx",
+  "files": ["index.jsx", "styles.mjs", "assets", "README.md"],
+  "peerDependencies": { "react": "^18.3.1" },
+  "dshm": { "interfaceApi": 1, "surface": "dshm.remote.home", "entry": "index.jsx", "displayName": "Remote 新版首页" }
+}

@@ -2,7 +2,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { RemoteModel } from '../../src/remote-model.mjs';
+import { RemoteClient } from '../../src/remote-client.mjs';
 import { loadTestRemotes } from './remote-core.mjs';
+import { RemoteHistoryReplay } from './remote-history-replay.mjs';
 import workspaceFilesRemote from './generated/workspace-files-remote.mjs';
 import sessionReferenceRemote from './generated/session-reference-remote.mjs';
 import { installRemotePluginSlots, RemotePluginScope } from '../../src/remote-plugin-slots.jsx';
@@ -45,6 +47,7 @@ import { renderFailureProbe } from './remote-render-failure.jsx';
 // 独立测试协议回放，不进入 APK；消息仍经过原 ClientSessions/UiConversation。
 const channels = new Map();
 const documentMode = new URL(location.href).searchParams.has('documents');
+const sidebarMode = new URL(location.href).searchParams.has('sidebar');
 const fileListMode = new URL(location.href).searchParams.has('files');
 const fileListRoot = 'Q:/Tanxian/LToys/dsh-mobile/plugin/artifacts/official-dsh-alpha2/home/official-remote-test-project/2ea87817';
 const documentReads = [];
@@ -74,6 +77,8 @@ const settingsRequests = [];
 const commandOutputRequests = [];
 const keyNativeCalls = [];
 const appearanceNavigationCalls = [];
+const externalLinkCalls = [];
+let externalLinkFailure, nativeLinkClient;
 let keyConfigured = true, heldKeyRead, heldKeyNative;
 let heldProviderCardRead;
 let readiness = 'credential-missing';
@@ -99,6 +104,7 @@ let jobStopWrites = 0;
 let scheduleSeq = 500, planSeq = 500, planWrites = [], modelSeq = 500;
 let workflowSeq = 0;
 let historyReply, historyTesting = false;
+const continuousHistory = new RemoteHistoryReplay();
 let listRefreshGate, releaseListRefresh;
 let createProbe;
 let lineageTesting = false;
@@ -131,6 +137,8 @@ const transport = {
     if (fileListMode && endpoint === 'workspaceFiles/list') return { ok: true, value: { path: '.', absolutePath: payload.args.path,
       entries: payload.args.path.endsWith('/folder') ? [{ name: 'nested.txt', type: 'file' }]
         : [{ name: 'folder', type: 'directory' }, ...Array.from({ length: 90 }, (_, index) => ({ name: `approval-${String(index).padStart(3, '0')}.txt`, type: 'file' }))], truncated: false } };
+    if (endpoint === 'session/page' && continuousHistory.active
+      && (payload.args.request.address.sessionId ?? payload.args.request.address.childSessionId) === continuousHistory.sessionId) return continuousHistory.page(payload.args.request);
     if (endpoint === 'session/page' && historyTesting && payload.args.request.address.sessionId === 'one') {
       historyRequests.push(payload.args.request);
       return new Promise(resolve => { historyReply = resolve; });
@@ -231,7 +239,11 @@ const transport = {
     if (endpoint === '$events') yield { type: 'ready', clientId: 'fixture', host: { home: '/fixture' } };
     if (endpoint === 'session/follow') yield { type: 'snapshot', header: { version: 1, id: key, createdAt: 0, isSeeded: false }, cursor: historyTesting && key === 'one' ? 10 : -1,
       records: historyTesting && key === 'one' ? [{ type: 'event', event: { type: 'turn/start', seq: 10, time: 1, data: { turn: 1 } } }] : [], hasMore: historyTesting && key === 'one',
-      projections: { asOfSeq: -1, values: { agentPreset: 'standard' } }, assistantStream: { revision: 0 } };
+      projections: { asOfSeq: -1, values: { agentPreset: 'standard', ...(sidebarMode || continuousHistory.sessionId==='child-chat' ? {subagentCatalog:key==='one' ? [
+        {id:'child-once',mode:'one-shot',label:'资料检查',createdAt:0},
+        {id:'child-chat',mode:'continuable',label:'分析助手',createdAt:0},
+      ] : [], ...(key.startsWith('child-') ? {subagent:{mode:key==='child-once'?'one-shot':'continuable',label:'分析助手',seq:0}} : {})} : {}) } }, assistantStream: { revision: 0 },
+      ...(continuousHistory.active && key === continuousHistory.sessionId ? continuousHistory.snapshot() : {}) };
     const abort = () => wake?.(); signal.addEventListener('abort', abort);
     try { while (!signal.aborted) { if (frames.length) yield frames.shift(); else await new Promise(resolve => { wake = resolve; }); } }
     finally { signal.removeEventListener('abort', abort); channels.delete(key); }
@@ -356,6 +368,11 @@ const client = { subscribe() { return () => {}; }, request(operation, onEvent, o
   }
   throw new Error(`Unexpected fixture operation: ${operation.method}`);
 }, async call(op, data) {
+  if (op === 'links.open') {
+    externalLinkCalls.push(data.url);
+    if (externalLinkFailure) throw Error(externalLinkFailure);
+    return nativeLinkClient ? nativeLinkClient.call(op,data) : {};
+  }
   if (op === 'appearance.settings') { appearanceNavigationCalls.push({ op, data }); return {}; }
   if (op === 'notifications.context') { readingContexts.push(data.sessionId); return {}; }
   if (op === 'notifications.status') return { status: 'listening' };
@@ -477,7 +494,33 @@ let removeCordisPanel;
 let cordisCards;
 let managementCapabilities;
 let releasePanelSelection, pendingPanelSelection, panelSelectionNotices;
+window.preview15 = { model, history: continuousHistory,
+  live: () => {
+    const first=continuousHistory.latest+1; continuousHistory.latest+=5;
+    for(const frame of continuousHistory.records(first,continuousHistory.latest)) channels.get(continuousHistory.sessionId)(frame);
+  },
+  state: () => {
+    const binding = (model.conversationFocus.getSnapshot() ?? model).reference?.binding;
+    const entries = binding?.eventSource.getSnapshot().entries ?? [];
+    return { calls:continuousHistory.calls, records:entries.length, first:entries[0]?.event.seq,
+      last:entries.at(-1)?.event.seq, windowed:!!binding?.history, selected:model.getSnapshot().selected,
+      groups:document.querySelectorAll('[data-history-group]').length, dom:document.querySelectorAll('*').length };
+  },
+};
 window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = desktopAppsReplay(model); }, ...factoryChecks(model), ...navigationChecks(model), ...composerChecks(model), checkRemoteInput, checkViewInputs: () => checkViewInputs(model), sidebarState: () => ({ selected: model.snapshot.selected, drafts: model.snapshot.drafts, prompts: sidebarPrompts }), inputDraft: () => model.getSnapshot().drafts[model.getSnapshot().selected], enable, disable: () => plugin.dispose(), select: id => model.select(id), emitTurn,
+  externalLinks: {calls:()=>externalLinkCalls,fail:code=>{externalLinkFailure=code;},native:()=>{nativeLinkClient=new RemoteClient(window.DSHMRemote);},raw:data=>nativeLinkClient.call('links.open',data)},
+  linkFile:()=>model.documentFiles?.get(sessionFileAddress('two','links.md')),
+  legacyLinkPreview:text=>{
+    const legacyModel=Object.assign(Object.create(model),{documentPreviews:undefined,files:{text:async()=>text}});
+    root.render(<RemotePluginScope model={model}><RemoteFilePreview file={{sessionId:'two',path:'legacy-links.md'}} model={legacyModel} onClose={()=>{}}/></RemotePluginScope>);
+  },
+  linkToolTurn:()=>{
+    const emit=(seq,type,data)=>channels.get('two')({type:'event',event:{seq,time:seq,type,data,...(type==='tool/result'?{surfaceOp:'append'}:{})}});
+    emit(5,'turn/start',{turn:2});emit(6,'step/start',{turn:2,step:1});
+    emit(7,'tool/call',{turn:2,step:1,callId:'link-read',name:'read',arguments:'{"path":"links.md"}'});
+    emit(8,'tool/result',{turn:2,step:1,message:{id:'link-read-result',role:'tool',source:{kind:'tool',callId:'link-read'},content:[{type:'text',text:'[工具网页](https://example.com/tool)'}]}});
+    emit(9,'step/end',{turn:2,step:1});emit(10,'turn/end',{turn:2,reason:{kind:'completed'}});
+  },
   appearanceNavigationCalls: () => appearanceNavigationCalls,
   backNavigationProject: () => model.workspaces.replaceBaseline({ items: [
     { workspaceId: 'back-test', title: '返回验证项目', sessionIds: ['one'], path: '/fixture/back',
@@ -832,6 +875,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
   },
   enableSidebarResources: async () => {
     if (!model.ctx.get('resources')) await model.ctx.plugin({ ...originalResources, name: 'fixture-sidebar-resources' }).await();
+    if (sidebarMode) model.sessions.handleSessionStatus('one', false);
   },
   readingContexts: () => readingContexts,
   enableReadingModal: async () => {

@@ -10,6 +10,9 @@ import { OrdinaryMarkdown } from '../ordinary-rendering.jsx';
 import { unwrap } from '../remote-model.mjs';
 import { responseFailures } from '../remote-response-errors.mjs';
 import { RemoteMessage, RemoteFiles, fileSize, contentText } from './RemoteMessage.jsx';
+import { RemoteHistoryList } from './RemoteHistoryList.jsx';
+import { RemoteDiagnosticEntry } from './RemoteDiagnostics.jsx';
+import { DefaultRemoteHome } from './DefaultRemoteHome.jsx';
 import { RemoteQueue } from './RemoteQueue.jsx';
 import { RemoteFilePreview } from './RemoteFilePreview.jsx';
 import { RemoteImages, RemoteLocalImage } from './RemoteImages.jsx';
@@ -22,7 +25,7 @@ import { RemotePluginList, RemoteComputerPlugins, RemotePluginSettings } from '.
 import { RemoteSettings } from './RemoteSettings.jsx';
 import { PanelSurface } from '../remote-plugin-panels.jsx';
 import { RemoteSettingsOnboarding } from './RemoteSettingsOnboarding.jsx';
-import { RemotePluginPanels, RemoteHeaderExtensions, RemoteHeaderTitle, RemoteHeaderAncestors, RemoteComposerExtension, RemoteRunningStatus } from '../remote-plugin-slots.jsx';
+import { RemotePluginPanels, RemoteHeaderExtensions, RemoteHeaderTitle, RemoteHeaderAncestors, RemoteComposerExtension, RemoteRunningStatus, RemoteHomeExtension } from '../remote-plugin-slots.jsx';
 import { RemoteSkillPicker } from './RemoteSkills.jsx';
 import { RemoteReferencePicker } from './RemoteReferences.jsx';
 import { referenceSources } from '../remote-references.mjs';
@@ -85,6 +88,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [command, setCommand] = useState(() => model.commandResume?.target ?? null);
   const [jobOutput, setJobOutput] = useState(() => model.jobOutputResume?.target ?? null);
   const scroll = useRef(null), bottom = useRef(true);
+  const homeReading = useRef(new Map());
   const scene = useRef(null);
   useSceneMotion(scene, state.selected ?? `workspace:${workspace ?? ''}`, state.selected ? 2 : workspace ? 1 : 0);
   const [flowMotion] = useState(() => createChatFlowMotion?.(() => {}, active => {
@@ -154,7 +158,8 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     historyRequest.current = request; bottom.current = false; setNotice('');
     try {
       // 分页仅锁住自己的按钮；用户离开时由原会话引用释放来取消请求。
-      await loadEarlierHistory({ container, load: () => loadRemoteHistory(reference.binding, { isCurrent }), isCurrent });
+      await new Promise(resolve => setTimeout(resolve, 0));
+      if (isCurrent()) await loadEarlierHistory({ container, load: () => loadRemoteHistory(reference.binding, { isCurrent }), isCurrent });
     } catch (error) { if (isCurrent()) setNotice(t(error.message)); }
     finally { if (historyRequest.current === request) historyRequest.current = null; }
   };
@@ -188,6 +193,32 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     !item.blank && !!state.workspaces?.archivedSessionIds.includes(item.id) === archived &&
     (!workspace || state.workspaces?.items.find(item => item.workspaceId === workspace)?.sessionIds.includes(item.id)) &&
     (!phrase || item.displayTitle.toLocaleLowerCase().includes(phrase.toLocaleLowerCase()) || snippets.has(item.id)));
+  const homeKey = JSON.stringify([workspace, archived, phrase]);
+  // 只交付首页投影和白名单操作；插件不会拿到 RemoteModel、凭据或任意 RPC 通道。
+  const home = { apiVersion: 1, t, locale, view: {
+    key: homeKey, scrollTop: homeReading.current.get(homeKey) ?? 0,
+    title: workspace ? state.workspaces.items.find(item => item.workspaceId === workspace)?.title ?? 'Remote' : 'Remote',
+    workspace, query, archived, ready: !!state.ready, busy, connection: state.connectionState,
+    workspaces: (state.workspaces?.items ?? []).map(item => ({ id: item.workspaceId, title: item.title })),
+    sessions: rows.map(item => ({ id: item.id, title: item.displayTitle, running: item.running, updatedAt: item.updatedAt, snippet: snippets.get(item.id) })),
+    searching, searchError: currentSearch?.error ? currentSearch.error === 'disabled'
+      ? '电脑尚未开启聊天内容搜索，当前仅搜索标题。' : '聊天内容搜索失败，当前仅显示标题匹配。请检查电脑连接后重试。' : null,
+    hasMore: !!currentSearch?.hasMore,
+  }, actions: {
+    back: () => { if (!busy) workspace ? setWorkspace(null) : onBack(); },
+    menu: () => setSheet('menu'), connection: onConnection,
+    workspace: id => { if (state.workspaces?.items.some(item => item.workspaceId === id)) setWorkspace(id); },
+    session: id => { if (!model.getSnapshot().selected && model.getSnapshot().connectionState === 'connected'
+      && rows.some(item => item.id === id)) void act(() => model.select(id)); },
+    query: value => { if (typeof value === 'string') setQuery(value); }, retrySearch: () => retrySearch(value => value + 1),
+    newSession: () => { if (model.getSnapshot().connectionState === 'connected' && !busy) setSheet('new'); },
+    readScroll: () => homeReading.current.get(homeKey) ?? 0,
+    rememberScroll: top => {
+      if (!Number.isFinite(top)) return;
+      homeReading.current.set(homeKey, Math.max(0, top));
+      if (homeReading.current.size > 32) homeReading.current.delete(homeReading.current.keys().next().value);
+    },
+  } };
   // 原投影保留未变节点的身份；稳定回调让新输出和草稿编辑不重画全部历史。
   const openFile = useCallback((path, options) => { if (selected) {
     if (model.documentPreviews) setCommand(null);
@@ -253,12 +284,14 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     window.dshmHandleBack = back;
     return () => { delete window.dshmHandleBack; };
   }, [model, embedded, file, command, jobOutput, sheet, selected, workspace, act]);
-  const header = <>
+  const navigation = <>
     <header className="topbar remote-topbar"><IconButton label={t("返回")} disabled={busy} onClick={() => selected ? void act(() => model.back()) : workspace ? setWorkspace(null) : onBack()}><IconChevronLeftOutline14/></IconButton>
       <div className="remote-heading">{selected ? <RemoteHeaderTitle model={model} title={chat?.displayTitle ?? '聊天'}/> : <strong>{workspace ? state.workspaces.items.find(item => item.workspaceId === workspace)?.title : 'Remote'}</strong>}</div>
       <IconButton label={t("Remote 选项")} disabled={busy} onClick={() => setSheet('menu')}><IconEllipsisOutline16/></IconButton></header>
     {selected && <><RemoteHeaderAncestors model={model}/><RemoteHeaderExtensions/></>}
-    {(notice || state.error) && <div className="remote-error" role="alert">{t(responseFailures[notice || state.error] ?? (notice || state.error))}</div>}
+  </>;
+  const status = <>
+    {(notice || state.error) && <div className="remote-error" role="alert">{t(responseFailures[notice || state.error] ?? (notice || state.error))}<RemoteDiagnosticEntry failure={notice || state.error}/></div>}
     <RemoteOfflineStatus model={model}/>
     {!!state.endpointRecoveries?.length && <p className="remote-offline-status" role="status">
       {t('有服务地址保存结果尚未确认，请打开对应设置重新读取地址。')}
@@ -282,6 +315,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     {selected && <RemoteActivePreset><RemoteAgentPresetLabel model={model} onOpen={() => setSheet('agentPresets')}/></RemoteActivePreset>}
     {selected && childAccess.address && <div className="remote-agent-mode"><Button disabled={busy} onClick={() => void act(() => model.back())}>{t("返回父会话")}</Button><span>{childAccess.address.mode === 'one-shot' ? '一次性子任务' : '子会话'}</span></div>}
   </>;
+  const header = <>{navigation}{status}</>;
   const conversation = <>{header}
     <section className="conversation" ref={attachScroll} aria-label={t("聊天内容")} onScroll={event => {
       const el = event.currentTarget, top = el.scrollTop;
@@ -297,8 +331,10 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
           <Button disabled={!connected || busy || state.subagentServiceAvailable === false && !!childAccess.address}
             onClick={() => void act(() => model.select(state.selectedTarget, { trail: state.selectionTrail }))}>{t('重试读取')}</Button></>}
         {state.session?.hasMore && <Button data-history-loader disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadOlder()}>{t("加载更早的消息")}</Button>}
-        {state.conversation?.order.map(key => <RemoteMessage key={key} node={state.conversation.nodes.get(key)} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment} openChanges={openChanges} openCommand={openCommand}
-          onFork={forkTurn} forkDisabled={!connected || busy || turnForkAnchor(state.conversation, key) === null}/>)}
+        <RemoteHistoryList key={`${selected}:${state.selectionRevision}`} conversation={state.conversation} container={scroll}
+          following={bottom} sessionKey={selected} reading={model.reading} target={state.selectedTarget} resume={model.readingResume}
+          renderNode={node => <RemoteMessage key={node.key} node={node} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment} openChanges={openChanges} openCommand={openCommand}
+            onFork={forkTurn} forkDisabled={!connected || busy || turnForkAnchor(state.conversation, node.key) === null}/>}/>
         {state.inbox?.['next-step']?.map(item => <UserMessage key={item.id} attachments={<RemoteFiles content={item.content} openAttachment={openAttachment}/>}>{contentText(item.content)}<small className="muted">{t("等待引导…")}</small></UserMessage>)}
         {state.session?.pendingSubmissions.filter(item => item.placement !== 'queued').map(item => <UserMessage key={item.requestId} attachments={<RemoteFiles pending={item.attachments} openAttachment={openAttachment}/>}>{item.text}<small className="muted">{t("正在发送…")}</small></UserMessage>)}
         <RemoteRunningStatus/>
@@ -309,21 +345,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     setSettingsTarget(before => ({ id, revision: before.revision + 1 })); setSheet('settings');
   }}/>}<RemoteImages key={selected ?? 'home'} model={model} sessionId={selected}><main ref={scene} data-chat-motion="" className={`app remote-app${embedded ? ' remote-embedded-app' : ''}`} data-testid={embedded ? 'remote-sidebar-conversation' : 'remote-workspace'}>
     {selected && !embedded && <RemotePluginPanels/>}
-    {!selected ? <>
-      {header}
-      <button className="connection-strip" onClick={onConnection}><span className={`connection-dot${connected ? ' online' : ''}`}/><strong role="status">{t(connectionLabel)}</strong></button>
-      <section className="remote-scroll remote-home">
-        {!workspace && <><h2>{t("项目")}</h2>{state.workspaces?.items.map(item => <button className="remote-project-row" key={item.workspaceId} onClick={() => setWorkspace(item.workspaceId)}><IconFolderClose16 size={22}/><span>{item.title}</span></button>)}</>}
-        <h2>{t(phrase ? '搜索结果' : archived ? '已归档' : '最近')}</h2>
-        {!state.ready && <p role="status">{t("正在读取电脑会话…")}</p>}
-        {state.ready && searching && <p role="status" className="muted">{t("正在搜索聊天内容…")}</p>}
-        {phrase && currentSearch?.error && <div className="remote-search-error" role="alert"><p>{t(currentSearch.error === 'disabled' ? '电脑尚未开启聊天内容搜索，当前仅搜索标题。' : '聊天内容搜索失败，当前仅显示标题匹配。请检查电脑连接后重试。')}</p><Button onClick={() => retrySearch(value => value + 1)}>{t("重新搜索")}</Button></div>}
-        {rows.map(item => <button className="remote-session-row" key={item.id} disabled={busy} onClick={() => void act(() => model.select(item.id))}><span className="remote-session-summary"><span>{item.displayTitle}</span>{phrase && snippets.get(item.id) && <span className="remote-search-snippet">{snippets.get(item.id)}</span>}</span><small>{item.running ? t('进行中') : <time dateTime={new Date(item.updatedAt).toISOString()}>{new Date(item.updatedAt).toLocaleDateString(locale?.startsWith('en') ? 'en' : 'zh-CN')}</time>}</small></button>)}
-        {phrase && currentSearch?.hasMore && <p role="status" className="muted">{t("匹配内容较多，目前仅显示部分结果。请输入更具体的关键词。")}</p>}
-        {state.ready && !rows.length && !searching && !currentSearch?.error && !currentSearch?.hasMore && <p className="muted">{t(phrase ? '没有找到匹配的聊天，试试其他关键词。' : '还没有聊天记录')}</p>}
-      </section>
-      <footer className="remote-home-actions"><label><IconSearchOutline16/><input aria-label={t("搜索远程聊天")} placeholder={t("搜索聊天")} value={query} onChange={event => setQuery(event.target.value)}/></label><IconButton label={t("在已有工作区新建聊天")} disabled={!connected || busy} onClick={() => setSheet('new')}><IconNewChatOutline16 size={22}/></IconButton></footer>
-    </> : <RemoteMainConversationFrame enabled={!embedded}>
+    {!selected ? <>{status}<RemoteHomeExtension home={home} fallback={<DefaultRemoteHome home={home}/>}/></> : <RemoteMainConversationFrame enabled={!embedded}>
       <div className="remote-conversation-view">{renderConversation ? renderConversation(conversation)
         : <RemoteMainConversationBody>{conversation}</RemoteMainConversationBody>}</div>
       <RemoteQueue key={selected} state={state} model={model} openAttachment={openAttachment}/>
@@ -355,7 +377,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       <header><h2>{t('电脑设置')}</h2><IconButton label={t('关闭窗口')} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
       <div className="remote-settings-body"><RemoteSettings model={model} navigation={settingsTarget} onClose={() => setSheet(null)}/></div>
     </PanelSurface>}</SurfacePresence>
-    <SurfacePresence>{sheet && sheet !== 'pluginManager' && sheet !== 'settings' && <Surface title={t(sheet === 'pending' ? '待处理' : sheetTitle)} onClose={() => setSheet(null)}>
+    <SurfacePresence>{sheet && sheet !== 'pluginManager' && sheet !== 'settings' && <Surface phoneTheme title={t(sheet === 'pending' ? '待处理' : sheetTitle)} onClose={() => setSheet(null)}>
       <header><h2>{t(sheet === 'pending' ? '待处理' : sheet === 'settings' ? '电脑设置' : sheetTitle)}</h2><IconButton label={t("关闭窗口")} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
       {sheet === 'pending' && <>
         {!model.transport.capabilities?.taskPendingNotifications ? <p role="status">{t("当前电脑不支持汇总待处理事项，请在对应聊天中处理请求。")}</p>

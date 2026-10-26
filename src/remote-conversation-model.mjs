@@ -21,7 +21,7 @@ export class RemoteConversationModel {
       'workspaces', 'workspaceActions', 'computerSettings', 'providerSettings', 'computerKey', 'computerEndpoint', 'searchKey', 'searchEndpoint',
       'files', 'modelCatalog', 'pluginSlots', 'pluginPanels', 'documentPreviews', 'documentFiles', 'reviewPreview', 'deliverablesPreview',
       'pendingImageUrls', 'conversationFocus', 'globalPanels',
-      'inputBindings', 'composerBlocks', 'sending', 'draftTransfers', 'workspaceNavigation']) {
+      'inputBindings', 'composerBlocks', 'sending', 'draftTransfers', 'workspaceNavigation', 'reading']) {
       Object.defineProperty(this, key, { get: () => model[key] });
     }
     this.view = new RemoteSessionView(model, {

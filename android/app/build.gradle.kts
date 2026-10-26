@@ -92,6 +92,7 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/webAssets"))
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/preinstalledAssets"))
     sourceSets["androidTest"].assets.srcDir(file("../../artifacts/web-update-tests/fixtures"))
 }
 
@@ -111,6 +112,22 @@ val syncWebAssets by tasks.registering(Sync::class) {
     }
 }
 tasks.named("preBuild").configure { dependsOn(syncWebAssets) }
+
+// 预装原件属于APK资产，不进入可热更新的网页目录，也不编译到宿主JS中。
+val preinstalledDirectory = file(providers.gradleProperty("preinstalledPluginsDir").orNull ?: "../../preinstalled-plugins")
+val preinstalledIndex = layout.buildDirectory.file("generated/preinstalled-index/index.json")
+val checkPreinstalledPlugins by tasks.registering(Exec::class) {
+    workingDir(file("../.."))
+    commandLine("node", "scripts/check-preinstalled-plugins.mjs", preinstalledDirectory.absolutePath, preinstalledIndex.get().asFile.absolutePath)
+}
+val syncPreinstalledPlugins by tasks.registering(Sync::class) {
+    dependsOn(checkPreinstalledPlugins)
+    from(preinstalledDirectory) { include("*.dshm-plugin") }
+    // 空清单也要同步，防止Sync的NO-SOURCE优化留下上次构建的预装包。
+    from(preinstalledIndex)
+    into(layout.buildDirectory.dir("generated/preinstalledAssets/preinstalled-plugins"))
+}
+tasks.named("preBuild").configure { dependsOn(syncPreinstalledPlugins) }
 
 dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")

@@ -1,64 +1,150 @@
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
+import { MobilePluginChannel } from './mobile-plugin-channel.mjs';
+import { PHONE_PLUGIN_CATALOG, defaultPluginRecord, pluginDescriptor, pluginStatus } from './phone-plugin-catalog.mjs';
+import { LocalPluginBackend } from './phone-plugin-records.mjs';
+import { externalPhonePlugins } from './external-phone-plugins.mjs';
+export { PHONE_PLUGIN_CATALOG, pluginStatus } from './phone-plugin-catalog.mjs';
 
-export const PHONE_PLUGIN_CATALOG = Object.freeze([
-  { id: 'input', name: '输入提示词', version: '0.1.6-alpha.2', description: '在消息中输入 /，选择本地总结或翻译提示词。',
-    source: '@deepseek-ai/dsh-client-ui-input-trigger', capabilities: '输入菜单、纯文本插入', configurable: true },
-  { id: 'theme', name: '外观主题', version: '0.1.6-alpha.2', description: '调整手机上的浅色、深色主题与阅读字号。',
-    source: '@deepseek-ai/dsh-client-ui-theme', capabilities: '主题、字号、本地偏好', configurable: true },
-  { id: 'rendering', name: '聊天排版', version: '0.1.0', description: '使用 DSH 的 Markdown、代码高亮和公式排版显示回复。',
-    source: '@dsh-mobile/ordinary-rendering', capabilities: '回复内容渲染', configurable: false },
-]);
-const key = 'dshm:ordinary:plugins:v1';
+const runtimeStates = new Set(['inactive', 'loading', 'active', 'stopping', 'failed']);
 
-/** 安装目录只提供经过手机适配核验的随包原始插件；不执行用户输入的任意脚本。 */
-export class PhonePlugins {
-  #storage;
-  #apply;
-  #busy = false;
-  state;
-  constructor(storage, apply) {
-    this.#storage = storage; this.#apply = apply;
-    const stored = storage.getItem(key);
-    const record = stored === null ? Object.fromEntries(PHONE_PLUGIN_CATALOG.map(plugin => [plugin.id, { installed: true, enabled: true, version: plugin.version }])) : JSON.parse(stored);
-    if (!record || typeof record !== 'object' || Array.isArray(record) || Object.keys(record).some(id => !PHONE_PLUGIN_CATALOG.some(plugin => plugin.id === id))) throw new Error('invalid_plugin_record');
-    for (const plugin of PHONE_PLUGIN_CATALOG) {
-      // 随 App 新增的核验插件默认安装；已有插件的启停与卸载状态不被升级覆盖。
-      if (!Object.hasOwn(record, plugin.id)) record[plugin.id] = { installed: true, enabled: true, version: plugin.version };
-      const value = record[plugin.id];
-      if (!value || typeof value.installed !== 'boolean' || typeof value.enabled !== 'boolean' || typeof value.version !== 'string' || value.version.length > 80 || (!value.installed && value.enabled)) throw new Error('invalid_plugin_record');
-      // 随包插件代码随 App 一起升级；不能把旧记录版本显示成正在运行的旧代码。
-      if (value.installed) value.version = plugin.version;
+/** 两个页面使用相同目录和操作协议；原生存储是跨来源的安装意图权威。 */
+export class PhonePlugins extends MobilePluginChannel {
+  constructor({ bridge = globalThis.DSHMMobilePlugins, storage = globalThis.localStorage, catalog = PHONE_PLUGIN_CATALOG, host = 'ordinary' } = {}) {
+    const nativeAvailable = !!bridge;
+    super(bridge ?? new LocalPluginBackend(storage, `dshm:phone-plugins:v2:${host}`).bridge(host));
+    this.nativeAvailable = nativeAvailable; this.bundledCatalog = catalog; this.catalog = catalog; this.storage = storage; this.host = host;
+    this.snapshot = { ready: false, revision: -1, record: Object.fromEntries(catalog.map(entry => [entry.id, defaultPluginRecord(entry)])), runtime: {}, busy: null, error: null };
+    this.state = createSnapshotStore(this.snapshot);
+  }
+  accept(value) {
+    if (value?.schema !== 2 || !Number.isSafeInteger(value.revision) || value.revision < this.snapshot.revision || !value.record || !value.runtime) return;
+    let external;
+    try { external = externalPhonePlugins(value.external); } catch { return; }
+    if (external.some(entry => this.bundledCatalog.some(builtin => builtin.id === entry.id))) return;
+    this.catalog = [...this.bundledCatalog, ...external];
+    const record = {}, runtime = {};
+    for (const entry of this.catalog) {
+      const item = value.record[entry.id];
+      if (item) {
+        if (item.id !== entry.id || item.host !== entry.host || typeof item.installed !== 'boolean' || typeof item.enabled !== 'boolean'
+          || !item.installed && item.enabled || !Number.isSafeInteger(item.revision) || item.revision < 1 || typeof item.version !== 'string') return;
+        record[entry.id] = { ...item, configured: true };
+      } else record[entry.id] = defaultPluginRecord(entry);
+      const reported = value.runtime[entry.id];
+      if (reported && runtimeStates.has(reported.status) && reported.revision === record[entry.id].revision) runtime[entry.id] = reported;
     }
-    this.state = createSnapshotStore({ record, busy: null, error: null });
+    this.publish({ ready: true, revision: value.revision, record, runtime, installerApi: value.installerApi === 1 ? 1 : 0 });
   }
-  enabled(id) { const item = this.state.getSnapshot().record[id]; return item.installed && item.enabled; }
+  publish(value) {
+    this.snapshot = { ...this.snapshot, ...value };
+    this.state.set(this.snapshot); this.listeners.forEach(listener => listener());
+  }
+  initialEntries() {
+    const old = this.host === 'ordinary' ? JSON.parse(this.storage?.getItem('dshm:ordinary:plugins:v1') ?? 'null') : null;
+    const saved = this.host === 'remote' ? this.storage?.getItem('dshm.mobile-interface.v1') : null;
+    const selection = saved == null ? undefined : JSON.parse(saved);
+    return this.catalog.filter(entry => entry.host === this.host && !entry.external).map(entry => {
+      const previous = old?.[entry.id];
+      if (previous && (typeof previous.installed !== 'boolean' || typeof previous.enabled !== 'boolean' || !previous.installed && previous.enabled)) throw Error('invalid_plugin_record');
+      return { entry: pluginDescriptor(entry), installed: previous?.installed ?? true,
+        enabled: previous?.enabled ?? (entry.group && selection !== undefined ? entry.id === selection : entry.defaultEnabled ?? true) };
+    });
+  }
+  start() { return this.started ??= this.call('plugins.watch').then(() => this.call('plugins.initialize', { entries: this.initialEntries() })).catch(error => { this.started = null; throw error; }); }
+  enabled(id) { const item = this.snapshot.record[id]; return !!item?.installed && item.enabled; }
+  running(id) { return pluginStatus(this.snapshot.record[id], this.snapshot.runtime[id]) === '运行中'; }
+  canManage(entry) { return this.nativeAvailable || entry.host === this.host; }
+  async importPackage() {
+    if (!this.nativeAvailable || this.host !== 'ordinary' || this.snapshot.installerApi !== 1) throw Error('mobile_plugins_unavailable');
+    if (this.snapshot.busy) throw Error('plugin_busy');
+    this.publish({ busy: 'import', error: null });
+    try { await this.call('plugins.import', {}, 300000); }
+    finally { this.publish({ busy: null }); }
+  }
   async change(id, action) {
-    const plugin = PHONE_PLUGIN_CATALOG.find(item => item.id === id);
-    if (!plugin || !['install', 'uninstall', 'enable', 'disable', 'update'].includes(action)) throw new Error('unsupported_plugin');
-    if (this.#busy) throw new Error('plugin_busy');
-    const previous = this.state.getSnapshot().record;
-    const current = previous[id];
-    if (['enable', 'disable', 'update'].includes(action) && !current.installed) throw new Error('plugin_not_installed');
-    const next = { ...current };
-    if (action === 'install') Object.assign(next, { installed: true, enabled: true, version: plugin.version });
-    if (action === 'uninstall') Object.assign(next, { installed: false, enabled: false });
-    if (action === 'enable') next.enabled = true;
-    if (action === 'disable') next.enabled = false;
-    if (action === 'update') next.version = plugin.version;
-    this.#busy = true;
-    this.state.set({ record: previous, busy: id, error: null });
+    const entry = this.catalog.find(item => item.id === id);
+    if (!entry || !this.canManage(entry) || !['install', 'uninstall', 'enable', 'disable', 'retry', 'update'].includes(action)) throw Error('unsupported_plugin');
+    if (this.snapshot.busy) throw Error('plugin_busy');
+    this.publish({ busy: id, error: null });
     try {
-      if (action === 'update' && current.version !== plugin.version) await this.#apply(id, false);
-      await this.#apply(id, next.installed && next.enabled);
-      const record = { ...previous, [id]: next };
-      this.#storage.setItem(key, JSON.stringify(record));
-      this.state.set({ record, busy: null, error: null });
-    } catch (error) {
-      // 只有运行结果和持久化都成功才发布；失败恢复上次配置，并报告恢复失败。
-      let code = 'plugin_operation_failed';
-      try { await this.#apply(id, current.installed && current.enabled); } catch { code = 'plugin_recovery_failed'; }
-      this.state.set({ record: previous, busy: null, error: code });
-      throw new Error(code, { cause: error });
-    } finally { this.#busy = false; }
+      if (entry.external && ['install', 'update'].includes(action)) throw Error('unsupported_plugin');
+      await this.call('plugins.change', { entry: pluginDescriptor(entry), action });
+    }
+    catch (error) { this.publish({ error: 'plugin_operation_failed' }); throw error; }
+    finally { this.publish({ busy: null }); }
   }
+  async restore(id) {
+    const entry = this.catalog.find(item => item.id === id);
+    if (this.host !== 'ordinary' || !this.nativeAvailable || !entry?.preinstalled) throw Error('unsupported_plugin');
+    if (this.snapshot.busy) throw Error('plugin_busy');
+    this.publish({ busy: id, error: null });
+    try { await this.call('plugins.restore', { id }); }
+    finally { this.publish({ busy: null }); }
+  }
+}
+
+/** 通用宿主执行器：安装意图与执行结果分开，过期操作不能报告运行成功。 */
+export class PhonePluginHost {
+  jobs = new Map(); closed = false;
+  constructor(registry, handlers) {
+    this.registry = registry; this.handlers = handlers; this.lease = crypto.randomUUID();
+    this.ready = registry.start().then(() => registry.call('plugins.claim', { lease: this.lease })).then(() => {
+      if (this.closed) return;
+      this.off = registry.subscribe(() => this.sync());
+      return this.sync();
+    });
+  }
+  report(id, revision, status, error = null) {
+    if (this.closed || this.registry.getSnapshot().record[id]?.revision !== revision) return Promise.resolve();
+    return this.registry.call('plugins.runtime', { lease: this.lease, id, revision, status, error });
+  }
+  handler(entry) { return typeof this.handlers === 'function' ? this.handlers(entry) : this.handlers[entry.id]; }
+  sync() {
+    if (this.closed) return;
+    const work = [];
+    for (const entry of this.registry.catalog.filter(entry => entry.host === this.registry.host)) {
+      const record = this.registry.getSnapshot().record[entry.id];
+      if (!record.configured) continue;
+      let job = this.jobs.get(entry.id);
+      if (!job) { job = { revision: -1, running: false }; this.jobs.set(entry.id, job); }
+      if (job.running || job.revision === record.revision) continue;
+      job.running = true;
+      job.task = this.run(entry, job).finally(() => { job.running = false; if (!this.closed) this.sync(); });
+      work.push(job.task);
+    }
+    return Promise.all(work);
+  }
+  async run(entry, job) {
+    const record = this.registry.getSnapshot().record[entry.id], enabled = record.installed && record.enabled;
+    job.revision = record.revision;
+    try {
+      await this.report(entry.id, record.revision, enabled ? 'loading' : 'stopping');
+      const handler = this.handler(entry);
+      if (!handler) throw Error('missing');
+      await handler(enabled);
+      await this.report(entry.id, record.revision, enabled ? 'active' : 'inactive');
+    } catch (error) {
+      // 激活失败也释放部分注册，默认正文/首页仍由宿主兜底。
+      try { await this.handler(entry)?.(false); } catch { /* 后续显式重试重新收敛。 */ }
+      await this.report(entry.id, record.revision, 'failed', ['missing', 'incompatible', 'timeout', 'render', 'storage'].includes(error?.message) ? error.message : 'load').catch(() => {});
+    }
+  }
+  async fail(id, error = 'render') {
+    const record = this.registry.getSnapshot().record[id];
+    if (!record || !this.registry.enabled(id)) return;
+    await this.report(id, record.revision, 'failed', error);
+  }
+  async dispose() {
+    if (this.closed) return;
+    this.closed = true; this.off?.();
+    await this.registry.call('plugins.release', { lease: this.lease }).catch(() => {});
+    await Promise.all([...this.jobs.values()].map(job => job.task));
+    await Promise.all(this.registry.catalog.filter(entry => this.jobs.has(entry.id)).map(entry => Promise.resolve().then(() => this.handler(entry)?.(false)).catch(() => {})));
+  }
+}
+
+const registries = new Map();
+export function phonePluginsFor(host) {
+  if (!registries.has(host)) registries.set(host, new PhonePlugins({ host }));
+  return registries.get(host);
 }
