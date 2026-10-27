@@ -41,7 +41,8 @@ try {
   assert.equal(original.turns[0].model, 'deepseek-v4-pro');
   assert.equal(original.turns[0].requestOptions.maxTokens, 512);
   await page.locator('.reply h2').waitFor(); await page.locator('.reply .katex').first().waitFor();
-  await button('复制代码').click(); await button('已复制').waitFor();
+  await page.locator('.reply .md-code-block').getByRole('button', { name: '复制', exact: true }).click();
+  await page.locator('.reply .md-code-block').getByRole('button', { name: '复制成功', exact: true }).waitFor();
   await button('复制回复').click(); await page.locator('.toast').filter({ hasText: '已复制' }).waitFor();
   report.stages.push({ name: 'realProOptionsMarkdownMathCopy', model: original.turns[0].model, requestOptions: original.turns[0].requestOptions, passed: true }); await save();
   await button('分享').click();

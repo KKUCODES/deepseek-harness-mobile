@@ -7,7 +7,7 @@ import { RemoteFlowMotion } from '../../src/ui/motion.jsx';
 
 function Case({ id }) {
   const [expanded, setExpanded] = useState(false);
-  const [motion] = useState(() => createChatFlowMotion(() => {}, () => {}));
+  const [motion] = useState(() => createChatFlowMotion(() => null, () => {}));
   useEffect(() => () => motion.clear(), [motion]);
   const turn = { turn: 1, status: 'closed', start: { time: 1000 }, end: { time: 2000, data: { reason: { kind: 'completed' } } } };
   const spec = { turn: 1, controlAnchorSeq: 0, processStartSeq: 0, answerAnchorSeq: null, answerStep: null, inlineReasoning: false };

@@ -62,6 +62,16 @@ test('page render error unloads only interface plugin and can be explicitly retr
   assert.equal(slots.entries.size, 1); await ctx.fiber.dispose();
 });
 
+test('connection page render failure releases the same interface module as home', async () => {
+  const item = entry(plugin()), { ctx, slots, controller } = setup([item]); await controller.ready;
+  for (const listener of slots.errors) listener('dshm.remote.connection');
+  await new Promise(resolve => setTimeout(resolve));
+  assert.equal(controller.getSnapshot().status, 'failed');
+  assert.equal(slots.entries.size, 0);
+  await controller.select(item.id); assert.equal(controller.getSnapshot().status, 'active');
+  await ctx.fiber.dispose();
+});
+
 test('rapid selection settles on the final plugin without duplicate slots', async () => {
   const first = plugin('first'), second = plugin('second'), gate = Promise.withResolvers();
   const { ctx, slots, controller } = setup([entry(first, () => gate.promise), entry(second)]);

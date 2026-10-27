@@ -1,5 +1,7 @@
 # Remote 长聊天窗口与恢复
 
+> 历史实现记录：以下双向数据窗口、正文分段与自动触顶适用于preview.12–14。当前本地preview.15以.11重新实现，使用原Session连续历史＋DOM虚拟化，没有这些操作限制。[当前实现与边界](./preview15-rebuild-current.md)。被撤下的源码与测试请查阅[preview.14固定源码](https://github.com/KKUCODES/deepseek-harness-mobile/tree/v0.1.0-preview.14)。
+
 公开插件读取的失败兼容已在本地修复：[Session/Conversation接口边界与双SDK回归](./remote-history-api-current.md)。内部连续性校验、手机错误提示及重试保留；尚未发布，下面的诊断条目保留其当时状态。
 
 2026-10-26新增[历史断层用例诊断](./remote-history-gap-diagnosis.md)：普通手机入口保留记录并可重试，两SDK连续24批复验通过；公开给插件的`loadOlder()`比官方多向外抛异常，存在待修复兼容差异。诊断未修改产品或既有测试代码，不把该问题简化为仅测试脚本错误。
@@ -32,7 +34,7 @@
 
 已随[preview.13/code16](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.13)公开发布；源码dcca782，Actions40088585593构建/lint/原签名/Release及APK与附件匿名下载核验通过。[发行KKC-93](https://linear.app/kkcodes/issue/KKC-93)与[发行证据](../releases.md#已核验范围)记录准确来源。旧preview.12没有自动加载入口。
 
-2026-10-24，[KKC-92](https://linear.app/kkcodes/issue/KKC-92)。[自动加载控制器](../../src/remote-history-auto-load.mjs)由主聊天和旁栏共用的 RemoteWorkspace 挂载：用户向上阅读到距离顶部 160 CSS px 内，复用同一个 loadHistory → loadEarlierHistory → loadRemoteHistory 路径。只增加触发入口，不扩大历史窗口或改写电脑日志；原虚拟列表继续维护可见锚点。
+2026-10-24，[KKC-92](https://linear.app/kkcodes/issue/KKC-92)。[自动加载控制器](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/remote-history-auto-load.mjs)由主聊天和旁栏共用的 RemoteWorkspace 挂载：用户向上阅读到距离顶部 160 CSS px 内，复用同一个 loadHistory → loadEarlierHistory → loadRemoteHistory 路径。只增加触发入口，不扩大历史窗口或改写电脑日志；原虚拟列表继续维护可见锚点。
 
 采用用户输入意图配合滚动距离，而非顶部 IntersectionObserver 一直可见就反复加载。触摸、滚轮、键盘和鼠标滚动条均支持；抬手后最多 1.5 秒的上行惯性仍可触发。一次触摸最多读一批，请求及两帧前插校正期间不排队，继续阅读才加载下一页。初次进入、程序滚动、返回最新、切换聊天、离线后恢复不重放旧手势；失败阻止自动重试，原按钮仍可手动重试。顶部显示加载状态，读完显示「没有更早的消息」。后台任务输出是独立分页面板，本轮不改成自动拉取。
 
@@ -42,7 +44,7 @@ rc.2 与 alpha.2 的真实列表点击入口、连续 24 次自动加载、原�
 
 证据：`artifacts/remote-history-window-0.2.1-rc.2.json`、`artifacts/remote-history-window-0.2.1-alpha.2.json`、`artifacts/history-auto-load/android-window-report.json`及同目录Node报告；均为忽略产物。锚点必须存在后再做小于4px的断言，不允许因虚拟卸载而跳过位置验证；两版桌面回放24批均为0px，Android均约0.381px。专项结束卸载独立测试包、关闭5556及自有临时转发，日常MuMu保持。
 
-来源：[自动输入回归](../../scripts/check-remote-history-auto-inputs.mjs)、[连续历史回归](../../scripts/check-remote-history-window.mjs)、[意图门控测试](../../tests/remote-history-auto-load.test.mjs)。不包含插件适配分支。
+来源：[自动输入回归](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/scripts/check-remote-history-auto-inputs.mjs)、[连续历史回归](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/scripts/check-remote-history-window.mjs)、[意图门控测试](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/tests/remote-history-auto-load.test.mjs)。不包含插件适配分支。
 
 ## 故障恢复
 
@@ -73,9 +75,9 @@ Android onRenderProcessGone 关闭旧桥、销毁失效 WebView，重建可见 A
 
 来源与重跑入口：
 
-- [数据窗口](../../src/remote-history-window.mjs)、[Session 接入](../../src/remote-sessions.mjs)、[虚拟列表](../../src/ui/RemoteHistoryList.jsx)、[统一节点分页](../../src/ui/RemotePagedNode.jsx)、[阅读位置](../../src/remote-reading-memory.mjs)。
+- [数据窗口](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/remote-history-window.mjs)、[Session 接入](../../src/remote-sessions.mjs)、[虚拟列表](../../src/ui/RemoteHistoryList.jsx)、[统一节点分页](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/ui/RemotePagedNode.jsx)、[阅读位置](../../src/remote-reading-memory.mjs)。
 - [错误边界](../../src/ui/RemoteRecovery.jsx)、[原生恢复](../../android/app/src/main/java/dev/dshmobile/validation/RendererRecovery.kt)。
-- [连续历史回归](../../scripts/check-remote-history-window.mjs)、[Android 驱动](../../scripts/verify-remote-history-android.mjs)、[窗口单测](../../tests/remote-history-window.test.mjs)。
+- [连续历史回归](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/scripts/check-remote-history-window.mjs)、[Android 驱动](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/scripts/verify-remote-history-android.mjs)、[窗口单测](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/tests/remote-history-window.test.mjs)。
 - `npm test`；`npm run build:web:ci`；`node scripts/verify-remote-plugin-slots.mjs --history-window`；增加 `--official-alpha2` 核验旧 SDK。
 - Android 驱动仅允许 emulator-5556/ranchu、dev.dshmobile.validation.rc21test；debug/release 构建及 lint，不签名、不替换日常 App、不发布。
 - 本地自动加载专项：`node scripts/verify-remote-history-android.mjs --auto-load`；使用已有隔离 debug APK，注入当前构建的产品组件，实际触摸和共享会话入口回放，不重测无关原生崩溃恢复。

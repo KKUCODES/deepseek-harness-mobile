@@ -20,5 +20,5 @@ const icons = { phone, edit, scan, image, chevron, chevronLight, back, more, lin
 
 /** 原 Figma 矢量以 mask 使用，尺寸和颜色分别由组件与主题控制。 */
 export function DesignIcon({ name, size = 24, className = '' }) {
-  return <span aria-hidden="true" className={`dshm-icon ${className}`} style={{ width: size, height: size, maskImage: `url("${icons[name]}")`, WebkitMaskImage: `url("${icons[name]}")` }}/>;
+  return <span aria-hidden="true" className={`dshm-icon ${className}`} style={{ width: size, height: size, maskImage: `url(${JSON.stringify(icons[name])})`, WebkitMaskImage: `url(${JSON.stringify(icons[name])})` }}/>;
 }

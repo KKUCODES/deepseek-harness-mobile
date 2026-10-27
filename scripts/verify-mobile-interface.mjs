@@ -40,7 +40,7 @@ const management=document.createElement('div');management.id='phone-plugin-page'
 const managementRoot=createRoot(management),phonePlugins=phonePluginsFor('remote');
 window.interfaceProbe.openManagement=()=>{management.style.display='block';managementRoot.render(<LocaleProvider locale="zh-CN"><PhonePluginsPage host={{phonePlugins,ordinaryInput:{promptSettings:{getSnapshot:()=>({value:{prompts:[]}})}}}} registerBack={()=>()=>{}} onBack={()=>management.style.display='none'} onRemote={()=>{}}/></LocaleProvider>);};
 window.interfaceProbe.closeManagement=()=>{management.style.display='none';managementRoot.render(null);};
-model.ctx.slots.onEntryError((slot,entry,error)=>window.interfaceProbe.slotErrors.push({slot,message:error.message}));
+model.interfaceUI.slots.onEntryError((slot,entry,error)=>window.interfaceProbe.slotErrors.push({slot,message:error.message}));
 window.interfaceProbe.addAlternate=async()=>{const entry={id:'@example/another-home',name:'通用替代首页',description:'通用替代首页',capabilities:'Remote 首页界面',host:'remote',group:'dshm.remote.home',version:'0.1.0',apiVersion:1,
 load:async()=>({name:'@example/another-home',inject:['slots'],mobileInterface:{apiVersion:1,surface:'dshm.remote.home'},apply(ctx){ctx.slots.register({name:'dshm.remote.home'},({home})=>{
 window.interfaceProbe.publicKeys=Object.keys(home);
@@ -86,7 +86,7 @@ try {
   const main=page.getByTestId('remote-workspace'), redesigned=page.getByTestId('remote-home-plugin'), fallback=page.getByTestId('remote-home-default');
   await redesigned.waitFor();
   assert.ok(requests.some(url=>/chunks\/remote-home-design-/.test(url)),'实际通过独立动态chunk加载');
-  assert.equal(await page.evaluate(()=>window.interfaceProbe.model.ctx.slots.entries('dshm.remote.home').length),1);
+  assert.equal(await page.evaluate(()=>window.interfaceProbe.model.interfaceUI.slots.entries('dshm.remote.home').length),1);
   report.cases.push('independent ESM chunk + actual Cordis slot registration');
   await main.getByRole('button',{name:'Remote 选项',exact:true}).click();
   assert.equal(await page.getByRole('button',{name:'手机界面',exact:true}).count(),0);
@@ -127,7 +127,7 @@ try {
   report.cases.push('actual unified plugin page uninstall/remove/catalog/reinstall; runtime confirmed and home/query retained');
   await choose('默认首页'); await fallback.waitFor();
   assert.equal(await page.locator('.dshm-home-plugin').count(),0);
-  assert.equal(await page.evaluate(()=>window.interfaceProbe.model.ctx.slots.entries('dshm.remote.home').length),0);
+  assert.equal(await page.evaluate(()=>window.interfaceProbe.model.interfaceUI.slots.entries('dshm.remote.home').length),0);
   assert.equal(await main.getByRole('textbox',{name:'搜索远程聊天',exact:true}).inputValue(),'one');
   assert.equal(await main.getByRole('heading',{name:'返回验证项目',exact:true}).count(),0); // 默认标题保留发布版 strong 排版。
   assert.equal(await main.locator('.remote-heading').innerText(),'返回验证项目');
@@ -187,7 +187,7 @@ try {
   await page.evaluate(()=>{window.__interfaceFailure=true;window.interfaceProbe.model.publish({error:null});});
   await fallback.waitFor();
   await page.waitForFunction(()=>window.interfaceProbe.model.interfacePlugins.getSnapshot().status==='failed');
-  assert.equal(await page.evaluate(()=>window.interfaceProbe.model.ctx.slots.entries('dshm.remote.home').length),0);
+  assert.equal(await page.evaluate(()=>window.interfaceProbe.model.interfaceUI.slots.entries('dshm.remote.home').length),0);
   await page.evaluate(()=>{window.__interfaceFailure=false;});await choose(/Remote 新版首页/);await redesigned.waitFor();
   report.cases.push('actual slot render fault abdicates/unloads; default usable; explicit retry works');
   await page.evaluate(()=>window.interfaceProbe.addAlternate());

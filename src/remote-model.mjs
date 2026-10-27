@@ -313,7 +313,7 @@ export class RemoteModel {
         const inbox = binding.session.projections.faceOf('inbox').getSnapshot();
         const matches = source => source?.kind === 'user' && source.rpcId === pending.requestId;
         const received = acceptedRequestId === pending.requestId
-          || (binding.history?.original ?? binding).eventSource.getSnapshot().entries.some(entry => entry.type === 'event'
+          || binding.eventSource.getSnapshot().entries.some(entry => entry.type === 'event'
             && entry.event.type === 'user/message' && matches(entry.event.data.source))
           || ['next-turn', 'next-step'].some(key => inbox?.[key]?.some(item => matches(item.source)));
         if (!received) return;

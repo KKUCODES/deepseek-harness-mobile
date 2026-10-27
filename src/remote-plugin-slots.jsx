@@ -1,10 +1,8 @@
 import { isProfileDshVersion } from './remote-dsh-version.mjs';
-import { MobileInterfacePlugins, REMOTE_HOME_SLOT } from './mobile-interface-plugins.mjs';
-import { phonePluginsFor, PhonePluginHost } from './phone-plugins.mjs';
-import { RemoteMarkdownLinks } from './remote-markdown-links.jsx';
-import { RemotePagedNode } from './ui/RemotePagedNode.jsx';
-import { RemoteErrorBoundary } from './ui/RemoteRecovery.jsx';
+import { REMOTE_HOME_SLOT } from './mobile-interface-plugins.mjs';
+import { RemoteInterfaceHost, RemoteInterfaceSurface } from './remote-interface-host.jsx';
 import './ui/system/system.css';
+import { RemoteMarkdownLinks } from './remote-markdown-links.jsx';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { SlotRegistry } from '../../deepseek-harness/packages/client/ui-renderer/src/client/registry.ts';
 import { createSlotRenderer } from '../../deepseek-harness/packages/client/ui-renderer/src/client/scoped-slots.tsx';
@@ -28,7 +26,7 @@ import { syncFeedbackSlot } from './remote-feedback-sync.mjs';
 import { installRemotePluginSettings } from './remote-plugin-settings.jsx';
 import { installRemoteModelOnboarding } from './remote-model-onboarding.jsx';
 import { RemotePluginImageUrls, inlineImage } from './remote-images.mjs';
-import { RemoteInlineImage, RemoteLocalImage } from './ui/RemoteImages.jsx';
+import { RemoteImageGallery, RemoteImageBoundary } from './ui/RemoteImages.jsx';
 import { ChatNodeSeat } from '../../deepseek-harness/packages/client/ui-chat/src/client/chat/ChatNodeSeat.tsx';
 import { TurnProcessNodeView } from '../../deepseek-harness/packages/client/ui-chat/src/client/chat/TurnProcessNodeView.tsx';
 import { createChatStore } from '../../deepseek-harness/packages/client/ui-chat/src/client/stores.ts';
@@ -51,7 +49,7 @@ import { installRemoteGlobalPanels, RemoteGlobalPanels } from './remote-global-p
 import { RemoteToolCancellationTree } from './remote-tool-cancellation.jsx';
 import { NativePanelFrame } from './ui/NativePanelFrame.jsx';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
-import { chatPresentation, chatNodeHooks, chatNodeBottom, chatSeatProps, ChatRunningStatus } from '@dshm/chat-presentation';
+import { chatPresentation, chatNodeHooks, chatNodeBottom, chatSeatProps, ChatRunningStatus, bindChatDisclosure, installChatReasoning } from '@dshm/chat-presentation';
 import { runningTurnStartTime } from './remote-running-status.mjs';
 import { RemotePresetDefaults } from './remote-preset-defaults.mjs';
 import { installRemoteConfigForms } from '@dshm/config-forms';
@@ -99,6 +97,14 @@ export function useRemoteFileMentions(node, openFile, label) {
   }, [turn, node.data.finalNode, tail, deliverables, provider, reference, openFile, label]);
 }
 
+function guardedImageComponent(component, model) {
+  const ImageComponent = remoteFactoryCaller(component, model);
+  const Guarded = props => <RemoteImageBoundary resetKey={JSON.stringify(props.images)} captureImageErrors onRetry={failedUrl => {
+    if (failedUrl) for (const image of props.images) if (image.attachment) props.loadImage?.forget?.(image.attachment, failedUrl);
+  }}><ImageComponent {...props}/></RemoteImageBoundary>;
+  return rememberComponentAdapter(Guarded, component);
+}
+
 class MobileSlotRegistry extends SlotRegistry {
   constructor(ctx, layout, model) { super(ctx); this.rootOwner = ctx.fiber; this.layout = layout; this.model = model; }
   onEntryError(listener) {
@@ -109,12 +115,19 @@ class MobileSlotRegistry extends SlotRegistry {
     });
   }
   registerFactory(options, component) {
-    return super.registerFactory(options, remoteFactoryCaller(component, this.model));
+    // 同一局部隔离覆盖图片席位和rc.2公开的图片内容工厂，不按插件ID特化。
+    return super.registerFactory(options, options.name === 'conversation.images.content'
+      ? guardedImageComponent(component, this.model) : remoteFactoryCaller(component, this.model));
   }
   register(options, component) {
     const declared = component;
     const register = (settings, Component) => super.register(settings,
       rememberComponentAdapter(remoteFactoryCaller(Component, this.model), declared));
+    if (['conversation.message.images', 'conversation.chat.user.images', 'conversation.chat.message.images',
+      'conversation.trajectory.images', 'tool.call.images'].includes(options.name)) {
+      // 在原插槽边界内保护每次图库调用，第三方图片错误也不能撤下共享节点。
+      component = guardedImageComponent(component, this.model);
+    }
     if (options.name === 'root' && this.ctx.fiber !== this.rootOwner) throw new Error('DSHM owns the root page; plugins must register partial UI slots');
     const sidebar = options.name === 'sidebar.right.pane.tab' && remoteSidebarHost(component, this.model);
     if (sidebar) return register(options, sidebar);
@@ -163,7 +176,7 @@ class MobileSlotRegistry extends SlotRegistry {
     if (id === '@deepseek-ai/dsh-client-ui-message-feedback' && options.name === 'conversation.chat.assistant-actions' && options.id === 'feedback') {
       options = syncFeedbackSlot(options, this.model);
     }
-    // 页面槽承载手机布局，不按桌面局部组件缩放；规则按槽类型，不能按插件包名特化。
+    // 页面级手机布局不参与桌面局部组件的等比缩放。
     if (options.name === REMOTE_HOME_SLOT) return register(options, component);
     if (!id || this.ctx.fiber === this.rootOwner || isRemoteSidebarComposition(options, component)
       || isRemoteDocumentComposition(options, component)) return register(options, component);
@@ -395,10 +408,14 @@ export function installRemotePluginSlots(model) {
     'conversation.session.header.corner': { kind: 'single', scope: 'session' },
     'conversation.session.header.lineage': { kind: 'single', scope: 'session' },
     'conversation.message.images': { kind: 'single', scope: 'session' },
+    'conversation.chat.user.images': { kind: 'single', scope: 'session' },
+    'conversation.chat.message.images': { kind: 'single', scope: 'session' },
+    'conversation.chat.reasoning.body': { kind: 'single', scope: 'session' },
     'conversation.chat.node': { kind: 'keyed', scope: 'session', inject: {
       hooks: chatNodeHooks ?? { turnData: (_standard, data) => key => useTurnDataValue(data, key) },
     } },
   } }, MobileSlotRoot);
+  installChatReasoning?.(slots, chatNS);
   installRemoteGlobalPanels(model);
   installRemoteWorkflow(model, layout);
   installRemoteCommandActions(model);
@@ -412,23 +429,11 @@ export function installRemotePluginSlots(model) {
     ...(chatPresentation ? { inject: () => ({ hooks: { presentation: chatPresentation } }) } : {}),
   }, MobileChatNodeSeat);
   slots.register({ name: 'dshm.chat.running', locale: chatNS, inject: () => ({ model }) }, MobileChatRunningStatus);
-  const registry = phonePluginsFor('remote');
-  const controller = model.interfacePlugins = new MobileInterfacePlugins(ctx, () => registry.catalog, { autoStart: false });
-  const runtime = model.interfaceHost = new PhonePluginHost(registry, entry => async enabled => {
-    if (entry.group !== REMOTE_HOME_SLOT) throw Error('incompatible');
-    if (enabled) {
-      await controller.select(entry.id);
-      const state = controller.getSnapshot();
-      if (state.status !== 'active') throw Error(state.error ?? 'load');
-    } else if (controller.getSnapshot().selected === entry.id) await controller.select(null);
-  });
-  const offInterface = controller.subscribe(() => {
-    const state = controller.getSnapshot();
-    if (state.status === 'failed' && state.selected) void runtime.fail(state.selected, state.error ?? 'render').catch(() => {});
-  });
-  void runtime.ready.catch(() => controller.fail('storage'));
-  ctx.effect(() => () => { offInterface(); return runtime.dispose(); }, 'DSHM: remote plugin runtime');
-  // 可选界面不能阻塞 Remote 核心就绪；加载期间由同一首页契约提供默认界面。
+  const interfaceUI = model.interfaceUI ??= new RemoteInterfaceHost();
+  model.interfacePlugins = interfaceUI.controller;
+  model.interfaceHost = interfaceUI.runtime;
+  if (!model.sharedInterfaceUI) ctx.effect(() => () => interfaceUI.dispose(), 'DSHM: remote plugin runtime');
+  // 可选首页加载期间仍显示默认界面，不阻塞会话和审批服务。
   const ready = Promise.all([installRemoteInteractionPlugins(model), ...(configForms ? [configForms.await()] : [])]);
   return { layout, locale, imageLoader, ready, render: props => slots.renderSlot('root', { model, ...props, rootModel: model }) };
 }
@@ -598,32 +603,55 @@ export function RemoteHeaderAncestors({ model }) {
 
 /** 复用原节点可见性和按会话保存的折叠状态，只替换最终内容的手机回退布局。 */
 function MobileChatNodeSeat({ node, dispatchNode, children, useSession, ...props }) {
-  const host = useContext(PluginSlots);
   const historyIncomplete = useSession(snapshot => snapshot.hasMore);
   const t = useTranslate();
   const renderNode = useCallback((name, owner, options) => {
-    const content = <RemoteErrorBoundary resetKey={owner.node.key} message="这段记录暂时无法显示，可以重试。"><RemotePagedNode owner={owner} session={host.reference.binding.session} render={view => dispatchNode(name, view, {
+    const content = dispatchNode(name, owner, {
       ...options,
       fallback: owner.node.kind === 'turn-process'
         ? <TurnProcessNodeView node={owner.node} turnProcess={owner.turnProcess} t={props.t}/>
-        : React.cloneElement(children, { node: view.node, turnProcess: owner.turnProcess }),
-    })}/></RemoteErrorBoundary>;
+        : <MobileNodeFallback turnProcess={owner.turnProcess} hookContext={options?.hookContext}
+          usePresentation={props.usePresentation} renderSlot={dispatchNode} t={props.t}>{children}</MobileNodeFallback>,
+    });
     if (owner.node.kind !== 'tool-call') return content;
     return <div className="remote-tool-entry">{content}
       {/* 保留独立的工具详情入口，放在行尾，避免每条记录多占一行。 */}
       <button type="button" className="remote-tool-inspect" data-tool-details aria-label={t('工具详情')} title={t('工具详情')}
         onClick={() => owner.inspectCall(owner.node.data.root.callId)}><IconEllipsisOutline16/></button>
     </div>;
-  }, [dispatchNode, children, props.t, t, host.reference]);
+  }, [dispatchNode, children, props.usePresentation, props.t, t]);
   return <ChatNodeSeat {...props} {...chatSeatProps} nodeKey={node.key} historyIncomplete={historyIncomplete} compactTranscript renderSlot={renderNode}/>;
 }
 
-function MessageImagesFallback({ images, openAttachment }) {
-  return <div className="remote-files">{images.map((source, index) => {
-    if (source.preview) return <RemoteLocalImage key={index} preview={{ previewUrl: source.preview.url, name: source.preview.name }}/>;
-    const image = inlineImage({ type: 'image', attachment: source.attachment });
-    return image ? <RemoteInlineImage key={index} image={image} label={source.label ?? '图片'} openAttachment={openAttachment}/> : null;
-  })}</div>;
+function MobileNodeFallback({ children, turnProcess, hookContext, usePresentation, renderSlot, t }) {
+  const useDisclosure = useMemo(() => hookContext?.disclosureReset && bindChatDisclosure?.(hookContext.disclosureReset), [hookContext?.disclosureReset]);
+  const reasoningProps = useMemo(() => useDisclosure ? { useDisclosure, usePresentation, renderSlot, t } : undefined,
+    [useDisclosure, usePresentation, renderSlot, t]);
+  return React.cloneElement(children, { turnProcess, reasoningProps });
+}
+
+function MessageImagesFallback({ images, ...props }) {
+  const host = useContext(PluginSlots);
+  const admitted = images.filter(source => source.preview ? host?.model.pendingImageUrls.has(source.preview.url)
+    : inlineImage({ type: 'image', attachment: source.attachment }));
+  return <RemoteImageGallery {...props} images={admitted}/>;
+}
+
+function renderMessageImages(renderSlot, owner, kind) {
+  const fallback = <MessageImagesFallback {...owner}/>;
+  // 新旧SDK的公开图片席位均保留；默认图片也经过这里，不能绕开第三方图库。
+  const legacy = renderSlot('conversation.message.images', owner, { fallback });
+  return renderSlot(kind === 'user' ? 'conversation.chat.user.images' : 'conversation.chat.message.images', owner, { fallback: legacy });
+}
+
+export function RemoteMessageImages({ kind = 'message', ...owner }) {
+  const host = useContext(PluginSlots);
+  if (!host?.reference) return <RemoteImageGallery {...owner}/>;
+  const { SessionProvider, renderSlot, reference, model } = host;
+  const props = { ...owner, loadImage: model.pluginSlots.imageLoader(reference) };
+  return <RemoteImageBoundary resetKey={JSON.stringify(owner.images)}><SessionProvider session={reference}>
+    {renderMessageImages(renderSlot, props, kind)}
+  </SessionProvider></RemoteImageBoundary>;
 }
 
 /** 所有原节点经过同一个 keyed-slot；无注册项时保留 DSHM 默认排版。 */
@@ -647,9 +675,9 @@ export function RemoteNodeExtension({ node, openFile, openAttachment, openComman
   };
   return <SessionProvider session={reference}>
     {renderSlot('dshm.chat.node', { node, openSkill, loadImage, dispatchNode: renderSlot, children,
-      renderMessageImages: owner => renderSlot('conversation.message.images', { ...owner, loadImage }, {
-        fallback: <MessageImagesFallback {...owner} openAttachment={openAttachment}/>,
-      }),
+      renderMessageImages: owner => <RemoteImageBoundary resetKey={JSON.stringify(owner.images)}>
+        {renderMessageImages(renderSlot, { ...owner, loadImage }, owner.align === 'end' ? 'user' : 'message')}
+      </RemoteImageBoundary>,
       fileMentions: owner => {
         const provider = model.ctx.get('chatFileMentions');
         return provider ? provider.forClosing(owner, reference.sessionId)
@@ -673,22 +701,12 @@ export function RemotePluginScope({ model, children }) {
   return <RemoteMarkdownLinks model={model}>{model.pluginSlots.render({ reference, children, model })}</RemoteMarkdownLinks>;
 }
 
-/** 页面扩展与会话/审批宿主同级；外观切换只替换首页，不重建会话作用域。 */
+/** 只替换首页席位；原会话、审批、插件作用域始终归宿主管理。 */
 export function RemoteHomeExtension({ home, fallback }) {
   const host = useContext(PluginSlots);
-  const controller = host?.model.interfacePlugins;
-  const state = useSyncExternalStore(controller?.subscribe ?? emptySubscribe, controller?.getSnapshot ?? defaultInterface);
-  let content = fallback;
-  if (host && state.status === 'active') {
-    const { SessionProvider, renderSlot } = host;
-    content = <SessionProvider session={undefined} empty={() => renderSlot(REMOTE_HOME_SLOT, { home }, { fallback })}/>;
-  }
-  // 页面槽共享手机色板；电脑皮肤的全局别名仍保留在聊天、局部插槽和面板中。
+  const content = host?.model.interfaceUI ? <RemoteInterfaceSurface host={host.model.interfaceUI} surface={REMOTE_HOME_SLOT} owner={{ home }} fallback={fallback}/> : fallback;
   return <div className="dshm-phone-colors dshm-phone-surface" data-dshm-surface="remote.home">{content}</div>;
 }
-const emptySubscribe = () => () => {};
-const defaultInterfaceValue = { status: 'default' };
-const defaultInterface = () => defaultInterfaceValue;
 
 /** 每个当前会话只挂载一次；只读子会话也需要原插件的反馈弹窗。 */
 export function RemoteInputExtensions() {

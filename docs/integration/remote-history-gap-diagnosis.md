@@ -17,7 +17,7 @@
 1. 既有[测试夹具](../../tests/fixtures/remote-plugin-slots.jsx)启用`historyTesting`，初始仅持有序号10，仍有更早历史。
 2. [全量脚本](../../scripts/verify-remote-plugin-slots.mjs)503–506附近直接调用真实`conversation.loadOlder()`，然后注入仅有序号5的旧页，缺少6～9。这是主动构造的断层，并非用户服务器真实返回。
 3. [载体校验](../../src/remote-core.mjs)调用[相邻页校验](../../src/remote-history-page.mjs)：旧页最后序号加1必须等于`beforeSeq=10`，5不满足，正确拒绝；该错误包装为`RemoteError`返回。
-4. [有界窗口](../../src/remote-history-window.mjs)保存友好错误并在finally清除加载状态，保持原窗口和`hasMore`，同时重新抛出失败。
+4. [有界窗口](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/remote-history-window.mjs)保存友好错误并在finally清除加载状态，保持原窗口和`hasMore`，同时重新抛出失败。
 5. 窗口对Session代理的`loadOlder`直接返回内部`older`，因此真实Conversation服务也会收到拒绝。脚本没有在发起Promise时立即挂失败处理，也没有期望拒绝的断言；Node默认未处理拒绝策略在脚本之后等待之前即可终止进程。
 
 即使调整监听时机，后面的裸`await pluginHistory`仍会让原脚本进入失败路径，不能把它当成预期错误的成功断言。复现原命令确实以退出码1终止；这也解释了为什么没有生成完整的成功报告。

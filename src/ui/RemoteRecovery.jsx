@@ -14,6 +14,7 @@ export class RemoteErrorBoundary extends React.Component {
     if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false });
   }
   render() {
+    if (this.state.failed && this.props.fallback) return this.props.fallback;
     return this.state.failed ? <Recovery message={this.props.message} onRetry={async () => {
       await this.props.onRecover?.(); this.setState({ failed: false });
     }}/> : this.props.children;

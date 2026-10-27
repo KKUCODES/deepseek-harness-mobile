@@ -1,6 +1,6 @@
 # DSHM Plugin SDK（实验版）
 
-构建可独立安装的 **DSHM 手机 Remote 首页插件**。当前仅开放 `dshm.remote.home`，API 主版本为 `1`；不是 DSH 电脑插件 SDK，也不提供任意 npm 包运行环境。
+构建可独立安装的 **DSHM 手机 Remote 界面插件**。API 主版本为 `1`，公开 `dshm.remote.home` 首页；preview.15 本地候选新增可选 `dshm.remote.connection` 连接页。已发布 preview.14 只有首页槽。不是 DSH 电脑插件 SDK，也不提供任意 npm 包运行环境。
 
 此 SDK 尚未发布到 npm。先在 DSHM 源码目录执行：
 
@@ -9,10 +9,10 @@ mkdir artifacts/plugin-sdk
 npm pack ./packages/plugin-sdk --pack-destination ./artifacts/plugin-sdk --ignore-scripts
 ```
 
-然后在独立插件工程中安装生成的 `dshm-plugin-sdk-0.1.0.tgz`，作为开发依赖。工程不依赖 DSHM 私有源码或上游 DSH；手机不需要安装此 SDK。
+然后在独立插件工程中安装生成的 `dshm-plugin-sdk-0.1.1.tgz`，作为开发依赖。工程不依赖 DSHM 私有源码或上游 DSH；手机不需要安装此 SDK。
 
 ```sh
-npm install --save-dev /path/to/dshm-plugin-sdk-0.1.0.tgz
+npm install --save-dev /path/to/dshm-plugin-sdk-0.1.1.tgz
 ```
 
 工程的 `package.json` 最小内容：
@@ -42,6 +42,8 @@ export const inject = ['slots'];
 export const mobileInterface = { apiVersion: 1, surface: 'dshm.remote.home' };
 export function apply(ctx) {
   ctx.slots.register({ name: mobileInterface.surface }, Home);
+  // 可选连接页：用inject兼容没有该槽的旧宿主。
+  // ctx.slots.inject('dshm.remote.connection', () => ctx.slots.register({ name: 'dshm.remote.connection' }, Connection));
   // 需要订阅或定时器时，用 ctx.effect(() => 清理函数) 注册清理。
 }
 /** @param {import('@dshm/plugin-sdk').HomeProps} props */

@@ -1,14 +1,20 @@
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
-import { IconCheckOutline16, IconChevronLeftOutline14, IconChevronDownOutline14, IconCloseOutline16, IconEllipsisOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
+import { IconCheckOutline16, IconChevronLeftOutline14, IconChevronDownOutline14, IconCloseOutline16, IconEllipsisOutline16, IconFolderClose16, IconNewChatOutline16, IconSearchOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Surface, IconButton } from './Surface.jsx';
 import { useLocale, useTranslate } from './locale.jsx';
 import { RemoteComposer } from './RemoteComposer.jsx';
 import { RemoteBoundHero, RemoteActivePreset } from './RemoteConversationHero.jsx';
 import { UserMessage } from './ChatMessage.jsx';
+import { ChatMarkdown } from './ChatMarkdown.jsx';
 import { unwrap } from '../remote-model.mjs';
 import { responseFailures } from '../remote-response-errors.mjs';
 import { RemoteMessage, RemoteFiles, fileSize, contentText } from './RemoteMessage.jsx';
+import { RemoteHistoryList } from './RemoteHistoryList.jsx';
+import { RemoteChatFrame } from './RemoteChatFrame.jsx';
+import { useRemoteScrollFollow } from '../use-remote-scroll-follow.mjs';
+import { RemoteDiagnosticEntry } from './RemoteDiagnostics.jsx';
+import { DefaultRemoteHome } from './DefaultRemoteHome.jsx';
 import { RemoteQueue } from './RemoteQueue.jsx';
 import { RemoteFilePreview } from './RemoteFilePreview.jsx';
 import { RemoteImages, RemoteLocalImage } from './RemoteImages.jsx';
@@ -41,17 +47,13 @@ import { RemoteSessionExport } from './RemoteSessionExport.jsx';
 import { RemoteDesktopApps } from './RemoteDesktopApps.jsx';
 import { RemoteInputExtensions } from '../remote-plugin-slots.jsx';
 import { RemoteOfflineStatus } from './RemoteOfflineStatus.jsx';
-import { RemoteDiagnosticEntry } from './RemoteDiagnostics.jsx';
 import { loadEarlierHistory } from '../remote-history-position.mjs';
 import { loadRemoteHistory } from '../remote-history.mjs';
-import { observeHistoryTop } from '../remote-history-auto-load.mjs';
 import { observeRemoteReadingContext } from '../remote-reading-context.mjs';
 import { RemoteMainConversationBody, RemoteMainConversationFrame } from '../remote-sidebar-chat.jsx';
 import { SurfacePresence, useSceneMotion, RemoteFlowMotion } from './motion.jsx';
 import { createChatFlowMotion } from '@dshm/chat-presentation';
-import { RemoteHistoryList } from './RemoteHistoryList.jsx';
-import { RemoteLongMarkdown } from './RemoteLongMarkdown.jsx';
-import { DefaultRemoteHome } from './DefaultRemoteHome.jsx';
+import { dismissRemotePortalModal } from '../remote-modals.mjs';
 
 export function RemoteWorkspace({ model, onBack, onConnection, embedded = false, renderConversation }) {
   const t = useTranslate();
@@ -65,8 +67,6 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [search, setSearch] = useState(null), [searchAttempt, retrySearch] = useState(0);
   const [settingsTarget, setSettingsTarget] = useState({ id: 'models', revision: 0 });
   const [notice, setNotice] = useState(''), [actionBusy, setBusy] = useState(false);
-  const contentPages = useRef(new Map());
-  const homeReading = useRef(new Map());
   const [cordisTarget, setCordisTarget] = useState(null);
   const [inputBusy, setInputBusy] = useState(false);
   const busy = actionBusy || inputBusy || model.draftTransfers.has(state.selected);
@@ -90,58 +90,15 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [file, setFile] = useState(null);
   const [command, setCommand] = useState(() => model.commandResume?.target ?? null);
   const [jobOutput, setJobOutput] = useState(() => model.jobOutputResume?.target ?? null);
-  const scroll = useRef(null), bottom = useRef(true);
-  const historyActions = useRef(null), stopHistoryAutoLoad = useRef(null);
-  const [historyError, setHistoryError] = useState(false);
+  const { scroll, bottom, attachScroll, onScroll, followBottom, followingTail, returnToBottom } = useRemoteScrollFollow(`${state.selected}:${state.selectionRevision}`);
+  const homeReading = useRef(new Map());
   const scene = useRef(null);
   useSceneMotion(scene, state.selected ?? `workspace:${workspace ?? ''}`, state.selected ? 2 : workspace ? 1 : 0);
-  const [flowMotion] = useState(() => createChatFlowMotion?.(() => {}, active => {
+  // 手机没有桌面InputFoldDriver；rc.2要求显式null，旧reserve合同忽略该返回值。
+  const [flowMotion] = useState(() => createChatFlowMotion?.(() => null, active => {
     if (scroll.current) scroll.current.style.overflowAnchor = active ? 'none' : '';
   }));
   useEffect(() => () => flowMotion?.clear(), [flowMotion]);
-  const scrollPosition = useRef(0);
-  const scrollRestoreFrame = useRef(null);
-  const scrollFollowFrame = useRef(null), scrollResizeObserver = useRef(null);
-  const followBottom = useCallback(() => {
-    if (!bottom.current || !scroll.current || scrollFollowFrame.current !== null) return;
-    const container = scroll.current;
-    scrollFollowFrame.current = requestAnimationFrame(() => {
-      scrollFollowFrame.current = null;
-      if (!bottom.current || scroll.current !== container || !container.clientHeight) return;
-      if (container.scrollHeight - container.clientHeight - container.scrollTop > 1) {
-        container.scrollTop = container.scrollHeight;
-        scrollPosition.current = container.scrollTop;
-      }
-    });
-  }, []);
-  // 局部 Views 可暂时卸载正文；阅读位置属于常驻会话，恢复正文时不能跳回顶部。
-  const attachScroll = useCallback(node => {
-    stopHistoryAutoLoad.current?.dispose(); stopHistoryAutoLoad.current = null;
-    cancelAnimationFrame(scrollRestoreFrame.current);
-    cancelAnimationFrame(scrollFollowFrame.current);
-    scrollFollowFrame.current = null;
-    scrollResizeObserver.current?.disconnect();
-    scrollResizeObserver.current = null;
-    if (!node && scroll.current) scrollPosition.current = scroll.current.scrollTop;
-    scroll.current = node;
-    if (node) scrollRestoreFrame.current = requestAnimationFrame(() => {
-      if (scroll.current !== node) return;
-      node.scrollTop = bottom.current ? node.scrollHeight : scrollPosition.current;
-      scrollPosition.current = node.scrollTop;
-    });
-    if (node) {
-      stopHistoryAutoLoad.current = observeHistoryTop(node, {
-        canLoad: () => historyActions.current?.canLoad() ?? false,
-        load: () => historyActions.current?.load(),
-      });
-      // 图片/局部插件及输入区可在会话事件之后改变布局；仅原本跟随尾部时补齐滚动。
-      const observer = new ResizeObserver(followBottom);
-      observer.observe(node);
-      const messages = node.querySelector('.messages');
-      if (messages) observer.observe(messages);
-      scrollResizeObserver.current = observer;
-    }
-  }, [followBottom]);
   const historyRequest = useRef(null);
   const filePicker = useRef(null), imagePicker = useRef(null), pickerSession = useRef(null);
   const editor = useRef(null);
@@ -159,24 +116,20 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   }, [busy]);
   const selected = state.selected, chat = state.list?.byId[selected];
   const connected = state.connectionState === 'connected';
-  const loadHistory = async (direction) => {
+  const loadOlder = async () => {
     if (!connected || busy || state.session?.loadingOlder || historyRequest.current || !scroll.current) return;
     const container = scroll.current, reference = model.reference;
     const generation = model.connection.generation.getSnapshot(), request = {};
     const isCurrent = () => historyRequest.current === request && scroll.current === container && model.reference === reference && model.connection.generation.getSnapshot() === generation;
-    historyRequest.current = request; stopHistoryAutoLoad.current?.reset(); bottom.current = false; setNotice(''); setHistoryError(false);
+    historyRequest.current = request; bottom.current = false; setNotice('');
     try {
       // 分页仅锁住自己的按钮；用户离开时由原会话引用释放来取消请求。
-      await loadEarlierHistory({ container, load: () => direction === 'newer'
-        ? reference.binding.history.newer() : loadRemoteHistory(reference.binding, { isCurrent }), isCurrent });
-    } catch (error) { if (isCurrent()) { setNotice(t(error.message)); setHistoryError(true); } }
+      await new Promise(resolve => setTimeout(resolve, 0));
+      if (isCurrent()) await loadEarlierHistory({ container, load: () => loadRemoteHistory(reference.binding, { isCurrent }), isCurrent });
+    } catch (error) { if (isCurrent()) setNotice(t(error.message)); }
     finally { if (historyRequest.current === request) historyRequest.current = null; }
   };
-  historyActions.current = {
-    canLoad: () => connected && !busy && !historyError && !state.session?.history?.error
-      && state.session?.openState === 'open' && state.session.hasMore && !state.session.loadingOlder && !historyRequest.current,
-    load: () => loadHistory('older'),
-  };
+  const connectionLabel = connected ? '已连接电脑' : state.connectionState === 'connecting' ? '正在连接电脑…' : '电脑连接已断开';
   const childAccess = subagentAccess(state);
   const modelReadOnly = !!childAccess.address;
   const modelSheetTitle = modelReadOnly ? '当前模型' : '选择模型';
@@ -206,76 +159,6 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     !item.blank && !!state.workspaces?.archivedSessionIds.includes(item.id) === archived &&
     (!workspace || state.workspaces?.items.find(item => item.workspaceId === workspace)?.sessionIds.includes(item.id)) &&
     (!phrase || item.displayTitle.toLocaleLowerCase().includes(phrase.toLocaleLowerCase()) || snippets.has(item.id)));
-  // 原投影保留未变节点的身份；稳定回调让新输出和草稿编辑不重画全部历史。
-  const openFile = useCallback((path, options) => { if (selected) {
-    if (model.documentPreviews) setCommand(null);
-    setFile({ sessionId: selected, path, line: options?.line });
-  } }, [selected, model]);
-  const openAttachment = useCallback(value => { if (selected) {
-    if (model.documentPreviews) setCommand(null);
-    setFile({ ...value, sessionId: selected });
-  } }, [selected, model]);
-  const openChanges = useCallback(value => { if (selected) {
-    // 原文档窗口使用可交互的插件 portal；先收起工具详情的模态层，避免其把新窗口置于 inert 背景。
-    if (model.documentPreviews && value.diffs || model.reviewPreview && value.seq !== undefined) setCommand(null);
-    setFile({ ...value, sessionId: selected });
-  } }, [selected, model]);
-  const openCommand = useCallback((nodeId, callId) => setCommand({ sessionId: selected, nodeId, callId }), [selected]);
-  const forkTurn = useCallback(nodeId => void act(() => model.forkTurn(nodeId, selected)), [act, model, selected]);
-  const renderContent = useCallback((text, streaming, options) => <RemoteLongMarkdown text={text} streaming={streaming}
-    memory={contentPages.current} contentKey={options?.contentKey} onOpenFile={openFile} fileMentions={options?.fileMentions}/>, [openFile]);
-  const renderHistoryNode = useCallback(node => <RemoteMessage node={node} renderContent={renderContent} openFile={openFile}
-    openAttachment={openAttachment} openChanges={openChanges} openCommand={openCommand} onFork={forkTurn}
-    forkDisabled={!connected || busy || turnForkAnchor(model.getSnapshot().conversation, node.key) === null}/>,
-  [model, renderContent, openFile, openAttachment, openChanges, openCommand, forkTurn, connected, busy]);
-  useEffect(() => {
-    const controller = new AbortController();
-    setSearch(null);
-    if (!phrase || selected || !state.ready) return () => controller.abort();
-    if (!connected) { setSearch({ query: phrase, loading: false, items: [], error: 'offline' }); return () => controller.abort(); }
-    setSearch({ query: phrase, loading: true, items: [] });
-    const timer = setTimeout(() => { void model.sessions.search(phrase, controller.signal).then(result => {
-      if (!controller.signal.aborted) setSearch({ ...unwrap(result), query: phrase, loading: false });
-    }).catch(error => { if (!controller.signal.aborted) setSearch({ query: phrase, loading: false, items: [],
-      error: /SESSION_QUERY_SEARCH_DISABLED|session search is disabled/.test(error.message) ? 'disabled' : 'failed' }); }); }, 180);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [phrase, model, selected, searchAttempt, state.ready, state.connectionState]);
-  useEffect(() => { historyRequest.current = null; stopHistoryAutoLoad.current?.reset(); setHistoryError(false); bottom.current = true; scrollPosition.current = 0; setFile(null); setCommand(current => current?.sessionId === selected ? current : null); setJobOutput(current => current?.sessionId === selected ? current : null); setSheet(null); }, [selected, state.selectionRevision]);
-  useEffect(() => {
-    if (embedded || !state.notificationNavigation) return;
-    setSheet(null); setFile(null); setCommand(null); setJobOutput(null);
-    if (model.pluginPanels.isExpanded()) model.pluginPanels.toggleExpanded();
-  }, [model, embedded, state.notificationNavigation]);
-  useEffect(() => { if (workspace && state.workspaces?.phase === 'ready' && !state.workspaces.items.some(item => item.workspaceId === workspace)) setWorkspace(null); }, [workspace, state.workspaces]);
-  useEffect(() => {
-    if (!cordisTarget) return;
-    if (selected !== cordisTarget) { setCordisTarget(null); return; }
-    if (!state.session) return;
-    setCordisTarget(null);
-    if (state.session.openError) return;
-    try { model.pluginPanels.openTab('guide'); } catch (error) { setNotice(error.message); }
-  }, [model, selected, state.session, cordisTarget]);
-  useEffect(() => {
-    // 会话更新和尺寸变化共用一帧，避免同一批事件重复强制布局。
-    followBottom();
-  }, [state.conversation, state.session, state.events, followBottom]);
-  useEffect(() => {
-    if (embedded) return;
-    const back = () => {
-      // 原管理组件将安装/卸载确认弹窗放在 body；Android 返回先交还原弹窗处理。
-      if (sheet === 'pluginManager' && document.querySelector('[role="dialog"][aria-modal="true"]')) {
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return true;
-      }
-      if (model.pluginSettingsBack?.()) return true;
-      if (model.pluginGlobalBack?.()) return true;
-      if (model.pluginPanelBack?.()) return true;
-      if (model.pluginPanels?.isExpanded()) { model.pluginPanels.toggleExpanded(); return true; }
-      if (jobOutput) { setJobOutput(null); setSheet('jobs'); } else if (command) setCommand(null); else if (file) setFile(null); else if (sheet === 'pluginManager') setSheet('plugins'); else if (sheet) setSheet(null); else if (selected) void act(() => model.back()); else if (workspace) setWorkspace(null); else return false; return true;
-    };
-    // 列表进入会话会先经过忙碌态；解除后必须刷新 act，避免系统返回一直被旧状态拦住。
-    window.dshmHandleBack = back;
-    return () => { delete window.dshmHandleBack; };
-  }, [model, embedded, file, command, jobOutput, sheet, selected, workspace, act]);
   const homeKey = JSON.stringify([workspace, archived, phrase]);
   // 只交付首页投影和白名单操作；插件不会拿到 RemoteModel、凭据或任意 RPC 通道。
   const home = { apiVersion: 1, t, locale, view: {
@@ -302,16 +185,77 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       if (homeReading.current.size > 32) homeReading.current.delete(homeReading.current.keys().next().value);
     },
   } };
+  // 原投影保留未变节点的身份；稳定回调让新输出和草稿编辑不重画全部历史。
+  const openFile = useCallback((path, options) => { if (selected) {
+    if (model.documentPreviews) setCommand(null);
+    setFile({ sessionId: selected, path, line: options?.line });
+  } }, [selected, model]);
+  const openAttachment = useCallback(value => { if (selected) {
+    if (model.documentPreviews) setCommand(null);
+    setFile({ ...value, sessionId: selected });
+  } }, [selected, model]);
+  const openChanges = useCallback(value => { if (selected) {
+    // 原文档窗口使用可交互的插件 portal；先收起工具详情的模态层，避免其把新窗口置于 inert 背景。
+    if (model.documentPreviews && value.diffs || model.reviewPreview && value.seq !== undefined) setCommand(null);
+    setFile({ ...value, sessionId: selected });
+  } }, [selected, model]);
+  const openCommand = useCallback((nodeId, callId) => setCommand({ sessionId: selected, nodeId, callId }), [selected]);
+  const forkTurn = useCallback(nodeId => void act(() => model.forkTurn(nodeId, selected)), [act, model, selected]);
+  const renderContent = useCallback((text, streaming, options) => <ChatMarkdown text={text} streaming={streaming} onOpenFile={openFile} fileMentions={options?.fileMentions}/>, [openFile]);
+  useEffect(() => {
+    const controller = new AbortController();
+    setSearch(null);
+    if (!phrase || selected || !state.ready) return () => controller.abort();
+    if (!connected) { setSearch({ query: phrase, loading: false, items: [], error: 'offline' }); return () => controller.abort(); }
+    setSearch({ query: phrase, loading: true, items: [] });
+    const timer = setTimeout(() => { void model.sessions.search(phrase, controller.signal).then(result => {
+      if (!controller.signal.aborted) setSearch({ ...unwrap(result), query: phrase, loading: false });
+    }).catch(error => { if (!controller.signal.aborted) setSearch({ query: phrase, loading: false, items: [],
+      error: /SESSION_QUERY_SEARCH_DISABLED|session search is disabled/.test(error.message) ? 'disabled' : 'failed' }); }); }, 180);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [phrase, model, selected, searchAttempt, state.ready, state.connectionState]);
+  useEffect(() => { historyRequest.current = null; setFile(null); setCommand(current => current?.sessionId === selected ? current : null); setJobOutput(current => current?.sessionId === selected ? current : null); setSheet(null); }, [selected, state.selectionRevision]);
+  useEffect(() => {
+    if (embedded || !state.notificationNavigation) return;
+    setSheet(null); setFile(null); setCommand(null); setJobOutput(null);
+    if (model.pluginPanels.isExpanded()) model.pluginPanels.toggleExpanded();
+  }, [model, embedded, state.notificationNavigation]);
+  useEffect(() => { if (workspace && state.workspaces?.phase === 'ready' && !state.workspaces.items.some(item => item.workspaceId === workspace)) setWorkspace(null); }, [workspace, state.workspaces]);
+  useEffect(() => {
+    if (!cordisTarget) return;
+    if (selected !== cordisTarget) { setCordisTarget(null); return; }
+    if (!state.session) return;
+    setCordisTarget(null);
+    if (state.session.openError) return;
+    try { model.pluginPanels.openTab('guide'); } catch (error) { setNotice(error.message); }
+  }, [model, selected, state.session, cordisTarget]);
+  useEffect(() => {
+    // 会话更新和尺寸变化共用一帧，避免同一批事件重复强制布局。
+    followBottom();
+  }, [state.conversation, state.session, state.events, followBottom]);
+  useEffect(() => {
+    if (embedded) return;
+    const back = () => {
+      if (model.pluginSettingsBack?.()) return true;
+      if (model.pluginGlobalBack?.()) return true;
+      if (model.pluginPanelBack?.()) return true;
+      if (dismissRemotePortalModal(document)) return true;
+      if (model.pluginPanels?.isExpanded()) { model.pluginPanels.toggleExpanded(); return true; }
+      if (jobOutput) { setJobOutput(null); setSheet('jobs'); } else if (command) setCommand(null); else if (file) setFile(null); else if (sheet === 'pluginManager') setSheet('plugins'); else if (sheet) setSheet(null); else if (selected) void act(() => model.back()); else if (workspace) setWorkspace(null); else return false; return true;
+    };
+    // 列表进入会话会先经过忙碌态；解除后必须刷新 act，避免系统返回一直被旧状态拦住。
+    window.dshmHandleBack = back;
+    return () => { delete window.dshmHandleBack; };
+  }, [model, embedded, file, command, jobOutput, sheet, selected, workspace, act]);
   const navigation = <>
-    <header className="topbar remote-topbar"><IconButton label={t("返回")} disabled={busy} onClick={() => void act(() => model.back())}><IconChevronLeftOutline14/></IconButton>
+    <header className="topbar remote-topbar"><IconButton label={t("返回")} disabled={busy} onClick={() => selected ? void act(() => model.back()) : workspace ? setWorkspace(null) : onBack()}><IconChevronLeftOutline14/></IconButton>
       <div className="remote-heading">{selected ? <RemoteHeaderTitle model={model} title={chat?.displayTitle ?? '聊天'}/> : <strong>{workspace ? state.workspaces.items.find(item => item.workspaceId === workspace)?.title : 'Remote'}</strong>}</div>
       <IconButton label={t("Remote 选项")} disabled={busy} onClick={() => setSheet('menu')}><IconEllipsisOutline16/></IconButton></header>
     {selected && <><RemoteHeaderAncestors model={model}/><RemoteHeaderExtensions/></>}
   </>;
   const status = <>
-    {(notice || state.error) && <div className="remote-error" role="alert">{t(responseFailures[notice || state.error] ?? (notice || state.error))}</div>}
+    {(notice || state.error) && <div className="remote-error" role="alert">{t(responseFailures[notice || state.error] ?? (notice || state.error))}<RemoteDiagnosticEntry failure={notice || state.error}/></div>}
     <RemoteOfflineStatus model={model}/>
-    {state.session?.history?.error && !notice && <div className="remote-error" role="alert">{t(state.session.history.error)}<RemoteDiagnosticEntry failure={state.session.history.error} phase="reading"/></div>}
     {!!state.endpointRecoveries?.length && <p className="remote-offline-status" role="status">
       {t('有服务地址保存结果尚未确认，请打开对应设置重新读取地址。')}
     </p>}
@@ -336,35 +280,25 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   </>;
   const header = <>{navigation}{status}</>;
   const conversation = <>{header}
-    <section className="conversation" ref={attachScroll} aria-label={t("聊天内容")} tabIndex={0} onScroll={event => {
-      const el = event.currentTarget, top = el.scrollTop;
-      const atBottom = el.scrollHeight - top - el.clientHeight < 80;
-      // 自己的滚动事件可能晚于新卡片布局到达；位置未变时不能误判成用户向上阅读。
-      if (top !== scrollPosition.current || atBottom) bottom.current = atBottom;
-      scrollPosition.current = top;
-    }}>
+    <RemoteChatFrame scroll={{ followingTail, returnToBottom: () => { flowMotion?.cancelInput?.(); returnToBottom(); } }}>
+    <section className="conversation" ref={attachScroll} aria-label={t("聊天内容")} onScroll={onScroll}>
       {!state.session?.openError && <RemoteBoundHero model={model} state={state} onPreset={() => setSheet('agentPresets')}/>}
       <div className="messages">
         {!state.session && <p role="status">{t("正在读取聊天记录…")}</p>}
         {state.session?.openError && <><p role="alert">{t(subagentReadError(state.session.openError))}</p>
           <Button disabled={!connected || busy || state.subagentServiceAvailable === false && !!childAccess.address}
             onClick={() => void act(() => model.select(state.selectedTarget, { trail: state.selectionTrail }))}>{t('重试读取')}</Button></>}
-        {state.session?.hasMore ? <div className="remote-history-loader">
-          {state.session.loadingOlder && <span role="status">{t('正在加载记录…')}</span>}
-          <Button data-history-loader disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadHistory('older')}>{t("加载更早的消息")}</Button>
-        </div> : state.session?.openState === 'open' && state.conversation?.order.length > 0 && <div className="remote-history-loader muted" role="status">{t('没有更早的消息')}</div>}
+        {state.session?.hasMore && <Button data-history-loader disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadOlder()}>{t("加载更早的消息")}</Button>}
         <RemoteHistoryList key={`${selected}:${state.selectionRevision}`} conversation={state.conversation} container={scroll}
-          history={model.reference?.binding.history} renderNode={renderHistoryNode} following={bottom} sessionKey={selected}
-          reading={model.reading} target={state.selectedTarget} resume={model.readingResume}/>
+          following={bottom} sessionKey={selected} reading={model.reading} target={state.selectedTarget} resume={model.readingResume}
+          renderNode={node => <RemoteMessage key={node.key} node={node} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment} openChanges={openChanges} openCommand={openCommand}
+            onFork={forkTurn} forkDisabled={!connected || busy || turnForkAnchor(state.conversation, node.key) === null}/>}/>
         {state.inbox?.['next-step']?.map(item => <UserMessage key={item.id} attachments={<RemoteFiles content={item.content} openAttachment={openAttachment}/>}>{contentText(item.content)}<small className="muted">{t("等待引导…")}</small></UserMessage>)}
         {state.session?.pendingSubmissions.filter(item => item.placement !== 'queued').map(item => <UserMessage key={item.requestId} attachments={<RemoteFiles pending={item.attachments} openAttachment={openAttachment}/>}>{item.text}<small className="muted">{t("正在发送…")}</small></UserMessage>)}
         <RemoteRunningStatus/>
       </div>
     </section>
-    {state.session?.history?.hasNewer && <div className="remote-history-navigation">
-      <Button disabled={!connected || busy || state.session.loadingOlder} onClick={() => void loadHistory('newer')}>{t('加载较新的消息')}</Button>
-      <Button onClick={() => { stopHistoryAutoLoad.current?.reset(); bottom.current = true; model.reference.binding.history.latest(); followBottom(); }}>{t('返回最新消息')}</Button>
-    </div>}
+    </RemoteChatFrame>
   </>;
   return <RemoteFlowMotion.Provider value={flowMotion}>{!embedded && <RemoteSettingsOnboarding model={model} openSection={id => {
     setSettingsTarget(before => ({ id, revision: before.revision + 1 })); setSheet('settings');

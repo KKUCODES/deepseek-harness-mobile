@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.14/DSHM-0.1.0-preview.14.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.15/DSHM-0.1.0-preview.15.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -67,6 +67,10 @@ flowchart LR
 公共服务使用 HTTP，传输未加密。敏感内容建议自建 HTTPS。普通聊天不经过中转。完整步骤见[使用指南](./docs/usage.md)。
 
 ## 当前状态
+
+**preview.15** 以 .11 聊天体验为基准，保留外链、长聊天虚拟渲染与恢复、新版 Remote、独立首页插件管理及错误栈；恢复手动加载和连续阅读，补齐 DSH 回底按钮、代码块、图片与思考过程兼容。[当前范围与验证](./docs/integration/preview15-rebuild-current.md) · [发行说明](./ci/release-notes/0.1.0-preview.15.md)。.12–.14 的历史窗口与自动加载属于旧版行为；发行进度与下载核验见[构建与下载](./docs/releases.md)。
+
+手机界面插件的[公开接口](./docs/plugins/remote-home-api.md)覆盖首页和连接前页面，停用、卸载或失败时使用默认界面。连接页扩展从 preview.15 起提供；开发方法见[插件作者指南](./docs/plugins/development.md)。
 
 **preview.14** 加入独立首页插件与统一手机插件管理，修复手机浅色与电脑深色皮肤混用时的首页配色及原 Figma 图标，保持插件历史读取失败时的官方接口行为。[发行说明](./ci/release-notes/0.1.0-preview.14.md)列出范围与验证边界。
 

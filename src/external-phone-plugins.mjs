@@ -9,7 +9,7 @@ export function externalPhonePlugins(entries = []) {
       || !/^[a-f0-9]{64}$/.test(entry.sha256) || entry.apiVersion !== MOBILE_INTERFACE_API
       || entry.surface !== REMOTE_HOME_SLOT || typeof entry.name !== 'string' || typeof entry.version !== 'string') throw Error('invalid_plugin_catalog');
     return { ...entry, host: 'remote', group: REMOTE_HOME_SLOT, external: true, source: entry.id,
-      capabilities: 'Remote 首页界面', load: async () => {
+      capabilities: 'Remote 页面界面', load: async () => {
         if (!entry.available) throw Error('missing');
         const module = await import(/* @vite-ignore */ new URL(`/phone-plugins/${entry.sha256}.js`, globalThis.location.origin).href);
         if (typeof module.default !== 'function') throw Error('incompatible');

@@ -1,10 +1,4 @@
 export async function loadRemoteHistory(binding, { isCurrent = () => true } = {}) {
-  if (binding.history) {
-    if (!isCurrent()) return;
-    try { return await binding.history.older(); }
-    catch { if (isCurrent()) throw new Error('未能加载更早的记录，请重试。'); }
-    return;
-  }
   const { session, eventSource } = binding;
   const state = session.getSnapshot();
   if (!isCurrent() || state.openState !== 'open' || !state.hasMore || state.loadingOlder) return;

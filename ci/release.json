@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0-preview.14",
-  "versionCode": 22,
+  "version": "0.1.0-preview.15",
+  "versionCode": 25,
   "requiredPluginVersion": "0.1.87-latest.0",
   "dshVersion": "0.2.1-rc.2",
   "remoteDshVersions": ["0.2.0-rc.2", "0.2.1-alpha.2", "0.2.1-rc.2"],

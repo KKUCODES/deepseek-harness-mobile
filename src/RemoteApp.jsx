@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { phonePluginsFor } from './phone-plugins.mjs';
+import { RemoteInterfaceHost } from './remote-interface-host.jsx';
 import { flushSync } from 'react-dom';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
@@ -28,7 +30,6 @@ import { DesignButton, DesignDialog } from './ui/system/Primitives.jsx';
 import { LoadingToast } from './ui/system/LoadingToast.jsx';
 import { RemoteDiagnostics } from './remote-diagnostics.mjs';
 import { RemoteDiagnosticsContext, RemoteDiagnosticSheet } from './ui/RemoteDiagnostics.jsx';
-import { phonePluginsFor } from './phone-plugins.mjs';
 
 const scanFailures = { scan_unavailable: '暂时无法打开扫码，请粘贴配对链接。', scan_busy: '扫码窗口已打开，请先完成或返回。', scan_timeout: '扫码已超时，请重新尝试。', scan_camera_permission: '未获得相机权限，可从图片识别或粘贴配对链接。', scan_image_invalid: '无法读取这张图片，请选择其他图片。', scan_image_too_large: '图片过大，请裁剪二维码后重试。', scan_qr_not_found: '未识别到二维码，请使用清晰的二维码图片。' };
 const failures = { pairing_unavailable: '链接已过期或已被领取，请在电脑上生成新链接。', device_pending: '请先在电脑端核对指纹并批准连接。', device_revoked: '电脑已撤销这台手机，请重新配对。', http_401: '连接授权已失效，请移除本机绑定后重新配对。', permissions_changed: '电脑已调整这台手机的权限，请重新连接。', host_offline: '电脑暂时离线，请检查 DSH 是否正在运行。', host_upgrade_required: '请先更新电脑端 DSH Mobile 插件，再重新连接。',
@@ -39,15 +40,17 @@ const failures = { pairing_unavailable: '链接已过期或已被领取，请在
   unsupported_dsh_version: '电脑 DSH 版本与当前手机端不兼容，请使用配套版本后重试。' };
 
 export function RemoteApp() {
+  useEffect(() => { void phonePluginsFor('remote').start().catch(() => {}); }, []);
+  const [interfaceUI] = useState(() => new RemoteInterfaceHost());
+  useEffect(() => () => { void interfaceUI.dispose(); }, [interfaceUI]);
   const [client] = useState(() => new RemoteClient());
   const [language, setLanguage] = useState('zh');
-  useEffect(() => { void phonePluginsFor('remote').start().catch(() => {}); }, []);
   const [appearanceReady, setAppearanceReady] = useState(false);
   useEffect(() => watchPhoneAppearance(client, new ThemePresenter(), { onLanguage: setLanguage, onReady: () => setAppearanceReady(true) }), [client]);
-  return <LocaleProvider locale={language}><RemoteConnection client={client} language={language} appearanceReady={appearanceReady}/></LocaleProvider>;
+  return <LocaleProvider locale={language}><RemoteConnection client={client} language={language} appearanceReady={appearanceReady} interfaceUI={interfaceUI}/></LocaleProvider>;
 }
 
-function RemoteConnection({ client, language, appearanceReady }) {
+function RemoteConnection({ client, language, appearanceReady, interfaceUI }) {
   const t = useTranslate();
   const languageRef = useRef(language);
   languageRef.current = language;
@@ -183,6 +186,7 @@ function RemoteConnection({ client, language, appearanceReady }) {
         const syncCache = await RemoteSyncCache.open(identity);
         if (!mounted.current || !client.connected) { draftStore.close(); syncCache?.close(); return; }
         const next = new RemoteModel(client, { syncCache, draftStore, notificationKey: JSON.stringify([identity.origin, identity.deviceId, identity.fingerprint]) });
+        next.interfaceUI = interfaceUI; next.sharedInterfaceUI = true;
         runtime.current = next;
         let rebuilding = false;
         next.requestRebuild = () => {
@@ -216,7 +220,7 @@ function RemoteConnection({ client, language, appearanceReady }) {
           if (resume.selected) await next.select(resume.selectedTarget ?? resume.selected, { trail: resume.selectionTrail ?? [] }).catch(failure => next.fail(failure));
           if (next.getSnapshot().selected === resume.selected) {
             if (resume.reading?.selected === resume.selected) {
-              await next.reference?.binding.history?.through(resume.reading.seq).catch(failure => next.fail(failure));
+              await next.reference?.binding.session.loadThrough(resume.reading.seq).catch(failure => next.fail(failure));
               next.readingResume = resume.reading;
             }
             next.jobOutputResume = resume.jobOutput;
@@ -416,7 +420,7 @@ function RemoteConnection({ client, language, appearanceReady }) {
   const diagnosticContext = { store: diagnosticStore, records: diagnosticRecords,
     latest: diagnosticRecords.find(item => item.source === 'remote'), open: setDiagnosticSelection };
   return <RemoteDiagnosticsContext.Provider value={diagnosticContext}>
-    <RemoteConnectionPage binding={binding} stage={stage} status={status} watchApproval={watchApproval} busy={busy} error={error} link={link} name={name} pairingServer={pairingServer}
+    <RemoteConnectionPage interfaceUI={interfaceUI} binding={binding} stage={stage} status={status} watchApproval={watchApproval} busy={busy} error={error} link={link} name={name} pairingServer={pairingServer}
       onLink={setLink} onName={setName} onScan={scan} onPaste={paste} onClaim={claim} onRetry={retry} pasteHint={pasteHint}
       onRetryRead={() => void run(() => { operation.current = operation.current.then(() => retryLoad.current?.()); return operation.current; })} onBack={back} onMore={() => setMenu(true)}/>
     {feedback && <LoadingToast state={feedback.state} message={t(feedback.message)}/>}

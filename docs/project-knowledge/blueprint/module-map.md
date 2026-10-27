@@ -1,5 +1,19 @@
 # 手机端模块地图
 
+[RemoteInterfaceHost](../../../src/remote-interface-host.jsx)在RemoteApp中先于电脑连接创建，独立原SlotRegistry/renderer、明确无Session适配及统一插件运行租约。RemoteModel仅借用，连接页与首页通过两个根槽呈现；[连接投影和默认视图](../../../src/ui/RemoteConnectionPage.jsx)保留宿主表单与业务回调，[独立包连接视图](../../../packages/remote-home-design/connection.jsx)仅使用公开owner。维护：手机端维护者，2026-10-27；[兼容、验收与限制](../../integration/remote-connection-plugin-current.md)。
+
+[思考呈现边界](../../../src/remote-chat-presentation-latest.jsx)直接导入原ReasoningRow/Disclosure及正文工厂；[原显隐Hook接线](../../../src/remote-chat-presentation-alpha2.jsx)只选择当前视口FlowMotion，RemoteWorkspace以显式null兼容原新旧首参。默认节点通过原disclosureReset连接，插件仍可包装公开正文席位。维护：手机端维护者，2026-10-27；[验收与限制](../../integration/remote-reasoning-current.md)。
+
+[RemoteImages](../../../src/ui/RemoteImages.jsx)直接导入原DSH消息ImageGallery/字典，在单次图片呈现内隔离异常；[新旧图片席位](../../../src/remote-plugin-slots.jsx)将默认和插件图片接入同一授权加载，[缓存](../../../src/remote-images.mjs)负责URL与会话生命周期，[portal返回](../../../src/remote-modals.mjs)沿用原Escape合同。维护：手机端维护者，2026-10-27；[验收与限制](../../integration/remote-image-gallery-current.md)。
+
+[mobile.css](../../../src/ui/mobile.css)按触屏媒体条件开放原Markdown宽表的横向滚动，覆盖普通聊天、Remote和文件预览；表格组件、列宽和窄表逻辑仍归原DSH。维护：手机端维护者，2026-10-27；[真实手势证据](../../integration/chat-table-current.md)。
+
+[ChatMarkdown](../../../src/ui/ChatMarkdown.jsx)导入原MarkdownText及markdownLabels；ordinary-rendering只注册同一组件并保留旧别名，Remote/旧预览/更新说明直接复用。mobile.css共同声明[JetBrains Mono字体](../../../src/assets/fonts/README.md)，构建将许可复制进网页包。维护：手机端维护者，2026-10-27；[契约与验证](../../integration/chat-code-block-current.md)。
+
+[RemoteChatFrame](../../../src/ui/RemoteChatFrame.jsx)保留原ChatView按钮JSX，直接导入原CSS/字典/图标；[滚动绑定](../../../src/use-remote-scroll-follow.mjs)将原ScrollFollow绑定主聊天和旁栏。[RemoteHistoryList](../../../src/ui/RemoteHistoryList.jsx)的程序高度校正共享同一原所有者，现有连续数据与插槽生命周期保持。维护：手机端维护者，2026-10-27；[来源、差异与验收](../../integration/remote-scroll-bottom-current.md)。
+
+2026-10-27当前候选：[preview.15架构与边界](../../integration/preview15-rebuild-current.md)。Session/Conversation与官方历史读取沿用.11，RemoteHistoryList只虚拟化DOM；没有RemoteHistoryWindow代理。独立首页、通用安装器、预装保持和真实运行租约选择性保留。下方历史窗口说明为.12–.14记录，不用于恢复已撤销的阅读限制。
+
 [预装目录](../../../preinstalled-plugins/README.md)由[通用构建检查](../../../scripts/check-preinstalled-plugins.mjs)和Gradle同步至独立APK资产。[原生预装来源](../../../android/app/src/main/java/dev/dshmobile/validation/PhonePreinstalledPlugins.kt)提供完整包和恢复元数据，Application启动经统一Store安装仅缺失记录的包；卸载墓碑持久保留，预装定义不会覆盖用户版本。恢复入口仍交相同PhonePluginPackages和动态加载器，预装原件不属于网页热更新。维护：手机端维护者，2026-10-26；[规则/验收](../../integration/preinstalled-phone-plugins-current.md)。
 
 [统一手机插件目录](../../../src/phone-plugin-catalog.mjs)、[管理器与宿主执行器](../../../src/phone-plugins.mjs)和[管理页](../../../src/ui/PhonePlugins.jsx)共用安装/卸载/启停与真实状态；[Application记录](../../../android/app/src/main/java/dev/dshmobile/validation/PhonePluginStore.kt)跨来源持久化意图、在内存按租约接收运行结果。旧选择只作首次迁移，界面加载器不再维护偏好。维护：手机端维护者，2026-10-25；[KKC-100验证](../../integration/phone-plugin-management-current.md)。
@@ -12,9 +26,9 @@
 
 Remote 的[通用设计组件](../../../src/ui/system/Primitives.jsx)与[加载提示](../../../src/ui/system/LoadingToast.jsx)由[配对及读取页面](../../../src/ui/RemoteConnectionPage.jsx)使用；新版首页已移至独立界面插件，不再把设计类加到整个工作区祖先。[RemoteApp](../../../src/RemoteApp.jsx)保留配对、批准检查、取消及运行环境恢复。[受限粘贴](../../../android/app/src/main/java/dev/dshmobile/validation/RemotePairClipboard.kt)只返回经原解析器校验的配对材料。维护：手机端维护者，2026-10-25；[当前实现与验证范围](../../integration/remote-design-current.md)。
 
-[触顶意图控制器](../../../src/remote-history-auto-load.mjs)由[RemoteWorkspace](../../../src/ui/RemoteWorkspace.jsx)在正文挂载/卸载时统一持有，主聊天和旁栏沿用同一分页请求锁、锚点和有界窗口。触摸一批门槛、惯性意图期限和失败手动重试防止自动连读；[规则与验证](../../integration/remote-history-window-current.md#触顶自动加载)。preview.13已公开，云端签名与下载验收由专题记录；维护：手机端维护者，核验2026-10-24。
+[触顶意图控制器](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/remote-history-auto-load.mjs)由[RemoteWorkspace](../../../src/ui/RemoteWorkspace.jsx)在正文挂载/卸载时统一持有，主聊天和旁栏沿用同一分页请求锁、锚点和有界窗口。触摸一批门槛、惯性意图期限和失败手动重试防止自动连读；[规则与验证](../../integration/remote-history-window-current.md#触顶自动加载)。preview.13已公开，云端签名与下载验收由专题记录；维护：手机端维护者，核验2026-10-24。
 
-[历史窗口](../../../src/remote-history-window.mjs)装饰公开Session binding，将实时尾部和历史查阅分开限制；[虚拟列表](../../../src/ui/RemoteHistoryList.jsx)只挂载可见组，[统一节点分页](../../../src/ui/RemotePagedNode.jsx)覆盖原内置正文与思考。[阅读位置](../../../src/remote-reading-memory.mjs)只保存身份隔离的游标，[原生恢复](../../../android/app/src/main/java/dev/dshmobile/validation/RendererRecovery.kt)重建失效WebView；不重放写操作。[当前实现与验证限制](../../integration/remote-history-window-current.md)。维护：手机端维护者，核验2026-10-24。
+[历史窗口](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/remote-history-window.mjs)装饰公开Session binding，将实时尾部和历史查阅分开限制；[虚拟列表](../../../src/ui/RemoteHistoryList.jsx)只挂载可见组，[统一节点分页](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/ui/RemotePagedNode.jsx)覆盖原内置正文与思考。[阅读位置](../../../src/remote-reading-memory.mjs)只保存身份隔离的游标，[原生恢复](../../../android/app/src/main/java/dev/dshmobile/validation/RendererRecovery.kt)重建失效WebView；不重放写操作。[当前实现与验证限制](../../integration/remote-history-window-current.md)。维护：手机端维护者，核验2026-10-24。
 
 [Remote统一Markdown外链](../../../src/remote-markdown-links.jsx)在会话/面板共享作用域同时连接源码与已发布SDK的Markdown上下文；显式处理函数仍优先，文件委托不继承网页能力。[原生ExternalLinks](../../../android/app/src/main/java/dev/dshmobile/validation/ExternalLinks.kt)由普通聊天和Remote桥复用，限制HTTP(S)并交系统浏览器，不放宽WebView导航。[规则、真实入口回归与未发布状态](../../integration/remote-links-diagnosis.md)。维护：手机端维护者，核验2026-10-24。
 

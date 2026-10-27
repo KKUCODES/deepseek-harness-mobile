@@ -6,12 +6,15 @@ import monitor from './assets/monitor.svg';
 import folder from './assets/folder.svg';
 import next from './assets/chevron.svg';
 import edit from './assets/edit.svg';
+import { RemoteConnection } from './connection.jsx';
 
 export const name = '@dshm/remote-home-design';
 export const inject = ['slots'];
 export const mobileInterface = { apiVersion: 1, surface: 'dshm.remote.home' };
 export function apply(ctx) {
   ctx.slots.register({ name: mobileInterface.surface }, RemoteHome);
+  // 可选公开席位：旧宿主没有该槽时仍能加载原首页。
+  ctx.slots.inject('dshm.remote.connection', () => ctx.slots.register({ name: 'dshm.remote.connection' }, RemoteConnection));
 }
 
 const icons = { back: [back,24], more: [more,24], monitor: [monitor,28], folder: [folder,24], next: [next,20], new: [edit,20] };

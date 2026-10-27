@@ -5,6 +5,24 @@ import { inlineImage, RemoteImageReads, RemotePluginImageUrls } from '../src/rem
 const image = (id, bytes = 4) => inlineImage({ type: 'image', attachment: { attachmentId: id, bytes, mediaType: 'image/png' } });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
+test('图片解码重试仅清除指定URL，迟到读取不能重新占用或发布旧URL', async () => {
+  let count = 0, finish;
+  const cache = new RemotePluginImageUrls(null, 'session', { read: async () => { count++; return new Uint8Array(4); } });
+  const ref = image('one').ref, other = image('two').ref;
+  const first = await cache.load(ref), second = await cache.load(other);
+  cache.load.forget(ref);
+  assert.equal(cache.load.peek(ref), undefined); assert.equal(cache.load.peek(other), second);
+  await assert.rejects(fetch(first));
+  const replacement = await cache.load(ref);
+  assert.notEqual(replacement, first); assert.equal(count, 3);
+  cache.load.forget(ref, first); assert.equal(cache.load.peek(ref), replacement, '旧图片的其他重试不能释放新的URL');
+  cache.dispose();
+  const delayed = new RemotePluginImageUrls(null, 'session', { read: () => new Promise(resolve => { finish = resolve; }) });
+  const pending = delayed.load(ref); await tick(); delayed.load.forget(ref); finish(new Uint8Array(4));
+  await assert.rejects(pending, { name: 'AbortError' }); await tick();
+  assert.equal(delayed.load.peek(ref), undefined); assert.equal(delayed.entries.size, 0); delayed.dispose();
+});
+
 test('原插件 URL 契约复用会话有界读取，peek 不发请求，释放后 URL 与迟到内容失效', async () => {
   let reads = 0, finish;
   const lifetime = new AbortController();

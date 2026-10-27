@@ -2,34 +2,45 @@ import React from 'react';
 import { useTranslate } from './locale.jsx';
 import { UserMessage, AssistantMessage, MessageReasoning } from './ChatMessage.jsx';
 import { JsonBlock } from '@upstream/ui-primitives/src/markdown/JsonBlock.tsx';
-import { useChatProcessHidden } from '@dshm/chat-presentation';
+import { useChatProcessHidden, ChatReasoningRow } from '@dshm/chat-presentation';
 import { IconBranchOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { remoteToolRow, remoteToolCancellation, remoteToolVisibleContent } from '../remote-tool-row.mjs';
 import { attachmentFile } from '../remote-attachments.mjs';
 import { inlineImage } from '../remote-images.mjs';
-import { RemoteInlineImage, RemoteLocalImage } from './RemoteImages.jsx';
+import { RemoteLocalImage } from './RemoteImages.jsx';
 import { diffCardModel } from '@upstream/ui-tool/src/client/tool/models/diff-card-model.ts';
 import { RemoteToolDiff } from './RemoteDiff.jsx';
 import { commandDetails } from '../remote-commands.mjs';
-import { RemoteTurnExtensions, RemoteNodeExtension, useRemoteFileMentions } from '../remote-plugin-slots.jsx';
+import { RemoteTurnExtensions, RemoteNodeExtension, RemoteMessageImages, useRemoteFileMentions } from '../remote-plugin-slots.jsx';
 import { MotionDetails } from './motion.jsx';
 
 export const contentText = content => (content ?? []).filter(block => block.type === 'text').map(block => block.text).join('\n');
 export const fileSize = bytes => bytes < 1024 ? `${bytes} B` : bytes < 1048576 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / 1048576).toFixed(1)} MB`;
 
-export function RemoteFiles({ content, pending, openAttachment }) {
+export function RemoteFiles({ content, pending, openAttachment, kind = 'message' }) {
   const t = useTranslate();
-  if (pending) return <><RemoteFiles content={pending.filter(part => part.type === 'file').map(part => ({ type: part.type, attachment: part.value }))} openAttachment={openAttachment}/>
+  if (pending) return <><RemoteFiles content={pending.filter(part => part.type === 'file').map(part => ({ type: part.type, attachment: part.value }))} openAttachment={openAttachment} kind={kind}/>
     <div className="remote-files">{pending.filter(part => part.type === 'image').map((part, index) => <RemoteLocalImage key={index} preview={part.value}/>)}</div></>;
   const files = (content ?? []).filter(part => ['file', 'image'].includes(part.type) && part.attachment);
-  return files.length > 0 && <div className="remote-files">{files.map((part, index) => {
+  const rows = []; let images = [];
+  const flush = () => {
+    if (!images.length) return;
+    rows.push(<RemoteMessageImages key={`images:${rows.length}`} kind={kind} images={images} align={kind === 'user' ? 'end' : 'start'}/>);
+    images = [];
+  };
+  for (const part of files) {
     const file = attachmentFile(part), label = part.attachment.name ?? t('图片');
-    const image = inlineImage(part);
-    if (image && openAttachment) return <RemoteInlineImage key={`${part.attachment.attachmentId}:${index}`} image={image} label={label} openAttachment={openAttachment}/>;
+    // 与原UserContent一致：file保留文件卡，不能伪装成image身份走图片授权。
+    const image = part.type === 'image' ? inlineImage(part) : null;
+    if (image) { images.push({ attachment: image.ref, label }); continue; }
+    flush();
     const body = <><strong>{label}</strong>{Number.isFinite(part.attachment.bytes) && <small>{fileSize(part.attachment.bytes)}</small>}</>;
-    return file && openAttachment ? <button type="button" className="remote-file" key={`${part.attachment.attachmentId}:${index}`} aria-label={t('查看附件 {name}', { name: label })} onClick={() => openAttachment(file)}>{body}</button>
-      : <div className="remote-file" key={`${part.attachment.attachmentId}:${index}`}>{body}</div>;
-  })}</div>;
+    const key = `${part.attachment.attachmentId}:${rows.length}`;
+    rows.push(file && openAttachment ? <button type="button" className="remote-file" key={key} aria-label={t('查看附件 {name}', { name: label })} onClick={() => openAttachment(file)}>{body}</button>
+      : <div className="remote-file" key={key}>{body}</div>);
+  }
+  flush();
+  return files.length > 0 && <div className="remote-files">{rows}</div>;
 }
 
 function Disclosure({ title, children, open }) {
@@ -68,16 +79,18 @@ export const RemoteMessage = React.memo(function RemoteMessage({ node, renderCon
   </RemoteNodeExtension>;
 });
 
-function RemoteReasoning({ text, active, hidden, reveal, renderContent }) {
+function RemoteReasoning({ text, active, hidden, reveal, renderContent, reasoningProps }) {
   const ref = useChatProcessHidden(hidden, reveal);
-  return <div ref={ref} data-turn-process-inline={hidden || undefined}><MessageReasoning text={text} active={active} renderContent={renderContent}/></div>;
+  return <div ref={ref} data-turn-process-inline={hidden || undefined}>{ChatReasoningRow && reasoningProps
+    ? <ChatReasoningRow {...reasoningProps} text={text} running={active}/>
+    : <MessageReasoning text={text} active={active} renderContent={renderContent}/>}</div>;
 }
 
-function RemoteAssistantMessage({ node, turnProcess, renderContent, openFile, openAttachment }) {
+function RemoteAssistantMessage({ node, turnProcess, reasoningProps, renderContent, openFile, openAttachment }) {
   const t = useTranslate(), data = node.data;
   const label = React.useCallback(path => t('打开文件：{path}', { path }), [t]);
   const mentions = useRemoteFileMentions(node, openFile, label);
-  const contentOptions = React.useMemo(() => ({ fileMentions: mentions, contentKey: node.key }), [mentions, node.key]);
+  const contentOptions = React.useMemo(() => ({ fileMentions: mentions }), [mentions]);
   const reasoningHidden = turnProcess?.foldable && turnProcess.spec.answerStep === data.step && turnProcess.spec.inlineReasoning && !turnProcess.open;
   const reveal = React.useCallback(() => turnProcess?.setOpen(true), [turnProcess?.setOpen]);
   const blocks = data.blocks ?? [], active = data.status === 'running', interrupted = data.status === 'interrupted';
@@ -86,8 +99,8 @@ function RemoteAssistantMessage({ node, turnProcess, renderContent, openFile, op
   const body = [];
   for (let index = 0; index < blocks.length; index++) {
     const block = blocks[index], key = index;
-    if (block.kind === 'text') body.push(<React.Fragment key={key}>{renderContent(block.text, active, { ...contentOptions, contentKey: `${node.key}:${index}` })}</React.Fragment>);
-    else if (block.kind === 'reasoning') body.push(<RemoteReasoning key={key} text={block.text} active={active && index === blocks.length - 1} hidden={Boolean(reasoningHidden)} reveal={reveal} renderContent={renderContent}/>);
+    if (block.kind === 'text') body.push(<React.Fragment key={key}>{renderContent(block.text, active, contentOptions)}</React.Fragment>);
+    else if (block.kind === 'reasoning' && block.text.trim() !== '') body.push(<RemoteReasoning key={key} text={block.text} active={active && index === blocks.length - 1} hidden={Boolean(reasoningHidden)} reveal={reveal} renderContent={renderContent} reasoningProps={reasoningProps}/>);
     else if (block.kind === 'image') {
       const images = [{ type: 'image', attachment: block.attachment }];
       while (blocks[index + 1]?.kind === 'image') images.push({ type: 'image', attachment: blocks[++index].attachment });
@@ -97,13 +110,13 @@ function RemoteAssistantMessage({ node, turnProcess, renderContent, openFile, op
   return <AssistantMessage body={body.length ? body : undefined} active={active} error={interrupted ? t('已停止') : null} renderContent={renderContent}/>;
 }
 
-function DefaultRemoteMessage({ node, turnProcess, renderContent, openFile, openAttachment, openChanges, openCommand, onFork, forkDisabled }) {
+function DefaultRemoteMessage({ node, turnProcess, reasoningProps, renderContent, openFile, openAttachment, openChanges, openCommand, onFork, forkDisabled }) {
   const t = useTranslate();
   if (!node || node.visibility === 'hidden') return null;
   const data = node.data;
   const inspectCommand = callId => openCommand(node.key, callId);
-  if (node.kind === 'user' || node.kind === 'steering') return <UserMessage attachments={<RemoteFiles content={data.content} openAttachment={openAttachment}/>}>{contentText(data.content)}</UserMessage>;
-  if (node.kind === 'assistant-step') return <RemoteAssistantMessage node={node} turnProcess={turnProcess} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment}/>;
+  if (node.kind === 'user' || node.kind === 'steering') return <UserMessage attachments={<RemoteFiles content={data.content} openAttachment={openAttachment} kind="user"/>}>{contentText(data.content)}</UserMessage>;
+  if (node.kind === 'assistant-step') return <RemoteAssistantMessage node={node} turnProcess={turnProcess} reasoningProps={reasoningProps} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment}/>;
   if (node.kind === 'tool-call') return <RemoteToolResult tool={data.root} renderContent={renderContent} openFile={openFile} openAttachment={openAttachment} openChanges={openChanges} openCommand={inspectCommand}/>;
   if (node.kind === 'remote-changes') return <>
     {data.seq !== undefined && <button className="remote-file-link" onClick={() => openChanges(data)}>{t('查看第 {turn} 轮文件改动', { turn: data.turn })}</button>}

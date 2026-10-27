@@ -120,3 +120,20 @@ body:has(dialog[data-motion-presence="open"], .remote-plugin-panel[data-motion-p
 @keyframes backdrop-exit { from { opacity: var(--surface-backdrop-opacity, 1); } to { opacity: 0; } }
 @media (max-height: 480px) { .welcome { padding-bottom: 12px; } .welcome p { display: none; } }
 @media (prefers-reduced-motion: reduce) { dialog::backdrop, .surface-exit-backdrop { animation: none; } .surface-exit-backdrop { opacity: 0; } }
+/* Android缺少默认桌面字体时仍等宽；保留用户/作者字体与原栈在前。
+   原主题插件会延迟注入body规则，此默认接线不能因两种页面的CSS加载时序而丢失。 */
+html body { --ds-font-family-code: var(--dsh-font-family-code, var(--dsh-font-family-code-default)), var(--dsh-font-family-code-default), monospace; }
+/* 原宽表仅在hover/focus-visible时开放滚动；触屏不能依赖悬停。
+   沿用原md-table-wide钩子和滚动容器，不改变列宽、窄表、触摸方向或插件DOM。 */
+@media (hover: none), (pointer: coarse) {
+  :root body .md-table-wide { overflow-x: auto; padding-bottom: 0; }
+}
+/* DSH原默认字体栈已包含JetBrains Mono；随包提供，避免Android的Courier别名落到Cutive Mono。
+   字体原件及OFL见src/assets/fonts，离线加载，不依赖电脑或中转。 */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../assets/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

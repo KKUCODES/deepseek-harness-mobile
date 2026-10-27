@@ -96,6 +96,7 @@ export class RemotePluginImageUrls {
     if (this.signal?.aborted) this.dispose();
     this.load = Object.assign(attachment => this.resolve(attachment), {
       peek: attachment => this.entries.get(JSON.stringify(attachment))?.url,
+      forget: (attachment, expectedUrl) => this.forget(attachment, expectedUrl),
     });
   }
   async resolve(attachment) {
@@ -109,7 +110,7 @@ export class RemotePluginImageUrls {
       entry = { lease };
       this.entries.set(key, entry);
       entry.promise = lease.promise.then(bytes => {
-        if (this.disposed) throw new DOMException('Session closed', 'AbortError');
+        if (this.disposed || this.entries.get(key) !== entry) throw new DOMException('Image released', 'AbortError');
         entry.url = URL.createObjectURL(new Blob([bytes], { type: image.mediaType }));
         return entry.url;
       }).catch(error => {
@@ -119,6 +120,15 @@ export class RemotePluginImageUrls {
       });
     }
     return entry.promise;
+  }
+  forget(attachment, expectedUrl) {
+    const key = JSON.stringify(attachment), entry = this.entries.get(key);
+    // 同图多处同时失败时，后一个重试不能取消前一个刚开始的新读取。
+    if (entry && (expectedUrl === undefined || entry.url === expectedUrl)) {
+      this.entries.delete(key);
+      if (entry.url) URL.revokeObjectURL(entry.url);
+      entry.lease.release();
+    }
   }
   dispose() {
     if (this.disposed) return;

@@ -1,23 +1,23 @@
 import assert from 'node:assert/strict';
 
-export async function checkRemoteBackNavigation(page) {
+export async function checkRemoteBackNavigation(page, { systemBack: nativeBack } = {}) {
   await page.waitForFunction(() => !!window.fixture && !!window.dshmHandleBack);
   // 仅初始化列表；每次进入会话必须点击真实按钮，不能用 model.select 绕过 act/busy。
   await page.evaluate(() => window.fixture.select(null));
   const main = page.getByTestId('remote-workspace');
   const back = main.getByRole('button', { name: '返回', exact: true });
   const selected = () => page.evaluate(() => window.fixture.sidebarState().selected);
-  const systemBack = async () => assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
+  const systemBack = async () => nativeBack ? nativeBack() : assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
   const waitSelected = id => page.waitForFunction(value => window.fixture.sidebarState().selected === value, id);
   const enter = async () => {
-    await main.locator('.remote-session-row, [data-remote-home-session]').filter({ hasText: 'one' }).click();
+    await main.locator('.remote-session-row,[data-remote-home-session]').filter({ hasText: 'one' }).click();
     await waitSelected('one');
-    await page.waitForFunction(() => !document.querySelector('.remote-topbar button').disabled);
+    await page.waitForFunction(() => !document.querySelector('[data-testid="remote-workspace"] button[aria-label="返回"]').disabled);
   };
 
   await page.evaluate(() => window.fixture.holdSelection());
   try {
-    await main.locator('.remote-session-row, [data-remote-home-session]').filter({ hasText: 'one' }).click();
+    await main.locator('.remote-session-row,[data-remote-home-session]').filter({ hasText: 'one' }).click();
     await waitSelected('one');
     assert.equal(await back.isDisabled(), true);
     await systemBack();
@@ -25,7 +25,7 @@ export async function checkRemoteBackNavigation(page) {
   } finally {
     await page.evaluate(() => window.fixture.releaseSelection());
   }
-  await page.waitForFunction(() => !document.querySelector('.remote-topbar button').disabled);
+  await page.waitForFunction(() => !document.querySelector('[data-testid="remote-workspace"] button[aria-label="返回"]').disabled);
   await systemBack();
   await waitSelected(null);
 
@@ -92,7 +92,7 @@ export async function checkRemoteBackNavigation(page) {
 
   await systemBack();
   await waitSelected(null);
-  assert.equal(await main.locator('.remote-heading, .dhp-bar h1').innerText(), '返回验证项目', '聊天返回原项目列表');
+  assert.equal(await main.locator('.remote-heading,.dhp-bar h1').innerText(), '返回验证项目', '聊天返回原项目列表');
   await enter();
   assert.equal(await main.getByRole('textbox', { name: '消息', exact: true }).innerText(), '返回验证草稿');
   await systemBack();

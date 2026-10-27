@@ -1,5 +1,6 @@
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useVirtualizer, defaultRangeExtractor } from '@tanstack/react-virtual';
+import { useVirtualizer, defaultRangeExtractor, elementScroll } from '@tanstack/react-virtual';
+import { ScrollFollow, scrollMetrics } from '@upstream/ui-chat/src/client/chat/use-scroll-follow.ts';
 import { RemoteErrorBoundary } from './RemoteRecovery.jsx';
 
 export function historyGroups(conversation) {
@@ -24,9 +25,20 @@ export function historyGroups(conversation) {
 export function RemoteHistoryList({ conversation, container, history, renderNode, following, sessionKey, reading, target, resume }) {
   const groups = useMemo(() => historyGroups(conversation), [conversation]);
   const element = useRef(null), previous = useRef(null), sizes = useRef(new Map());
+  // 子组件layout effect先于父滚动区ref回调；首次已有历史时也要接上真实滚动区。
+  const scrollElement = () => container.current ?? element.current?.closest('.conversation');
   const [margin, setMargin] = useState(0), [focused, setFocused] = useState(null);
   const restored = useRef(false);
-  const virtual = useVirtualizer({ count: groups.length, getScrollElement: () => container.current,
+  const virtual = useVirtualizer({ count: groups.length, getScrollElement: scrollElement,
+    scrollToFn: (offset, options, instance) => {
+      const host = instance.scrollElement;
+      const owner = host && ScrollFollow.forElement(host);
+      if (!owner) return elementScroll(offset, options, instance);
+      // 虚拟高度校正是已知定位；经过原控制器登记，不能误当成读者上滑取消跟随。
+      const active = owner.active;
+      owner.jump(host, scrollMetrics(host), offset + (options.adjustments ?? 0));
+      owner.setFollowing(active);
+    },
     getItemKey: index => groups[index].id, estimateSize: index => sizes.current.get(groups[index].id) ?? 240,
     overscan: 2, scrollMargin: margin,
     rangeExtractor: useCallback(range => {
@@ -38,21 +50,21 @@ export function RemoteHistoryList({ conversation, container, history, renderNode
       const id = node.dataset.historyGroup;
       if (id) {
         sizes.current.delete(id); sizes.current.set(id, height);
-        if (sizes.current.size > 128) sizes.current.delete(sizes.current.keys().next().value);
+        // 连续历史不裁剪；只保留数字高度，避免回看已读记录时退回估算高度造成跳动。
       }
       return height;
     },
     shouldAdjustScrollPositionOnItemSizeChange: (item, _delta, instance) => !following.current && item.start < (instance.scrollOffset ?? 0),
   });
   useLayoutEffect(() => {
-    const host = container.current, list = element.current;
+    const host = scrollElement(), list = element.current;
     if (!host || !list) return;
     const measure = () => setMargin(list.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop);
     measure(); const observer = new ResizeObserver(measure); observer.observe(host); observer.observe(list.parentElement);
     return () => observer.disconnect();
   }, [container, sessionKey]);
   useLayoutEffect(() => {
-    const host = container.current;
+    const host = scrollElement();
     if (!host) return;
     const before = previous.current;
     let correction;
@@ -93,7 +105,8 @@ export function RemoteHistoryList({ conversation, container, history, renderNode
     {virtual.getVirtualItems().map(item => {
       const group = groups[item.index];
       return <div key={item.key} ref={virtual.measureElement} data-index={item.index} data-history-group={group.id}
-        className="remote-history-group" style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${item.start - margin}px)` }}
+        // 直接定位，避免旧WebView把变换容器内原DSH的sticky代码工具栏推到块底部。
+        className="remote-history-group" style={{ position: 'absolute', top: item.start - margin, left: 0, width: '100%' }}
         onFocusCapture={() => setFocused(group.id)} onBlurCapture={event => {
           if (!event.currentTarget.contains(event.relatedTarget)) setFocused(null);
         }}>

@@ -1,5 +1,23 @@
 # 手机端知识总目录
 
+2026-10-27：[连接前通用界面宿主与默认回退](../integration/remote-connection-plugin-current.md)。两个公开页面槽共享本地模块，连接前加载，停用/卸载/失败均回退；SDK/作者文档、580项Node、双SDK矩阵与MuMu真实管理/原配对/原聊天通过，最终原签名code25保留插件停用，未发行。[KKC-123](https://linear.app/kkcodes/issue/KKC-123)。
+
+2026-10-27：[首页插件停用后的待连接页缺口](../integration/remote-connection-plugin-diagnosis.md)。修复前源码证据：连接页固定渲染，只有已连接首页接入插件槽；后续实施与真实回退见KKC-123。[KKC-122](https://linear.app/kkcodes/issue/KKC-122)。
+
+2026-10-27：[思考折叠修复与原组件复用](../integration/remote-reasoning-current.md)。显式null兼容新旧FlowMotion，直接导入原ReasoningRow/Disclosure/显隐Hook及正文席位工厂；双SDK回归、MuMu原49轮外层重开与50轮思考通过，原签名code25已安装，未发行。[KKC-121](https://linear.app/kkcodes/issue/KKC-121)。
+
+2026-10-27：[原聊天图片画廊与局部恢复](../integration/remote-image-gallery-current.md)。直接导入原图库，接通新旧图片插槽、局部错误/解码重试与原图返回优先级；不改DSH，未发行。[KKC-120](https://linear.app/kkcodes/issue/KKC-120)。保留[修复前诊断](../integration/remote-image-blank-diagnosis.md)。
+
+2026-10-27：[部分思考无法展开的诊断](../integration/remote-reasoning-diagnosis.md)。完整原日志和MuMu单变量实验确认新旧FlowMotion首参合同接错，隐藏样式残留；修复前只读证据，后续验收见上方KKC-121。[KKC-118](https://linear.app/kkcodes/issue/KKC-118)。
+
+2026-10-27：[聊天宽表触摸滚动](../integration/chat-table-current.md)。沿用原表格钩子，在触屏开放横向滚动；普通/Remote主旁栏、新旧预览及MuMu实际手势通过。[KKC-117](https://linear.app/kkcodes/issue/KKC-117)。
+
+2026-10-27：[两种聊天共用原DSH代码块](../integration/chat-code-block-current.md)。补齐原工具栏参数、共享ChatMarkdown与离线代码字体，记录Android实际字体及双SDK验证。[KKC-116](https://linear.app/kkcodes/issue/KKC-116)。
+
+2026-10-27：[Remote 原版回到底部按钮](../integration/remote-scroll-bottom-current.md)。直接复用 DSH 的 ScrollFollow、CSS、图标与字典，保留原按钮 JSX；主聊天/旁栏及插件替换入口回归通过，Android 实际验证状态见专题。[KKC-115](https://linear.app/kkcodes/issue/KKC-115)。
+
+当前代码候选：[以preview.11重建preview.15](../integration/preview15-rebuild-current.md)。保留四项认可功能及用户补充确认的独立首页插件安装管理；官方Session连续历史＋DOM虚拟化，不继承双向数据窗口/自动触顶/正文分段。原.14本地工作已归档，不修改main/远端/DSH。下方.12–.14实现与验收为历史依据，不代表当前候选仍采用同一历史算法。状态：[KKC-114](https://linear.app/kkcodes/issue/KKC-114)。
+
 2026-10-26：preview.14/code22已公开发行，纳入下方已完成的插件接口、主题图标、预装/外部首页插件及其安装管理依赖。[Actions40276885134](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40276885134)构建/lint/原签名/发行及APK与三附件匿名核验通过；预装0.3.1、原身份、资源公钥与r1保持，旧适配分支未混入。下列“本地/未发布”描述保留各专题当时的验收阶段，当前交付与验证范围以[发行指南](../releases.md#已核验范围)为准。[KKC-108](https://linear.app/kkcodes/issue/KKC-108)。
 
 2026-10-26：[插件历史读取失败兼容](../integration/remote-history-api-current.md)。公开loadOlder/loadThrough保持官方失败行为，内部严格读取继续校验、报错和重试；596项Node、全量插槽脚本、两SDK各六类接口与24批连续历史回归通过。未安装或发布。[KKC-107](https://linear.app/kkcodes/issue/KKC-107)。

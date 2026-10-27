@@ -1,12 +1,14 @@
 # 插件历史读取的失败兼容
 
+> 以下为preview.14代理的历史记录。当前preview.15直接使用官方Session，不再包装loadOlder/loadThrough，自然保留官方失败行为；手机按钮通过原事件源prepend结果判断读取失败。[当前规则](./preview15-rebuild-current.md)。旧代理源码见[preview.14](https://github.com/KKUCODES/deepseek-harness-mobile/tree/v0.1.0-preview.14)。
+
 - 状态：随preview.14/code22公开发行；Actions构建/lint/原签名与匿名下载通过，[发行核验](../releases.md#已核验范围)。下列功能验收范围保持。
 - 维护：手机端维护者；核验日期：2026-10-26；任务：[KKC-107](https://linear.app/kkcodes/issue/KKC-107)。
 - 原因：[断层用例与公开接口诊断](./remote-history-gap-diagnosis.md)。只修改手机端，不改DSH本体、不合入旧插件适配分支。
 
 ## 接口边界
 
-[RemoteHistoryWindow](../../src/remote-history-window.mjs)将两类方法分开：
+[RemoteHistoryWindow](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/src/remote-history-window.mjs)将两类方法分开：
 
 | 调用入口 | 失败行为 |
 | --- | --- |
@@ -21,8 +23,8 @@
 
 ## 回归入口
 
-- [窗口单测](../../tests/remote-history-window.test.mjs)：先复现公开loadOlder/loadThrough两项失败，再验证载体拒绝、抛错、断层均不向插件抛出；原窗口、控制投影、待发送回执、错误状态和重试保留。独立断言内部严格读取仍抛断层错误。
-- [接口回归](../../scripts/check-remote-history-contract.mjs)：实际RemoteModel/Workspace和Conversation/Session服务，使用既有合成电脑协议；插件按钮通过真实React事件调用公开服务并忽略Promise，验证无新增未处理异常；同时覆盖手机按钮、严格入口、公开loadThrough和有效页重试。
+- [窗口单测](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/tests/remote-history-window.test.mjs)：先复现公开loadOlder/loadThrough两项失败，再验证载体拒绝、抛错、断层均不向插件抛出；原窗口、控制投影、待发送回执、错误状态和重试保留。独立断言内部严格读取仍抛断层错误。
+- [接口回归](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/scripts/check-remote-history-contract.mjs)：实际RemoteModel/Workspace和Conversation/Session服务，使用既有合成电脑协议；插件按钮通过真实React事件调用公开服务并忽略Promise，验证无新增未处理异常；同时覆盖手机按钮、严格入口、公开loadThrough和有效页重试。
 - [既有全量脚本](../../scripts/verify-remote-plugin-slots.mjs)：断层负面用例在创建Promise时立即接失败处理，并明确断言公开调用完成和原错误提示/重试入口，而非裸await造成Node提前退出。
 - 专项命令`node scripts/verify-remote-plugin-slots.mjs --history-contracts`使用官方rc.2；追加`--official-alpha2`使用官方alpha.2。默认无参数全量脚本仍是旧测试基线，不能冒充两个新SDK的完整验收。
 

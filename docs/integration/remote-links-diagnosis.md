@@ -56,7 +56,7 @@
 | 原生安全 | [ExternalLinkChecks](../../android/app/src/androidTest/java/dev/dshmobile/validation/ExternalLinkChecks.kt)在Android通过有效URL、非法协议/凭据/端口/类型/长度、Intent内容及无浏览器/系统拒绝分类；后两者由受控Activity抛出异常，非真实卸载浏览器。真实Remote桥另验拒绝非法URL、额外参数和非入口页面；同源子框架桥存在但调用不响应，opaque来源没有该桥，均未唤起浏览器。 |
 | 对照与构建 | 550项Node、普通/Remote两个实际更新说明入口通过；rc.2页面、Debug/AndroidTest/Release构建及两变体lint通过。普通聊天继续使用同一受限原生帮助类，未重新生成真实模型回复。 |
 
-复验：`node scripts/verify-remote-plugin-slots.mjs --links`；旧SDK用`--links --official-alpha2`。Android运行`linksOnly` instrumentation及[真实入口驱动](../../scripts/verify-remote-links-android.mjs)，只允许emulator-5556/rc21test；驱动先自动固定生成rc.2合成页面及浏览器回归，防止复用错版本的test.js。报告为`artifacts/remote-links-0.2.1-rc.2-web.json`、`remote-links-0.2.1-alpha.2-web.json`及`artifacts/remote-links/{native-policy.log,native-links-report.json,android-build.log,node-tests.log,update-ui-regression.log}`。
+复验：`node scripts/verify-remote-plugin-slots.mjs --links`；旧SDK用`--links --official-alpha2`。Android运行`linksOnly` instrumentation及[真实入口驱动](https://github.com/KKUCODES/deepseek-harness-mobile/blob/v0.1.0-preview.14/scripts/verify-remote-links-android.mjs)，只允许emulator-5556/rc21test；驱动先自动固定生成rc.2合成页面及浏览器回归，防止复用错版本的test.js。报告为`artifacts/remote-links-0.2.1-rc.2-web.json`、`remote-links-0.2.1-alpha.2-web.json`及`artifacts/remote-links/{native-policy.log,native-links-report.json,android-build.log,node-tests.log,update-ui-regression.log}`。
 
 早期工具事件夹具形状、展开选择器与退出动效等待失败保留，未计通过；实际文件面板测试揭示双上下文遗漏后已修复，最终两版本均通过。首次原生断言遇到测试Activity在非主线程创建，已将该检查切到主线程；一次系统UI无响应打断Chrome返回，关闭阻塞提示后完整顺序复验通过。CDP闲置连接关闭问题在独立CLI报告落盘后显式退出，不改产品逻辑。合成会话与网络回放不冒充真实配对电脑、所有厂商或物理手机验收。
 
