@@ -129,6 +129,14 @@ class RemoteActivity : Activity() {
         // 自有页面先关闭预览/面板，再退回会话列表；页面未接管时才离开 Remote。
         // 连接页的窗口不属于会话组件；先沿 dialog.cancel 关闭当前可见窗口，避免退掉底层聊天。
         webView.evaluateJavascript("""(() => {
+            const portal = [...document.querySelectorAll('[role="dialog"][aria-modal="true"]')]
+                .findLast(node => node.tagName !== 'DIALOG' && node.getClientRects().length);
+            if (portal) {
+                if ([...document.querySelectorAll('[role="menu"]')].some(node => node.getClientRects().length))
+                    document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+                else portal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+                return true;
+            }
             const dialog = [...document.querySelectorAll('dialog[open]')].findLast(node => node.getClientRects().length);
             if (dialog) {
                 if ([...document.querySelectorAll('[role="menu"]')].some(node => node.getClientRects().length)) {

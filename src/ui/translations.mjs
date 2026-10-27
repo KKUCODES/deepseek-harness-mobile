@@ -31,6 +31,7 @@ export const english = Object.freeze({
   "随 App 提供的手机界面插件。停用或加载失败时使用默认首页，会话和草稿会保留。": "An interface plugin included with the app. Disabling it or a load failure restores default home, keeping chats and drafts.",
   "无法读取手机插件设置，请重新打开插件页。": "Could not read phone plugin settings. Reopen the plugins page.",
   "Remote 首页界面": "Remote home interface",
+  "Remote 页面界面": "Remote page interface",
   "重试加载": "Retry loading",
   "手机界面": "Phone interface",
   "默认首页": "Default home",

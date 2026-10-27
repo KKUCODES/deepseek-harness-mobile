@@ -6,7 +6,7 @@ import { SurfacePresence } from './motion.jsx';
 import { useTranslate } from './locale.jsx';
 import { appUpdates, updateError } from '../app-updates.mjs';
 import { updatePresentation } from '../update-presentation.mjs';
-import { OrdinaryMarkdown } from '../ordinary-rendering.jsx';
+import { ChatMarkdown } from './ChatMarkdown.jsx';
 import './app-updates.css';
 
 const useUpdates = () => { const service = appUpdates(); return [service, useSyncExternalStore(service.subscribe, service.getSnapshot)]; };
@@ -61,7 +61,7 @@ function UpdateContent() {
       {release?.notes && <details key={kind + ':' + version} className="app-update-changelog" onToggle={event => setNotesOpen(event.currentTarget.open)}>
         <summary>{t('更新内容')}</summary>
         {notesOpen && <div className="app-update-notes"><UpdateBoundary fallback={<p>{t('更新内容暂时无法显示，请前往发行页查看。')}</p>}>
-          <OrdinaryMarkdown text={release.notes} onOpenLink={url => void service.openLink(url)}/>
+          <ChatMarkdown text={release.notes} onOpenLink={url => void service.openLink(url)}/>
         </UpdateBoundary></div>}
       </details>}
       <details className="app-update-more"><summary>{t('更多')}</summary>

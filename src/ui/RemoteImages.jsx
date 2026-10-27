@@ -1,66 +1,76 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ImageBody } from '@upstream/ui-sidebar-documentpreview/src/client/image/ImageBody.tsx';
-import { zh as imageLabels } from '@upstream/ui-sidebar-documentpreview/src/client/image/locales.ts';
-import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path';
-import { RemoteImageReads } from '../remote-images.mjs';
-import { fileError } from '../remote-files.mjs';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { ImageGallery } from '@upstream/ui-attachment/src/MessageImage.tsx';
+import { messageImageLabels } from '@upstream/ui-attachment/src/client/labels.ts';
+import { zh, en } from '@upstream/ui-conversation/src/client/locales.ts';
+import galleryCss from '@upstream/ui-attachment/src/MessageImage.module.css';
+import { RemotePluginImageUrls } from '../remote-images.mjs';
+import { useLocale } from './locale.jsx';
 
 const Images = createContext(null);
-const translate = (key, values = {}) => imageLabels[key].replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
-const imageError = failure => failure.message === 'remote_image_memory_full' ? '图片较多，请点开单独查看。' : fileError(failure);
 
 export function RemoteImages({ model, sessionId, children }) {
-  const reads = useMemo(() => new RemoteImageReads(model, sessionId), [model, sessionId]);
-  useEffect(() => () => reads.dispose(), [reads]);
-  const value = useMemo(() => ({ reads, model, sessionId }), [reads, model, sessionId]);
+  const cache = useMemo(() => new RemotePluginImageUrls(model, sessionId), [model, sessionId]);
+  useEffect(() => () => cache.dispose(), [cache]);
+  const value = useMemo(() => ({ load: cache.load, model }), [cache, model]);
   return <Images.Provider value={value}>{children}</Images.Provider>;
 }
 
-export function RemoteInlineImage({ image, label, openAttachment }) {
-  const scope = useContext(Images), element = useRef(null);
-  const [visible, setVisible] = useState(false), [result, setResult] = useState(null), [error, setError] = useState('');
-  const [attempt, setAttempt] = useState(0);
-  const identity = JSON.stringify([image.file.attachment, image.ref.bytes, image.mediaType]);
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { rootMargin: '120px' });
-    observer.observe(element.current);
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
-    setResult(null); setError('');
-    if (!visible || !scope) return;
-    let live = true, lease;
-    try {
-      lease = scope.reads.acquire(image);
-      void lease.promise.then(bytes => { if (live) setResult({ identity, bytes }); }, failure => {
-        if (live) setError(imageError(failure));
-      });
-    } catch (failure) { setError(imageError(failure)); }
-    return () => { live = false; lease?.release(); };
-  }, [scope, identity, visible, attempt]);
-  const address = useMemo(() => sessionFileAddress(scope?.sessionId ?? '', image.displayPath), [scope?.sessionId, image.displayPath]);
-  return <div className="remote-inline-image" ref={element}>
-    <button type="button" className="remote-image-open" aria-label={`查看附件 ${label}`} onClick={() => openAttachment(image.file)} onErrorCapture={() => setError('图片无法显示，请重试。')}>
-      {visible && result?.identity === identity ? <ImageBody content={{ kind: 'bytes', data: result.bytes }} resourceAddress={address} t={translate}/>
-        : <span className="remote-image-placeholder" role={visible ? 'status' : undefined}>{error || (visible ? '正在加载图片…' : '图片')}</span>}
-      <span className="remote-image-caption">{label}</span>
-    </button>
-    {error && <button type="button" className="remote-image-retry" onClick={() => setAttempt(value => value + 1)}>重新加载图片</button>}
-  </div>;
+/** 在共用聊天插槽内部隔离单次图片呈现，不能让一张图撤下所有消息。 */
+export class RemoteImageBoundary extends React.Component {
+  state = { failed: false, failedUrl: undefined, attempt: 0 };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(error) { console.warn('[DSHM image]', error?.name ?? 'Error'); }
+  componentDidUpdate(previous) {
+    if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false, failedUrl: undefined });
+  }
+  render() {
+    return <div className="remote-message-images" data-remote-image-gallery onErrorCapture={this.props.captureImageErrors ? event =>
+      this.setState({ failed: true, failedUrl: event.target.currentSrc || event.target.src }) : undefined}>
+      {this.state.failed ? <ImageFailure onRetry={() => {
+        this.props.onRetry?.(this.state.failedUrl); this.setState(state => ({ failed: false, failedUrl: undefined, attempt: state.attempt + 1 }));
+      }}/> : <React.Fragment key={this.state.attempt}>{this.props.children}</React.Fragment>}
+    </div>;
+  }
 }
 
-/** 只接收手机 File 或本模型持有的待提交 URL，电脑日志中的任意 URL 不能进入 img。 */
+function ImageFailure({ onRetry }) {
+  const labels = useImageLabels();
+  return <button type="button" className={galleryCss.error} data-variant="single" onClick={onRetry}>{labels.loadFailed}</button>;
+}
+
+function useImageLabels(labels) {
+  const locale = useLocale(), dictionary = locale?.startsWith('en') ? en : zh;
+  return useMemo(() => labels ?? messageImageLabels((key, values = {}) => dictionary[key]
+    .replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '')), [dictionary, labels]);
+}
+
+/** 原画廊负责缩略图、分组、加载重试和原图窗口；手机只接授权读取和原字典。 */
+export function RemoteImageGallery({ images, loadImage, align = 'start', compact, thumbnail, labels }) {
+  const scope = useContext(Images), load = loadImage ?? scope?.load, resolved = useImageLabels(labels);
+  return <RemoteImageBoundary resetKey={JSON.stringify(images)} captureImageErrors onRetry={failedUrl => {
+    if (failedUrl) for (const image of images) if (image.attachment) load?.forget?.(image.attachment, failedUrl);
+  }}><ImageGallery images={images} load={load} align={align} compact={compact} thumbnail={thumbnail} labels={resolved}/></RemoteImageBoundary>;
+}
+
+export function RemoteInlineImage({ image, label }) {
+  return <RemoteImageGallery images={[{ attachment: image.ref, label }]}/>;
+}
+
+/** 只接收手机File或本模型持有的待提交URL，电脑日志中的任意URL不能成为本地预览。 */
 export function RemoteLocalImage({ source, preview }) {
-  const scope = useContext(Images), [local, setLocal] = useState(null);
+  const scope = useContext(Images);
+  const url = preview && scope?.model.pendingImageUrls.has(preview.previewUrl) ? preview.previewUrl : null;
+  if (source) return <RemoteBytesImage data={source} name={source.name}/>;
+  return url && <RemoteImageGallery images={[{ preview: { url, name: preview.name, width: preview.width, height: preview.height } }]}/>;
+}
+
+/** 旧文件预览也用原画廊打开原图，不为文档组件伪造标签页或缩放服务。 */
+export function RemoteBytesImage({ data, mediaType, name }) {
+  const [source, setSource] = useState(null);
   useEffect(() => {
-    if (!source) return;
-    const url = URL.createObjectURL(source);
-    setLocal({ source, url });
+    const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type: mediaType }));
+    setSource({ data, url });
     return () => URL.revokeObjectURL(url);
-  }, [source]);
-  const url = source ? (local?.source === source ? local.url : null)
-    : scope?.model.pendingImageUrls.has(preview?.previewUrl) ? preview.previewUrl : null;
-  const [failed, setFailed] = useState(null);
-  return url && (failed === url ? <span>图片无法显示</span>
-    : <img className="remote-local-image" src={url} alt={source?.name ?? preview?.name ?? '待发送图片'} onError={() => setFailed(url)}/>);
+  }, [data, mediaType]);
+  return source?.data === data && <RemoteImageGallery images={[{ preview: { url: source.url, name } }]}/>;
 }

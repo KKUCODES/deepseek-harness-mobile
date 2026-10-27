@@ -13,20 +13,27 @@ import {mobileApprovalAccessibility} from './mobile-approval-accessibility.mjs';
 import {checkRemoteLinks} from './check-remote-links.mjs';
 import {checkRemoteBackNavigation} from './check-remote-back-navigation.mjs';
 import {checkSidebarChat} from './check-sidebar-chat.mjs';
+import {checkRemoteScrollBottom} from './check-remote-scroll-bottom.mjs';
+import {checkRemoteCodeBlock} from './check-chat-code-block.mjs';
+import {checkRemoteTable} from './check-chat-table.mjs';
+import {checkRemoteImages} from './check-remote-images.mjs';
+import {checkRemoteReasoning} from './check-remote-reasoning.mjs';
 
 const root=resolve(import.meta.dirname,'..'),baseline=process.argv.includes('--baseline');
 const aside=process.argv.includes('--aside-history');
 const terminal=process.argv.includes('--terminal');
-const mode=process.argv.includes('--links')?'links':process.argv.includes('--navigation')?'navigation':process.argv.includes('--sidebar')?'sidebar':aside?'aside-history':terminal?'terminal':'history';
+const mode=process.argv.includes('--reasoning')?(aside?'reasoning-aside':'reasoning'):process.argv.includes('--images')?'images':process.argv.includes('--table')?(aside?'table-aside':'table'):process.argv.includes('--code-block')?'code-block':process.argv.includes('--scroll-bottom')?(aside?'scroll-bottom-aside':'scroll-bottom'):process.argv.includes('--links')?'links':process.argv.includes('--navigation')?'navigation':process.argv.includes('--sidebar')?'sidebar':aside?'aside-history':terminal?'terminal':'history';
 const require=createRequire(import.meta.url);
 const sdk=latestMobileBuild(root,{officialOnly:true,officialVersion:process.argv.includes('--alpha2')?'0.2.1-alpha.2':'0.2.1-rc.2'});
 const output=resolve(root,`artifacts/tests/preview15-history/${sdk.version}-${baseline?'baseline':'candidate'}-${mode}`);
 await mkdir(output,{recursive:true});
-const contents=`import './tests/fixtures/remote-plugin-slots.jsx';
+const contents=`import {installRemotePlatform} from './src/remote-platform.mjs'; import installRemoteUrl from './src/remote-url-platform.cjs';
+installRemotePlatform(); installRemoteUrl(); await import('./tests/fixtures/remote-plugin-slots.jsx');
 import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css';
+import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';
 import './src/ui/mobile.css'; import './src/ui/ordinary-product.css'; import './docs/design/ordinary-preview/remote.css'; import './src/ui/remote-product.css';`;
 await build({absWorkingDir:root,stdin:{contents,resolveDir:root,loader:'jsx'},outfile:resolve(output,'test.js'),bundle:true,
-  format:'esm',platform:'browser',jsx:'automatic',logLevel:'silent',
+  format:'esm',platform:'browser',target:['chrome100'],jsx:'automatic',logLevel:'silent',
   plugins:[...(baseline?[{name:'published-preview11-workspace',setup(builder){builder.onLoad({filter:/[\\/]src[\\/]ui[\\/]RemoteWorkspace\.jsx$/},({path})=>({
     contents:execFileSync('git',['show','v0.1.0-preview.11:src/ui/RemoteWorkspace.jsx'],{cwd:root,encoding:'utf8'}),loader:'jsx',resolveDir:resolve(path,'..'),
   }));}}]:[]),sdk.resolver,mobileApprovalAccessibility()],
@@ -43,14 +50,26 @@ const server=createServer(async(req,res)=>{
 });
 server.listen(0,'127.0.0.1');await once(server,'listening');
 const browser=await chromium.launch({channel:'msedge',headless:true});
-const page=await browser.newPage({viewport:{width:390,height:844}});page.setDefaultTimeout(20000);
+const page=await browser.newPage({viewport:{width:390,height:844},...(mode.startsWith('table')?{isMobile:true,hasTouch:true}:{})});page.setDefaultTimeout(20000);
 const report={sdk:sdk.version,baseline,source:'Actual preview.11-based host and official Session; isolated synthetic protocol, not a public APK or live desktop',pages:[],errors:[]};
 page.on('pageerror',error=>report.errors.push(error.message));
 const settle=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))));
 const state=()=>page.evaluate(()=>window.preview15.state());
 try{
-  await page.goto(`http://127.0.0.1:${server.address().port}/${mode==='links'?'?documents&builtin':mode==='sidebar'?'?sidebar':''}`);await page.waitForFunction(()=>!!window.preview15);
-  if(process.argv.includes('--links')){
+  await page.goto(`http://127.0.0.1:${server.address().port}/${mode.startsWith('table')?`?documents&builtin${aside?'&sidebar':''}`:['links','code-block'].includes(mode)?'?documents&builtin':mode==='sidebar'?'?sidebar':''}`);await page.waitForFunction(()=>!!window.preview15);
+  if(mode.startsWith('reasoning')){
+    report.reasoning=await checkRemoteReasoning(page,{aside}); assert.deepEqual(report.errors,[]);
+  }else if(mode==='images'){
+    report.images=await checkRemoteImages(page,{alpha2:sdk.version==='0.2.1-alpha.2'});
+    assert.deepEqual(report.errors,[]);
+  }else if(mode.startsWith('table')){
+    report.table=await checkRemoteTable(page,{aside});assert.deepEqual(report.errors,[]);
+  }else if(process.argv.includes('--code-block')){
+    report.codeBlock=await checkRemoteCodeBlock(page);
+    assert.deepEqual(report.errors,[]);
+  }else if(process.argv.includes('--scroll-bottom')){
+    report.scrollBottom=await checkRemoteScrollBottom(page,{aside});
+  }else if(process.argv.includes('--links')){
     report.links=await checkRemoteLinks(page);
   }else if(process.argv.includes('--navigation')){
     report.navigation=await checkRemoteBackNavigation(page);

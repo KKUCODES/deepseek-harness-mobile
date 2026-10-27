@@ -20,16 +20,35 @@ test('公开SDK打包后的原SVG可作为CSS mask地址，不能带未转义的
   const output = resolve('artifacts/tests/remote-theme/portable-home.dshm-plugin');
   await buildPlugin({ root: resolve('packages/remote-home-design'), output });
   const pkg = JSON.parse(await readFile(output, 'utf8'));
+  const preinstalled = JSON.parse(await readFile('preinstalled-plugins/remote-home-design.dshm-plugin', 'utf8'));
+  assert.equal(preinstalled.sha256, pkg.sha256, '预装资源必须与当前公开SDK构建一致，避免只改源码却仍装旧界面');
   const entry = resolve('artifacts/tests/remote-theme/portable-home.mjs');
   await writeFile(entry, pkg.code);
   const plugin = (await import(pathToFileURL(entry))).default({ React });
   let Home;
-  plugin.apply({ slots: { register(slot, component) { Home = component; } } });
+  plugin.apply({ slots: { register(slot, component) { Home = component; }, inject() {} } });
   const markup = renderToStaticMarkup(React.createElement(Home, { home: { t: value => value, view: { connection: 'connected', workspaces: [], sessions: [], query: '', ready: true }, actions: { readScroll: () => 0 } } }));
   const sources = [...markup.matchAll(/data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)/g)].map(match => Buffer.from(match[1], 'base64'));
   assert.ok(sources.length >= 4, '实际公开组件必须渲染可移植mask资源');
   for (const name of ['back','more','monitor','folder','edit']) {
     const original = await readFile(`src/ui/assets/remote/${name}.svg`);
     assert.ok(sources.some(bytes => bytes.equals(original)), `${name} 原SVG字节必须进入实际渲染的URL`);
+  }
+});
+
+test('公开连接页独立包携带原插画资产，不依赖宿主私有组件', async () => {
+  const output = resolve('artifacts/tests/remote-theme/portable-connection.dshm-plugin');
+  await buildPlugin({ root: resolve('packages/remote-home-design'), output });
+  const pkg = JSON.parse(await readFile(output, 'utf8')), entry = resolve('artifacts/tests/remote-theme/portable-connection.mjs');
+  await writeFile(entry, pkg.code);
+  const plugin = (await import(pathToFileURL(entry))).default({ React });
+  let Connection;
+  plugin.apply({ slots: { inject(_name, register) { register(); }, register(slot, component) { if (slot.name === 'dshm.remote.connection') Connection = component; } } });
+  assert.equal(typeof Connection, 'function');
+  const markup = renderToStaticMarkup(React.createElement(Connection, { connection: { t: value => value, view: { paired: true, title: 'Waiting', description: 'Fixture' }, actions: {}, parts: {} } }));
+  const sources = [...markup.matchAll(/data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)/g)].map(match => Buffer.from(match[1], 'base64'));
+  for (const name of ['hero-halo', 'hero-scan', 'hero-dot', 'arrow']) {
+    const original = await readFile(`src/ui/assets/remote/${name}.svg`);
+    assert.ok(sources.some(bytes => bytes.equals(original)), `${name}原资产应进入连接页独立包`);
   }
 });

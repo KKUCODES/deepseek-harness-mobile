@@ -1,5 +1,21 @@
 # 普通聊天插件验证
 
+2026-10-27：[独立连接页与首页宿主](../../../../integration/remote-connection-plugin-current.md)。连接前本地加载，同一安装器/加载器/租约支持两个公开槽；无Session绑定、宿主表单节点、默认回退及SDK0.1.1合同。两SDK页面矩阵与MuMu运行时卸载、恢复、停用和原配对/聊天通过，未发行。维护：手机端维护者；KKC-123。
+
+2026-10-27：[连接页未纳入界面插件的诊断](../../../../integration/remote-connection-plugin-diagnosis.md)。修复前首页槽仅覆盖连接后的Workspace、其他页固定宿主的只读证据；后续独立页面宿主与回退已由KKC-123补齐。维护：手机端维护者；KKC-122。
+
+2026-10-27：[原思考行与动画合同修复](../../../../integration/remote-reasoning-current.md)。原ReasoningRow/Disclosure/FlowHidden及正文工厂直接复用，默认与插件共用重置合同，null同时满足新旧FlowMotion；双SDK和MuMu原49/50轮验收通过，未发行。维护：手机端维护者；KKC-121。
+
+2026-10-27：[原消息画廊与局部隔离](../../../../integration/remote-image-gallery-current.md)。复用原ImageGallery、原字典和新旧公开图片席位，默认与插件图片统一接线，错误不得撤下共享节点；缓存按失败URL重试，原图portal接入返回优先级。维护：手机端维护者；KKC-120。保留[原诊断](../../../../integration/remote-image-blank-diagnosis.md)，独立FlowMotion修复见上方KKC-121。
+
+2026-10-27：[思考折叠的动画合同诊断](../../../../integration/remote-reasoning-diagnosis.md)。rc.2要求驱动器或null，手机沿用alpha.2的空reserve回调；509条原记录、MuMu A/B及旧SDK对照确认。修复前证据，实施与验收见KKC-121。维护：手机端维护者；KKC-118。
+
+2026-10-27：[原宽表的触屏接线](../../../../integration/chat-table-current.md)。原md-table-wide默认依赖hover；手机宿主仅按输入能力开放其滚动，不重写组件或更改插件DOM。维护：手机端维护者；KKC-117。
+
+2026-10-27：[共享Markdown与原DSH代码工具栏](../../../../integration/chat-code-block-current.md)。普通排版席位、Remote及旧预览共用同一组件，源码合同与字体许可/真实Android字体证据见专题。维护：手机端维护者；KKC-116。
+
+2026-10-27：[原 DSH 回到底部按钮与控制器](../../../../integration/remote-scroll-bottom-current.md)。默认正文内挂载，不覆盖插件自有 Views；虚拟定位共享原 ScrollFollow 所有者，不更换 Session/插槽合同。维护：手机端维护者；KKC-115。
+
 2026-10-27当前候选：[preview.15重建与验收](../../../../integration/preview15-rebuild-current.md)。以.11为基准，不装饰公开Session历史方法；保留独立首页安装管理。后文.14历史代理和自动分页属于旧发行证据，不能当作本轮接入方式。
 
 2026-10-26：[插件Session历史读取兼容](../../../../integration/remote-history-api-current.md)。公开loadOlder/loadThrough与内部严格分页分层；两SDK载体/断层/真实插件按钮/手机重试专项、各24批自动加载和596项Node、全量插槽脚本通过。未安装发布。维护：手机端维护者；KKC-107。

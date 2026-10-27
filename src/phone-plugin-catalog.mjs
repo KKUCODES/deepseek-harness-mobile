@@ -1,5 +1,6 @@
 export const MOBILE_INTERFACE_API = 1;
 export const REMOTE_HOME_SLOT = 'dshm.remote.home';
+export const REMOTE_CONNECTION_SLOT = 'dshm.remote.connection';
 
 /** 随App提供的受控目录；宿主与配置能力由条目声明，不由管理页面判断包名。 */
 export const PHONE_PLUGIN_CATALOG = [

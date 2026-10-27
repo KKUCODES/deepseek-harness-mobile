@@ -45,4 +45,6 @@
 
 升级后首页插件仍保留原先停用状态；临时启用确认真实运行、新首页显示后，已在插件页恢复停用。最终MuMu停留在该插件详情，现有安装版本0.3.1、外部更新入口和原配对保持。未发送模型消息、处理审批或修改电脑配置。
 
-本轮未声称完整真机性能验收，未在未知第三方插件上证明全生态兼容。发布需另行授权；公开下载仍指向 preview.14，r2 不发布。
+后续修复与验证分别见[原滚动控制](./remote-scroll-bottom-current.md)、[共用代码块](./chat-code-block-current.md)、[表格横向滚动](./chat-table-current.md)、[图片画廊](./remote-image-gallery-current.md)、[思考过程](./remote-reasoning-current.md)和[连接页插件](./remote-connection-plugin-current.md)。最新本地候选为`artifacts/DSHM-preview15-connection-ui.apk`，原签名code25，SHA256 `1810a3e5fec25dc9c30a4c19e27b384360b992b08280bd1eb6254f2292562143`；580项Node及两SDK专项、最终MuMu原配对和旧聊天读取通过。原0.3.1未被自动覆盖；手动恢复0.4.0后验证启停、卸载及默认待连接页回退，最终保留0.4.0安装与原停用偏好。
+
+用户已授权公开发布，发行构建与匿名下载结果见[发行核验](../releases.md)。不发布r2，不混旧插件适配分支。本轮未声称完整真机性能验收，未在未知第三方插件上证明全生态兼容。

@@ -1,5 +1,17 @@
 # 手机端模块地图
 
+[RemoteInterfaceHost](../../../src/remote-interface-host.jsx)在RemoteApp中先于电脑连接创建，独立原SlotRegistry/renderer、明确无Session适配及统一插件运行租约。RemoteModel仅借用，连接页与首页通过两个根槽呈现；[连接投影和默认视图](../../../src/ui/RemoteConnectionPage.jsx)保留宿主表单与业务回调，[独立包连接视图](../../../packages/remote-home-design/connection.jsx)仅使用公开owner。维护：手机端维护者，2026-10-27；[兼容、验收与限制](../../integration/remote-connection-plugin-current.md)。
+
+[思考呈现边界](../../../src/remote-chat-presentation-latest.jsx)直接导入原ReasoningRow/Disclosure及正文工厂；[原显隐Hook接线](../../../src/remote-chat-presentation-alpha2.jsx)只选择当前视口FlowMotion，RemoteWorkspace以显式null兼容原新旧首参。默认节点通过原disclosureReset连接，插件仍可包装公开正文席位。维护：手机端维护者，2026-10-27；[验收与限制](../../integration/remote-reasoning-current.md)。
+
+[RemoteImages](../../../src/ui/RemoteImages.jsx)直接导入原DSH消息ImageGallery/字典，在单次图片呈现内隔离异常；[新旧图片席位](../../../src/remote-plugin-slots.jsx)将默认和插件图片接入同一授权加载，[缓存](../../../src/remote-images.mjs)负责URL与会话生命周期，[portal返回](../../../src/remote-modals.mjs)沿用原Escape合同。维护：手机端维护者，2026-10-27；[验收与限制](../../integration/remote-image-gallery-current.md)。
+
+[mobile.css](../../../src/ui/mobile.css)按触屏媒体条件开放原Markdown宽表的横向滚动，覆盖普通聊天、Remote和文件预览；表格组件、列宽和窄表逻辑仍归原DSH。维护：手机端维护者，2026-10-27；[真实手势证据](../../integration/chat-table-current.md)。
+
+[ChatMarkdown](../../../src/ui/ChatMarkdown.jsx)导入原MarkdownText及markdownLabels；ordinary-rendering只注册同一组件并保留旧别名，Remote/旧预览/更新说明直接复用。mobile.css共同声明[JetBrains Mono字体](../../../src/assets/fonts/README.md)，构建将许可复制进网页包。维护：手机端维护者，2026-10-27；[契约与验证](../../integration/chat-code-block-current.md)。
+
+[RemoteChatFrame](../../../src/ui/RemoteChatFrame.jsx)保留原ChatView按钮JSX，直接导入原CSS/字典/图标；[滚动绑定](../../../src/use-remote-scroll-follow.mjs)将原ScrollFollow绑定主聊天和旁栏。[RemoteHistoryList](../../../src/ui/RemoteHistoryList.jsx)的程序高度校正共享同一原所有者，现有连续数据与插槽生命周期保持。维护：手机端维护者，2026-10-27；[来源、差异与验收](../../integration/remote-scroll-bottom-current.md)。
+
 2026-10-27当前候选：[preview.15架构与边界](../../integration/preview15-rebuild-current.md)。Session/Conversation与官方历史读取沿用.11，RemoteHistoryList只虚拟化DOM；没有RemoteHistoryWindow代理。独立首页、通用安装器、预装保持和真实运行租约选择性保留。下方历史窗口说明为.12–.14记录，不用于恢复已撤销的阅读限制。
 
 [预装目录](../../../preinstalled-plugins/README.md)由[通用构建检查](../../../scripts/check-preinstalled-plugins.mjs)和Gradle同步至独立APK资产。[原生预装来源](../../../android/app/src/main/java/dev/dshmobile/validation/PhonePreinstalledPlugins.kt)提供完整包和恢复元数据，Application启动经统一Store安装仅缺失记录的包；卸载墓碑持久保留，预装定义不会覆盖用户版本。恢复入口仍交相同PhonePluginPackages和动态加载器，预装原件不属于网页热更新。维护：手机端维护者，2026-10-26；[规则/验收](../../integration/preinstalled-phone-plugins-current.md)。

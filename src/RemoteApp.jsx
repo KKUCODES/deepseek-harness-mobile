@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { phonePluginsFor } from './phone-plugins.mjs';
+import { RemoteInterfaceHost } from './remote-interface-host.jsx';
 import { flushSync } from 'react-dom';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
@@ -40,14 +41,16 @@ const failures = { pairing_unavailable: '链接已过期或已被领取，请在
 
 export function RemoteApp() {
   useEffect(() => { void phonePluginsFor('remote').start().catch(() => {}); }, []);
+  const [interfaceUI] = useState(() => new RemoteInterfaceHost());
+  useEffect(() => () => { void interfaceUI.dispose(); }, [interfaceUI]);
   const [client] = useState(() => new RemoteClient());
   const [language, setLanguage] = useState('zh');
   const [appearanceReady, setAppearanceReady] = useState(false);
   useEffect(() => watchPhoneAppearance(client, new ThemePresenter(), { onLanguage: setLanguage, onReady: () => setAppearanceReady(true) }), [client]);
-  return <LocaleProvider locale={language}><RemoteConnection client={client} language={language} appearanceReady={appearanceReady}/></LocaleProvider>;
+  return <LocaleProvider locale={language}><RemoteConnection client={client} language={language} appearanceReady={appearanceReady} interfaceUI={interfaceUI}/></LocaleProvider>;
 }
 
-function RemoteConnection({ client, language, appearanceReady }) {
+function RemoteConnection({ client, language, appearanceReady, interfaceUI }) {
   const t = useTranslate();
   const languageRef = useRef(language);
   languageRef.current = language;
@@ -183,6 +186,7 @@ function RemoteConnection({ client, language, appearanceReady }) {
         const syncCache = await RemoteSyncCache.open(identity);
         if (!mounted.current || !client.connected) { draftStore.close(); syncCache?.close(); return; }
         const next = new RemoteModel(client, { syncCache, draftStore, notificationKey: JSON.stringify([identity.origin, identity.deviceId, identity.fingerprint]) });
+        next.interfaceUI = interfaceUI; next.sharedInterfaceUI = true;
         runtime.current = next;
         let rebuilding = false;
         next.requestRebuild = () => {
@@ -416,7 +420,7 @@ function RemoteConnection({ client, language, appearanceReady }) {
   const diagnosticContext = { store: diagnosticStore, records: diagnosticRecords,
     latest: diagnosticRecords.find(item => item.source === 'remote'), open: setDiagnosticSelection };
   return <RemoteDiagnosticsContext.Provider value={diagnosticContext}>
-    <RemoteConnectionPage binding={binding} stage={stage} status={status} watchApproval={watchApproval} busy={busy} error={error} link={link} name={name} pairingServer={pairingServer}
+    <RemoteConnectionPage interfaceUI={interfaceUI} binding={binding} stage={stage} status={status} watchApproval={watchApproval} busy={busy} error={error} link={link} name={name} pairingServer={pairingServer}
       onLink={setLink} onName={setName} onScan={scan} onPaste={paste} onClaim={claim} onRetry={retry} pasteHint={pasteHint}
       onRetryRead={() => void run(() => { operation.current = operation.current.then(() => retryLoad.current?.()); return operation.current; })} onBack={back} onMore={() => setMenu(true)}/>
     {feedback && <LoadingToast state={feedback.state} message={t(feedback.message)}/>}

@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Surface, IconButton } from './Surface.jsx';
-import { OrdinaryMarkdown } from '../ordinary-rendering.jsx';
+import { ChatMarkdown } from './ChatMarkdown.jsx';
 import { fileError } from '../remote-files.mjs';
 import { RemoteDocumentActions } from './RemoteDocumentActions.jsx';
-import { ImageBody, imageMediaType } from '@upstream/ui-sidebar-documentpreview/src/client/image/ImageBody.tsx';
-import { zh as imageZh, en as imageEn } from '@upstream/ui-sidebar-documentpreview/src/client/image/locales.ts';
+import { imageMediaType } from '@upstream/ui-sidebar-documentpreview/src/client/image/ImageBody.tsx';
+import { RemoteBytesImage } from './RemoteImages.jsx';
 import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path';
 import { attachmentDocumentAddress } from '../remote-document-address.mjs';
 import { FullscreenIcon } from './FullscreenIcon.jsx';
@@ -21,7 +21,7 @@ import { fileLine } from '../remote-file-position.mjs';
 import { RemoteFileSource } from './RemoteFileSource.jsx';
 import { useSurfacePresent } from './motion.jsx';
 
-import { useLocale, useTranslate } from './locale.jsx';
+import { useTranslate } from './locale.jsx';
 
 export function RemoteFilePreview({ file, model, onClose }) {
   if (model.documentPreviews) return <RemoteDocumentRequest file={file} model={model} onClose={onClose}/>;
@@ -59,12 +59,8 @@ function LegacyFilePreview({ file, model, onClose }) {
 }
 
 function RemoteFileContent({ file, model, onClose, selector }) {
-  const t = useTranslate(), locale = useLocale();
+  const t = useTranslate();
   const present = useSurfacePresent();
-  const imageTranslate = useMemo(() => {
-    const labels = locale?.startsWith('en') ? imageEn : imageZh;
-    return (key, values = {}) => labels[key].replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '');
-  }, [locale]);
   const [result, setResult] = useState(null), [error, setError] = useState(''), [revision, setRevision] = useState(0);
   const [source, setSource] = useState(() => fileLine(file.line) !== undefined), [full, setFull] = useState(false);
   const [latest, setLatest] = useState(false);
@@ -101,10 +97,10 @@ function RemoteFileContent({ file, model, onClose, selector }) {
     <div className="remote-file-preview-body">
       {office && result?.missingFonts?.length > 0 && <p role="status">{t('电脑缺少字体：{fonts}。显示效果可能不同。', { fonts: result.missingFonts.join('、') })}</p>}
       {historical ? <RemoteToolDiff diffs={file.diffs.filter(diff => diff.path === file.path)}/> : error ? <p role="alert">{t(error)}</p> : result === null ? <p role="status">{t(office ? '正在电脑上转换文档…' : '正在读取文件…')}</p>
-        : image ? <ImageBody content={{ kind: 'bytes', data: result }} resourceAddress={sessionFileAddress(file.sessionId, file.mediaType ? `image.${file.mediaType.split('/')[1]}` : file.path)} t={imageTranslate}/>
+        : image ? <RemoteBytesImage data={result} mediaType={file.mediaType ?? imageMediaType(file.path)} name={file.path}/>
         : pdf || office ? <RemotePdfPreview key={revision} data={office ? result.data : result} address={sessionFileAddress(file.sessionId, file.path)} signal={model.lifetime.signal}/>
         : html ? <RemoteHtmlPreview key={revision} document={result} file={file} model={model} onRetry={() => setRevision(value => value + 1)}/>
-        : result === '' ? <><p className="muted">{t('文件内容为空')}</p>{sourceLine !== undefined && <RemoteFileSource key={revision} text={result} line={sourceLine}/>}</> : markdown && !source ? <OrdinaryMarkdown text={result}/> : <RemoteFileSource key={revision} text={result} line={sourceLine}/>}
+        : result === '' ? <><p className="muted">{t('文件内容为空')}</p>{sourceLine !== undefined && <RemoteFileSource key={revision} text={result} line={sourceLine}/>}</> : markdown && !source ? <ChatMarkdown text={result}/> : <RemoteFileSource key={revision} text={result} line={sourceLine}/>}
     </div>
   </Surface>;
 }

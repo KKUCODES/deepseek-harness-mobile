@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 
-export async function checkRemoteBackNavigation(page) {
+export async function checkRemoteBackNavigation(page, { systemBack: nativeBack } = {}) {
   await page.waitForFunction(() => !!window.fixture && !!window.dshmHandleBack);
   // 仅初始化列表；每次进入会话必须点击真实按钮，不能用 model.select 绕过 act/busy。
   await page.evaluate(() => window.fixture.select(null));
   const main = page.getByTestId('remote-workspace');
   const back = main.getByRole('button', { name: '返回', exact: true });
   const selected = () => page.evaluate(() => window.fixture.sidebarState().selected);
-  const systemBack = async () => assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
+  const systemBack = async () => nativeBack ? nativeBack() : assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
   const waitSelected = id => page.waitForFunction(value => window.fixture.sidebarState().selected === value, id);
   const enter = async () => {
     await main.locator('.remote-session-row,[data-remote-home-session]').filter({ hasText: 'one' }).click();

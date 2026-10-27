@@ -5,6 +5,7 @@ import { RemoteModel } from '../../src/remote-model.mjs';
 import { RemoteClient } from '../../src/remote-client.mjs';
 import { loadTestRemotes } from './remote-core.mjs';
 import { RemoteHistoryReplay } from './remote-history-replay.mjs';
+import { ScrollFollow } from '@upstream/ui-chat/src/client/chat/use-scroll-follow.ts';
 import workspaceFilesRemote from './generated/workspace-files-remote.mjs';
 import sessionReferenceRemote from './generated/session-reference-remote.mjs';
 import { installRemotePluginSlots, RemotePluginScope } from '../../src/remote-plugin-slots.jsx';
@@ -43,6 +44,8 @@ import { enableCordisCards } from './remote-cordis-cards.jsx';
 import { mountMotionProbe } from './motion-probe.jsx';
 window.mountMotionProbe = mountMotionProbe;
 import { renderFailureProbe } from './remote-render-failure.jsx';
+import { imageChatFixture } from './remote-image-chat.jsx';
+import { reasoningChatFixture } from './remote-reasoning-chat.jsx';
 
 // 独立测试协议回放，不进入 APK；消息仍经过原 ClientSessions/UiConversation。
 const channels = new Map();
@@ -494,7 +497,9 @@ let removeCordisPanel;
 let cordisCards;
 let managementCapabilities;
 let releasePanelSelection, pendingPanelSelection, panelSelectionNotices;
-window.preview15 = { model, history: continuousHistory,
+const imageChat = imageChatFixture(model, transport, channels, continuousHistory);
+window.preview15 = { model, history: continuousHistory, images: imageChat, reasoning: reasoningChatFixture(model, channels, continuousHistory),
+  originalScrollOwner: element => ScrollFollow.forElement(element) instanceof ScrollFollow,
   live: () => {
     const first=continuousHistory.latest+1; continuousHistory.latest+=5;
     for(const frame of continuousHistory.records(first,continuousHistory.latest)) channels.get(continuousHistory.sessionId)(frame);
@@ -508,6 +513,9 @@ window.preview15 = { model, history: continuousHistory,
   },
 };
 window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = desktopAppsReplay(model); }, ...factoryChecks(model), ...navigationChecks(model), ...composerChecks(model), checkRemoteInput, checkViewInputs: () => checkViewInputs(model), sidebarState: () => ({ selected: model.snapshot.selected, drafts: model.snapshot.drafts, prompts: sidebarPrompts }), inputDraft: () => model.getSnapshot().drafts[model.getSnapshot().selected], enable, disable: () => plugin.dispose(), select: id => model.select(id), emitTurn,
+  markdownStream: (text, streaming = true, locale = 'zh') => root.render(<LocaleProvider locale={locale}>
+    <div className="app"><OrdinaryMarkdown text={text} streaming={streaming}/></div>
+  </LocaleProvider>),
   externalLinks: {calls:()=>externalLinkCalls,fail:code=>{externalLinkFailure=code;},native:()=>{nativeLinkClient=new RemoteClient(window.DSHMRemote);},raw:data=>nativeLinkClient.call('links.open',data)},
   linkFile:()=>model.documentFiles?.get(sessionFileAddress('two','links.md')),
   legacyLinkPreview:text=>{
@@ -773,6 +781,10 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     } });
     window.fixture.htmlLegacyReads = () => reads;
     root.render(<RemoteFilePreview model={legacy} file={{ sessionId: 'two', path: 'page.html' }} onClose={() => root.render(null)}/>);
+  },
+  legacyImagePreview: () => {
+    const legacy = Object.assign(Object.create(model), { documentPreviews: undefined, files: { bytes: async () => imageChat.bytes() } });
+    root.render(<RemotePluginScope model={model}><RemoteFilePreview model={legacy} file={{ sessionId: 'one', path: 'image.png' }} onClose={() => root.render(null)}/></RemotePluginScope>);
   },
   attachmentPreview: id => {
     function Request() {

@@ -1,5 +1,5 @@
-import { PHONE_PLUGIN_CATALOG, MOBILE_INTERFACE_API, REMOTE_HOME_SLOT } from './phone-plugin-catalog.mjs';
-export { MOBILE_INTERFACE_API, REMOTE_HOME_SLOT } from './phone-plugin-catalog.mjs';
+import { PHONE_PLUGIN_CATALOG, MOBILE_INTERFACE_API, REMOTE_HOME_SLOT, REMOTE_CONNECTION_SLOT } from './phone-plugin-catalog.mjs';
+export { MOBILE_INTERFACE_API, REMOTE_HOME_SLOT, REMOTE_CONNECTION_SLOT } from './phone-plugin-catalog.mjs';
 
 /** 本地随包目录与安装器分开；不读取电脑插件包或启用 npm 安装分支。 */
 export const mobileInterfaceCatalog = PHONE_PLUGIN_CATALOG.filter(entry => entry.host === 'remote' && entry.group === REMOTE_HOME_SLOT);
@@ -18,7 +18,7 @@ export class MobileInterfacePlugins {
     this.ctx = ctx; this.catalog = catalog;
     this.timeoutMs = timeoutMs;
     this.offError = ctx.slots.onEntryError(slot => {
-      if (slot !== REMOTE_HOME_SLOT) return;
+      if (![REMOTE_HOME_SLOT, REMOTE_CONNECTION_SLOT].includes(slot)) return;
       // 槽的错误账本先完成退位，再释放该插件；不在 React 渲染中更换插件树。
       const revision = this.revision;
       queueMicrotask(() => { if (!this.closed && revision === this.revision) void this.fail('render'); });

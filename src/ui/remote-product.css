@@ -1,4 +1,7 @@
 .remote-runtime { height: 100dvh; display: flex; flex-direction: column; min-width: 0; overflow: clip; }
+/* 原ChatView浮动控件依赖ConversationRoot提供的手机输入区边距。 */
+.remote-app { --dsh-composer-side-clearance: 8px; }
+.remote-chat-frame[data-chat-following-tail] > .conversation { overflow-anchor: none; }
 .remote-home-surface { display:flex; flex:1; min-height:0; min-width:0; flex-direction:column; background:var(--dshm-bg); color:var(--dshm-text); }
 /* 仅限制挂载的历史节点，已读取记录仍由原Session连续持有，不裁剪成分页窗口。 */
 .remote-app .messages > .remote-history-list { margin: 0; flex: none; }
@@ -66,15 +69,7 @@
 .remote-question-option { display: flex; align-items: start; gap: 10px; padding: 10px 0; }
 .remote-question-option small { display: block; color: var(--dsw-alias-label-secondary); }
 .remote-files { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
-.remote-inline-image { width: 200px; max-width: 100%; min-width: 0; }
-.remote-image-open { display: block; width: 100%; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 14px; overflow: hidden; background: transparent; color: inherit; cursor: pointer; }
-.remote-image-open:hover, .remote-image-open:focus-visible { background: var(--dsw-alias-bg-l2); }
-.remote-image-open [data-image-preview] { height: 156px; min-height: 156px; padding: 6px; }
-.remote-image-open img { max-height: 144px; object-fit: contain; }
-.remote-image-placeholder { display: grid; place-items: center; height: 156px; padding: 12px; box-sizing: border-box; font-size: 13px; color: var(--dsw-alias-label-secondary); }
-.remote-image-caption { display: block; padding: 6px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-.remote-image-retry { border: 0; background: transparent; color: inherit; padding: 8px; font: inherit; font-size: 13px; text-decoration: underline; }
-.remote-local-image { width: 64px; height: 64px; object-fit: contain; border-radius: 8px; flex: none; }
+.remote-message-images { min-width: 0; max-width: 100%; }
 .remote-file { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 14px; min-width: 0; max-width: 100%; }
 .remote-file strong { display: block; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
 .remote-file small { display: block; font-size: 12px; color: var(--dsw-alias-label-secondary); }
@@ -266,7 +261,7 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-hero-brand { display: block; flex: 0 0 34px; width: 34px; min-width: 0; }
 .remote-hero-mode { width: max-content; max-width: 100%; min-width: 0; }
 .remote-hero-options { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.remote-conversation-body > .conversation:has(.remote-bound-hero) { display: flex; flex-direction: column; }
+.remote-conversation-body .conversation:has(.remote-bound-hero) { display: flex; flex-direction: column; }
 .remote-document-content { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; }
 /* 只约束手机自有文档外壳；长路径、长行交给局部截断/滚动，不能反向撑宽后缩小整页。 */
 .remote-document-content > [data-textpreview-url] { min-width: 0; width: 100%; overflow: hidden; }

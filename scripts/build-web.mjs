@@ -23,6 +23,8 @@ const latest = process.argv.includes('--latest-candidate') ? latestMobileBuild(r
 }) : null;
 const dist = latest?.dist ?? resolve(root, 'dist');
 await mkdir(resolve(dist, 'plugins'), { recursive: true });
+await mkdir(resolve(dist, 'licenses'), { recursive: true });
+await copyFile(resolve(root, 'src/assets/fonts/JetBrainsMono-OFL.txt'), resolve(dist, 'licenses/JetBrainsMono-OFL.txt'));
 const prefix = '@deepseek-ai/dsh-client-';
 const packages = ['modules', 'ui-renderer', 'locale', 'ui-theme'];
 const records = [];
