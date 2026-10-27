@@ -1,12 +1,12 @@
 # APK 构建、签名与下载
 
-**preview.15/code25 正在发行**，云端签名构建与公开下载待核验；[范围与本地验证](./integration/preview15-rebuild-current.md)。
+**preview.15/code25 已发布**，云端构建、原证书签名和公开匿名下载均已核验；[范围与本地验证](./integration/preview15-rebuild-current.md)。
 
 [返回首页](../README.md) · [使用指南](./usage.md)
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.15 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.15/DSHM-0.1.0-preview.15.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.15)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。发行完成前可使用[上一版 preview.14](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.14)。
+直接下载 [DSHM 0.1.0-preview.15 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.15/DSHM-0.1.0-preview.15.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.15)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
@@ -49,6 +49,8 @@ Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地�
 维护来源：[工作流](../.github/workflows/android-build.yml)、[版本与证书](../ci/release.json)、[SDK 准备](../scripts/prepare-ci.mjs)、[无签名产物整理](../scripts/ci-package.mjs)、[Android 构建规则](../android/app/build.gradle.kts)。
 
 ## 已核验范围
+
+2026-10-27的[Actions40454356205](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40454356205)完成preview.15/code25网页与Android构建、lint、原证书签名及公开[Release](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.15)。源码和标签固定`38646b5d95851ecb82bb257a5be6e326e9d4d834`，其完整树与preview.11基准分支的`cf428f4`一致；main正常快进保留历史，旧插件适配分支不是发行提交祖先。APK与三个附件均已匿名下载并核对大小、GitHub资产摘要及SHA256SUMS；本机下载较慢，APK通过连续HTTP范围完整下载后核对整文件摘要。APK为11,411,148字节，SHA256 `fc7dc8236645fe3c1fe977feef4879c973c8b703a45f48f837d7f51b1003b0f2`。本机apksigner/aapt核对原证书、包名、code25、Android9及非调试属性；预装0.4.0代码摘要`a17fdeda1ed5f7399a6cee4d1428e0135486873d5b8a080db3e66cd85b218a7c`与源码包一致，原字体许可、两个界面插槽及原回底入口存在，测试夹具未包含。资源信任公钥保持，公共r1资产ID/大小/摘要保持，不发布r2，不升级桌面插件或中转。580项本地Node、84文件与1,211处文档链接检查通过；两SDK、MuMu和原配对旧聊天验收沿用各专题的实际范围，本轮不额外安装模拟器或扩大真机验收。下载及包身份证据在忽略目录`artifacts/preview15-release/public-verification.json`。[发行KKC-124](https://linear.app/kkcodes/issue/KKC-124)。
 
 2026-10-26的[Actions40276885134](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/40276885134)完成preview.14/code22构建、lint、原证书签名及公开[Release](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.14)，源码与标签固定`1f5974b4c02390be22bf92a30c267c2de843d3d9`。APK及三个校验附件均实际匿名下载，字节与SHA-256匹配GitHub资产摘要和SHA256SUMS；APK11,316,996字节，SHA-256 `b4ad223782672744b54bbc87321aaf9c710a6fd673e4bed9b00b6f652edf52af`。本机apksigner/aapt复核原证书、原包名、code22、最低Android9及非调试属性。包内预装首页0.3.1与源码重建完全一致，六个原SVG以base64保留；公开历史适配方法、手机主题边界、原生安装器/预装管理与诊断存在，测试夹具及测试类未包含。资源信任JSON及公钥与源码一致，仅云端LF和Windows CRLF不同；公共r1资产ID/大小/摘要保持，不投放r2。旧插件适配分支非发行提交祖先，桌面插件0.1.87、官方DSH/SDK/中转来源保持。发版前596项Node、正式网页、Android release/lint及30份Markdown/1,379处本地链接检查通过；两SDK历史接口/24批、MuMu主题/预装专项沿用各专题的实际范围。本轮没有覆盖安装MuMu或新增真机/真实公网验收。push触发的重复构建40276884572已取消，仅上述手动发行作业作为发布结果。证据在本机忽略目录`artifacts/preview14-release/public-verification.json`。[发行KKC-108](https://linear.app/kkcodes/issue/KKC-108)。
 
