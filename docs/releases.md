@@ -1,20 +1,18 @@
 # APK 构建、签名与下载
 
-**preview.15/code25 正在发行**，云端签名构建与公开下载待核验；[范围与本地验证](./integration/preview15-rebuild-current.md)。
+**preview.16（versionCode 26）** 优化了 Remote 回前台和重进最近会话的体验，并修复草稿恢复误报。[双语发行说明](../ci/release-notes/0.1.0-preview.16.md) · [本地验证](./integration/preview16-remote-resume.md)
 
 [返回首页](../README.md) · [使用指南](./usage.md)
 
 ## 下载并安装
 
-直接下载 [DSHM 0.1.0-preview.15 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.15/DSHM-0.1.0-preview.15.apk)，Android 9 及以上可安装。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.15)另附 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。发行完成前可使用[上一版 preview.14](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.14)。
+Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。[下载 preview.16 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.16/DSHM-0.1.0-preview.16.apk) · [公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.16)
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前是开发预览，沿用 `dev.dshmobile.validation.officialtest` 包名与原候选证书，code25可覆盖此前公开预览及本地code25候选。不要卸载旧版来更新，以免删除本地数据。preview.8起可在App内检查新版；更早的公开版请手动下载覆盖安装。普通聊天使用自己的供应商 API Key；Remote 核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`，配套电脑插件仍为 `0.1.87-latest.0`；本版不要求额外升级插件或中转。此前大响应分块仍要求中转包含提交 `94183d0`。
+当前开发预览使用 `dev.dshmobile.validation.officialtest` 包名与原签名证书。请直接覆盖安装来保留本地数据。preview.8 起可在 App 内检查新版，更早的公开版请手动下载 APK。Remote 支持官方 DSH `0.2.0-rc.2`、`0.2.1-alpha.2` 和 `0.2.1-rc.2`，配套电脑插件为 `0.1.87-latest.0`。大响应分块需要中转包含提交 `94183d0`。
 
 ## 自动构建与发布
-
-`0.1.0-preview.15`（versionCode 25）以[preview.11重建](./integration/preview15-rebuild-current.md)，恢复官方连续历史和手动加载，保留可见区域渲染及故障恢复；纳入[原回底按钮](./integration/remote-scroll-bottom-current.md)、[共用代码块](./integration/chat-code-block-current.md)、[宽表格触摸](./integration/chat-table-current.md)、[图片画廊](./integration/remote-image-gallery-current.md)、[思考展开](./integration/remote-reasoning-current.md)和[连接页插件回退](./integration/remote-connection-plugin-current.md)。完整内容见[双语发行说明](../ci/release-notes/0.1.0-preview.15.md)。仅发布APK，不投放r2；[KKC-124](https://linear.app/kkcodes/issue/KKC-124)跟踪云端构建及下载核验。
 
 - `main` 的相关源码、构建或依赖变更自动构建并签名，不自动发布每次提交。
 - 指向 `main` 的 PR 只构建无签名包，签名作业不运行。

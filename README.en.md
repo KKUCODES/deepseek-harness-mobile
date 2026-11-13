@@ -6,7 +6,7 @@
 
 **DSHM** is a community-developed Android client for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Chat directly with DeepSeek or synchronize DSH conversations from your computer. Away from your desk, you can keep sending messages, viewing execution results, switching models, and handling approvals; the computer runs the tasks.
 
-[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.15/DSHM-0.1.0-preview.15.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
+[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.16/DSHM-0.1.0-preview.16.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
@@ -68,7 +68,7 @@ The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTT
 
 ## Current status
 
-**preview.15** rebuilds on .11's chat experience. It keeps external links, viewport rendering and recovery, redesigned Remote pages, independent home-plugin management and redacted traces, with manual loading and continuous history browsing. It also restores DSH's scroll-to-bottom button and improves code blocks, images and reasoning compatibility. See the [scope and validation (Chinese)](./docs/integration/preview15-rebuild-current.md), [release notes](./ci/release-notes/0.1.0-preview.15.md) and [build/download status (Chinese)](./docs/releases.md). History-window and automatic-loading notes describe older releases.
+**preview.16** improves Remote reconnection when the app returns to the foreground, shows cached messages when reopening recent chats, and fixes a draft recovery error. See the [validation scope (Chinese)](./docs/integration/preview16-remote-resume.md), [release notes](./ci/release-notes/0.1.0-preview.16.md) and [build and download guide (Chinese)](./docs/releases.md).
 
 The [public phone interface API (Chinese)](./docs/plugins/remote-home-api.md) provides home and connection-page surfaces, with default views when a plugin is disabled, removed or fails. The connection-page surface requires preview.15 or later. See the [plugin author guide (Chinese)](./docs/plugins/development.md).
 
