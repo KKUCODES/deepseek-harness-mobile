@@ -49,6 +49,8 @@ import { reasoningChatFixture } from './remote-reasoning-chat.jsx';
 
 // 独立测试协议回放，不进入 APK；消息仍经过原 ClientSessions/UiConversation。
 const channels = new Map();
+let openingHistory;
+const breakHistoryStreams = new Map();
 const documentMode = new URL(location.href).searchParams.has('documents');
 const sidebarMode = new URL(location.href).searchParams.has('sidebar');
 const fileListMode = new URL(location.href).searchParams.has('files');
@@ -233,9 +235,15 @@ const transport = {
     throw new Error(`Unexpected fixture write: ${endpoint}`);
   },
   async *stream(_channel, endpoint, payload, signal) {
-    const frames = []; let wake;
+    const frames = []; let wake, failure;
     const key = endpoint === 'session/follow' ? payload.args.request.address.sessionId ?? payload.args.request.address.childSessionId : endpoint;
+    if (endpoint === 'session/follow' && key === openingHistory?.id) await openingHistory.promise;
+    if (signal.aborted) return;
     channels.set(key, frame => { frames.push(frame); wake?.(); });
+    if (endpoint === 'session/follow') breakHistoryStreams.set(key, () => {
+      failure = Object.assign(Error('fixture carrier closed'), { dshRemoteStreamFailure: { kind: 'carrier' } });
+      wake?.();
+    });
     if (endpoint === 'workspaceFiles/changes') yield { kind: 'ready' };
     if (endpoint === 'workspace/follow') yield { type: 'baseline', value: { items: [], archivedSessionIds: [] } };
     if (endpoint === 'session/control') yield { type: 'baseline', value: { jobs: {}, projections: {} } };
@@ -248,8 +256,8 @@ const transport = {
       ] : [], ...(key.startsWith('child-') ? {subagent:{mode:key==='child-once'?'one-shot':'continuable',label:'分析助手',seq:0}} : {})} : {}) } }, assistantStream: { revision: 0 },
       ...(continuousHistory.active && key === continuousHistory.sessionId ? continuousHistory.snapshot() : {}) };
     const abort = () => wake?.(); signal.addEventListener('abort', abort);
-    try { while (!signal.aborted) { if (frames.length) yield frames.shift(); else await new Promise(resolve => { wake = resolve; }); } }
-    finally { signal.removeEventListener('abort', abort); channels.delete(key); }
+    try { while (!signal.aborted) { if (failure) throw failure; if (frames.length) yield frames.shift(); else await new Promise(resolve => { wake = resolve; }); } }
+    finally { signal.removeEventListener('abort', abort); channels.delete(key); breakHistoryStreams.delete(key); }
   },
 };
 const moduleId = '@deepseek-ai/dsh-client-modules';
@@ -499,6 +507,12 @@ let managementCapabilities;
 let releasePanelSelection, pendingPanelSelection, panelSelectionNotices;
 const imageChat = imageChatFixture(model, transport, channels, continuousHistory);
 window.preview15 = { model, history: continuousHistory, images: imageChat, reasoning: reasoningChatFixture(model, channels, continuousHistory),
+  breakFollow(id) { breakHistoryStreams.get(id)(); model.connection.reconnect(); },
+  holdOpening(id) {
+    const gate = Promise.withResolvers();
+    openingHistory = { id, promise: gate.promise };
+    return () => { openingHistory = null; gate.resolve(); };
+  },
   originalScrollOwner: element => ScrollFollow.forElement(element) instanceof ScrollFollow,
   live: () => {
     const first=continuousHistory.latest+1; continuousHistory.latest+=5;

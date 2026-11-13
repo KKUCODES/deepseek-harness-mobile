@@ -2,31 +2,15 @@ import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from '
 import { useVirtualizer, defaultRangeExtractor, elementScroll } from '@tanstack/react-virtual';
 import { ScrollFollow, scrollMetrics } from '@upstream/ui-chat/src/client/chat/use-scroll-follow.ts';
 import { RemoteErrorBoundary } from './RemoteRecovery.jsx';
-
-export function historyGroups(conversation) {
-  const groups = [];
-  for (const key of conversation?.order ?? []) {
-    const node = conversation.nodes.get(key);
-    if (!node || node.visibility === 'hidden') continue;
-    const locationTurn = node.location?.turn;
-    const turn = typeof locationTurn === 'number' ? locationTurn : locationTurn?.turn ?? node.data?.turn;
-    const id = turn === undefined ? key : `turn:${turn}`;
-    let group = groups.at(-1);
-    if (group?.turnId !== id || group.nodes.length >= 4) {
-      group = { id: group?.turnId === id ? `${id}:${key}` : id, turnId: id, nodes: [], seq: Math.max(0, Math.floor(node.seq ?? node.data?.seq ?? node.anchorSeq)) };
-      groups.push(group);
-    }
-    group.nodes.push(node);
-  }
-  return groups;
-}
+import { historyGroups } from '../remote-history.mjs';
 
 /** 按回合组织，每组至多四个节点；保留原席位和会话级状态，活动输入保持挂载。 */
-export function RemoteHistoryList({ conversation, container, history, renderNode, following, sessionKey, reading, target, resume }) {
-  const groups = useMemo(() => historyGroups(conversation), [conversation]);
+export function RemoteHistoryList({ conversation, cached, container, history, renderNode, following, sessionKey, reading, target, resume, onReading }) {
+  const groups = useMemo(() => cached ?? historyGroups(conversation), [cached, conversation]);
   const element = useRef(null), previous = useRef(null), sizes = useRef(new Map());
   // 子组件layout effect先于父滚动区ref回调；首次已有历史时也要接上真实滚动区。
   const scrollElement = () => container.current ?? element.current?.closest('.conversation');
+  const cacheMode = !!cached;
   const [margin, setMargin] = useState(0), [focused, setFocused] = useState(null);
   const restored = useRef(false);
   const virtual = useVirtualizer({ count: groups.length, getScrollElement: scrollElement,
@@ -70,13 +54,21 @@ export function RemoteHistoryList({ conversation, container, history, renderNode
     let correction;
     if (!restored.current && resume?.selected === sessionKey && groups.length) {
       restored.current = true;
-      const index = groups.findIndex(group => group.id === resume.group);
+      const index = groups.findIndex(group => resume.nodeKey
+        ? group.nodes.some(node => node.key === resume.nodeKey) : group.id === resume.group);
       if (index >= 0) {
         following.current = false;
         host.scrollTop = (virtual.getMeasurements()[index]?.start ?? 0) + resume.offset;
+        if (resume.nodeKey) correction = requestAnimationFrame(() => {
+          const start = virtual.getMeasurements()[index]?.start ?? 0;
+          ScrollFollow.forElement(host)?.jump(host, scrollMetrics(host), start + resume.offset);
+          following.current = false;
+        });
+      } else if (resume.nodeKey && !cached) {
+        following.current = true;
       }
     }
-    if (before && before.key !== groups[0]?.id && !following.current) {
+    if (before && (before.key !== groups[0]?.id || before.cacheMode !== cacheMode) && !following.current) {
       const index = groups.findIndex(group => group.id === before.anchor);
       if (index >= 0) {
         const offset = virtual.getMeasurements()[index]?.start;
@@ -91,16 +83,21 @@ export function RemoteHistoryList({ conversation, container, history, renderNode
       const items = virtual.getVirtualItems();
       const item = items.find(item => item.end > host.scrollTop);
       const node = [...(element.current?.querySelectorAll('[data-history-group]') ?? [])].find(node => node.dataset.historyGroup === item?.key);
-      previous.current = { key: groups[0]?.id, anchor: item?.key, offset: host.scrollTop - (item?.start ?? 0),
+      previous.current = { key: groups[0]?.id, cacheMode, anchor: item?.key, offset: host.scrollTop - (item?.start ?? 0),
         pixelOffset: node ? node.getBoundingClientRect().top - host.getBoundingClientRect().top : undefined };
       history?.setAnchor(following.current ? undefined : groups[item?.index]?.seq);
       const group = groups[item?.index];
-      if (group) reading?.remember(sessionKey, target, { seq: group.seq, group: group.id, offset: previous.current.offset });
+      if (group && !cached) {
+        const anchor = { selected: sessionKey, seq: group.seq, group: group.id, nodeKey: group.nodes[0].key, offset: previous.current.offset };
+        reading?.remember(sessionKey, target, anchor);
+        onReading?.(following.current ? null : anchor);
+      }
     };
     capture(); host.addEventListener('scroll', capture, { passive: true });
     return () => { cancelAnimationFrame(correction); host.removeEventListener('scroll', capture); };
-  }, [groups, history, virtual, following, container]);
-  return <div ref={element} className="remote-history-list" data-history-count={groups.length}
+  }, [groups, history, virtual, following, container, cacheMode, cached, resume, onReading, reading, sessionKey, target]);
+  useLayoutEffect(() => { element.current.inert = cacheMode; }, [cacheMode]);
+  return <div ref={element} className="remote-history-list" data-history-count={groups.length} data-cached-history={cached ? '' : undefined}
     style={{ height: virtual.getTotalSize(), position: 'relative', width: '100%', overflowAnchor: 'none' }}>
     {virtual.getVirtualItems().map(item => {
       const group = groups[item.index];

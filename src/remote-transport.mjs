@@ -61,6 +61,22 @@ export class RemoteTransport {
     this.lifetime.abort();
     this.lifetime = new AbortController();
   }
+  async checkHost({ signal = this.lifetime.signal } = {}) {
+    // 复用已授权的只读握手探测端到端连接，不改协商状态或中断在途分块。
+    signal.throwIfAborted();
+    const request = this.client.request({ method: 'remote.negotiate', version: 2 });
+    const cancel = () => request.cancel();
+    signal.addEventListener('abort', cancel, { once: true });
+    const timeout = setTimeout(cancel, 3500);
+    try {
+      const result = await request.promise;
+      signal.throwIfAborted();
+      if (result?.transport !== 2) throw new Error('remote_resume_probe_failed');
+    } finally {
+      clearTimeout(timeout);
+      signal.removeEventListener('abort', cancel);
+    }
+  }
   async negotiate({ signal } = {}) {
     this.client.responseChunksEnabled = false;
     signal?.throwIfAborted();

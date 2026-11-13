@@ -55,7 +55,8 @@ export function RemoteMainConversationFrame({ children, enabled }) {
 
 export function RemoteMainConversationBody({ children }) {
   const Views = useContext(ConversationViews);
-  return Views ? <ConversationBody.Provider value={children}><Views/></ConversationBody.Provider> : children;
+  return Views ? <ConversationBody.Provider value={children}><Views/></ConversationBody.Provider>
+    : <div className="remote-conversation-body">{children}</div>;
 }
 
 // 这两个受控组合只承载手机自己的聊天，不属于需要按桌面宽度缩放的插件内容。

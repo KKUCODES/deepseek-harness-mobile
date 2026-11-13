@@ -1,6 +1,6 @@
 const emptySelection = () => ({ selected: null, selectedTarget: null, selectionTrail: [], selectionRevision: 0,
   session: null, conversation: null, model: null, permission: null, agentPreset: null,
-  schedules: null, plan: null, inbox: null, error: null });
+  schedules: null, plan: null, inbox: null, cachedHistory: null, cachedReadingResume: null, restoringHistory: false, selectionError: null, error: null });
 
 /** 独立会话引用与投影；共享已认证的服务，不创建连接、插件树或另一个电脑会话。 */
 export class RemoteSessionView {
@@ -35,10 +35,23 @@ export class RemoteSessionView {
     for (const listener of this.listeners) listener();
   }
   release() {
+    if (this.snapshot.selected && this.model.recentChats && this.source === 'mainView' && this.readingAnchor !== undefined) {
+      this.model.recentChats.remember(this.snapshot, this.readingAnchor);
+    }
+    this.readingAnchor = undefined;
     this.selection++;
     this.releases.splice(0).forEach(release => release());
     this.callbacks.onRelease?.();
     this.reference?.release(); this.reference = null;
+  }
+  rememberReading(id, revision, anchor) {
+    if (id === this.snapshot.selected && revision === this.snapshot.selectionRevision) this.readingAnchor = anchor;
+  }
+  clearCachedHistory() {
+    if (this.snapshot.cachedHistory) {
+      this.readingAnchor = undefined;
+      this.publish({ cachedHistory: null, cachedReadingResume: null });
+    }
   }
   /** 写入已发出后不能当作取消；只撤销迟到结果自动打开页面的资格。 */
   beginNavigation() {
@@ -90,9 +103,12 @@ export class RemoteSessionView {
     this.release();
     this.reference = reference ?? null;
     const generation = this.selection;
+    const cached = id && this.source === 'mainView' ? model.recentChats?.take(target) : undefined;
+    this.readingAnchor = cached?.anchor;
     const restored = this.callbacks.onSelection?.(id) ?? {};
     // 即使复用同一空会话，也是一轮已接受的导航；页面据此关闭先前的设置和管理界面。
-    this.publish({ ...emptySelection(), selected: id, selectedTarget: target, selectionTrail: trail, selectionRevision: generation, ...restored });
+    this.publish({ ...emptySelection(), selected: id, selectedTarget: target, selectionTrail: trail, selectionRevision: generation,
+      cachedHistory: cached?.groups ?? null, cachedReadingResume: cached?.anchor ?? null, ...restored });
     if (!id || generation !== this.selection || this.lifetime.signal.aborted) return;
     if (model.jobs) this.releases.push(model.jobs.watchRows(id));
     if (model.subagentsAvailable) {
@@ -102,7 +118,12 @@ export class RemoteSessionView {
     }
     let binding;
     try { binding = await reference.ready; }
-    catch (error) { if (generation === this.selection && !this.lifetime.signal.aborted) throw error; return; }
+    catch (error) {
+      if (generation !== this.selection || this.lifetime.signal.aborted) return;
+      this.readingAnchor = undefined;
+      this.publish({ cachedHistory: null, cachedReadingResume: null, selectionError: error });
+      throw error;
+    }
     if (generation !== this.selection || this.lifetime.signal.aborted) return;
     await model.reconcileSubmission?.(id, binding);
     if (generation !== this.selection || this.lifetime.signal.aborted) return;
@@ -115,14 +136,43 @@ export class RemoteSessionView {
     this.releases.push(binding.eventSource.subscribe(reconcile), binding.session.projections.faceOf('inbox').subscribe(reconcile));
     reconcile();
     const conversation = model.conversations.binding(binding).target('chat');
+    // 重新使用原 Session 的连续历史；读到过较早位置时先让该锚点重新进入官方窗口。
+    const anchor = this.snapshot.cachedHistory && this.readingAnchor;
+    if (anchor && !conversation.getSnapshot()?.nodes?.get(anchor.nodeKey)) {
+      await binding.session.loadThrough(anchor.seq).catch(error => {
+        if (generation === this.selection) model.fail(error);
+      });
+      if (generation !== this.selection || this.lifetime.signal.aborted) return;
+    }
     const sources = { session: binding.session, conversation };
     for (const [key, face] of Object.entries({ model: 'modelSelection', inbox: 'inbox', permission: 'permissions',
       agentPreset: 'agentPreset', schedules: 'schedule', plan: 'plan' })) sources[key] = binding.session.projections.faceOf(face);
+    const read = () => Object.fromEntries(Object.entries(sources).map(([key, source]) => [key, source.getSnapshot()]));
+    let repairing = false, repairedRevision;
     const update = () => {
-      if (generation === this.selection) this.publish(Object.fromEntries(Object.entries(sources).map(([key, source]) => [key, source.getSnapshot()])));
+      if (generation !== this.selection || repairing) return;
+      const next = read();
+      const anchor = this.readingAnchor, window = binding.eventSource.getSnapshot();
+      if (anchor && window.change?.kind === 'replace' && window.revision !== repairedRevision
+        && next.session.openState === 'open' && window.hasMore
+        && window.change.entries[0]?.event.seq > anchor.seq) {
+        // 重连快照通常只有尾部。翻回当前阅读点时继续展示原正文；审批等投影仍使用新状态。
+        repairing = true;
+        repairedRevision = window.revision;
+        this.publish({ ...next, conversation: this.snapshot.conversation, restoringHistory: true });
+        void Promise.resolve().then(() => {
+          if (generation === this.selection) return binding.session.loadThrough(anchor.seq);
+        }).catch(error => { if (generation === this.selection) model.fail(error); }).finally(() => {
+          repairing = false;
+          if (generation === this.selection) this.publish({ ...read(), restoringHistory: false });
+        });
+        return;
+      }
+      this.publish(next);
     };
     for (const source of Object.values(sources)) this.releases.push(source.subscribe(update));
-    update();
+    const reading = this.snapshot.cachedHistory ? this.readingAnchor : null;
+    this.publish({ cachedHistory: null, cachedReadingResume: reading ?? null, ...read() });
     if (generation === this.selection && !this.lifetime.signal.aborted) this.callbacks.onReady?.(id, binding);
   }
   dispose() {

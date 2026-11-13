@@ -34,6 +34,7 @@ import { RemoteViewNotifications } from './remote-view-notifications.mjs';
 import { sameRemoteDraft } from './remote-drafts.mjs';
 import { RemoteEndpointJournal } from './remote-endpoint-journal.mjs';
 import { RemoteReadingMemory } from './remote-reading-memory.mjs';
+import { RemoteRecentChats } from './remote-recent-chat.mjs';
 
 /** 只组装数据和会话投影；不启动 bootClient，不挂载电脑页面。 */
 export class RemoteModel {
@@ -52,6 +53,7 @@ export class RemoteModel {
   draftTransfers = new Set();
   selectingModels = new Set();
   pendingImageUrls = new Set();
+  recentChats = new RemoteRecentChats();
   constructor(client, { syncCache, transport = new RemoteTransport(client, { syncCache }), loadRemotes, draftStore, notificationKey } = {}) {
     this.client = client;
     this.transport = transport;
@@ -106,6 +108,16 @@ export class RemoteModel {
       onReady: (id, binding) => this.goals.select(id, binding),
       onRelease: () => this.goals.select(null),
       onChange: patch => this.publish(patch),
+    });
+    const clearRecent = () => { this.recentChats.clear(); this.sessionView.clearCachedHistory(); };
+    globalThis.addEventListener?.('dshm-cache-clear', clearRecent);
+    this.disposers.push(() => {
+      globalThis.removeEventListener?.('dshm-cache-clear', clearRecent);
+      this.recentChats.clear();
+    });
+    this.remote.$on('api-session/removed', id => {
+      this.recentChats.forget(id);
+      if (this.sessionView.getSnapshot().selected === id) this.sessionView.clearCachedHistory();
     });
     this.workspaceNavigation = new RemoteWorkspaceNavigation(this);
     this.ctx.provide('uiWorkspace', this.workspaceNavigation);

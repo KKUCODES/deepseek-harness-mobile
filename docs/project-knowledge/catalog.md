@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+2026-11-13：[preview.16 Remote 回前台恢复与最近会话](../integration/preview16-remote-resume.md)。基于公开 .15 的独立分支，双 SDK 回归、原签名 APK 与 MuMu 实际验证范围见专题。
+
 2026-10-27：[连接前通用界面宿主与默认回退](../integration/remote-connection-plugin-current.md)。两个公开页面槽共享本地模块，连接前加载，停用/卸载/失败均回退；SDK/作者文档、580项Node、双SDK矩阵与MuMu真实管理/原配对/原聊天通过，最终原签名code25保留插件停用，未发行。[KKC-123](https://linear.app/kkcodes/issue/KKC-123)。
 
 2026-10-27：[首页插件停用后的待连接页缺口](../integration/remote-connection-plugin-diagnosis.md)。修复前源码证据：连接页固定渲染，只有已连接首页接入插件槽；后续实施与真实回退见KKC-123。[KKC-122](https://linear.app/kkcodes/issue/KKC-122)。

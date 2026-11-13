@@ -10,6 +10,7 @@ import {execFileSync} from 'node:child_process';
 import {latestMobileBuild} from './latest-mobile-build.mjs';
 import {remoteSourceAliases} from './remote-source-aliases.mjs';
 import {mobileApprovalAccessibility} from './mobile-approval-accessibility.mjs';
+import {mobileLexical} from './mobile-lexical.mjs';
 import {checkRemoteLinks} from './check-remote-links.mjs';
 import {checkRemoteBackNavigation} from './check-remote-back-navigation.mjs';
 import {checkSidebarChat} from './check-sidebar-chat.mjs';
@@ -18,11 +19,12 @@ import {checkRemoteCodeBlock} from './check-chat-code-block.mjs';
 import {checkRemoteTable} from './check-chat-table.mjs';
 import {checkRemoteImages} from './check-remote-images.mjs';
 import {checkRemoteReasoning} from './check-remote-reasoning.mjs';
+import {checkRecentRemoteChat} from './check-recent-remote-chat.mjs';
 
 const root=resolve(import.meta.dirname,'..'),baseline=process.argv.includes('--baseline');
 const aside=process.argv.includes('--aside-history');
 const terminal=process.argv.includes('--terminal');
-const mode=process.argv.includes('--reasoning')?(aside?'reasoning-aside':'reasoning'):process.argv.includes('--images')?'images':process.argv.includes('--table')?(aside?'table-aside':'table'):process.argv.includes('--code-block')?'code-block':process.argv.includes('--scroll-bottom')?(aside?'scroll-bottom-aside':'scroll-bottom'):process.argv.includes('--links')?'links':process.argv.includes('--navigation')?'navigation':process.argv.includes('--sidebar')?'sidebar':aside?'aside-history':terminal?'terminal':'history';
+const mode=process.argv.includes('--recent-chat')?'recent-chat':process.argv.includes('--reasoning')?(aside?'reasoning-aside':'reasoning'):process.argv.includes('--images')?'images':process.argv.includes('--table')?(aside?'table-aside':'table'):process.argv.includes('--code-block')?'code-block':process.argv.includes('--scroll-bottom')?(aside?'scroll-bottom-aside':'scroll-bottom'):process.argv.includes('--links')?'links':process.argv.includes('--navigation')?'navigation':process.argv.includes('--sidebar')?'sidebar':aside?'aside-history':terminal?'terminal':'history';
 const require=createRequire(import.meta.url);
 const sdk=latestMobileBuild(root,{officialOnly:true,officialVersion:process.argv.includes('--alpha2')?'0.2.1-alpha.2':'0.2.1-rc.2'});
 const output=resolve(root,`artifacts/tests/preview15-history/${sdk.version}-${baseline?'baseline':'candidate'}-${mode}`);
@@ -36,7 +38,7 @@ await build({absWorkingDir:root,stdin:{contents,resolveDir:root,loader:'jsx'},ou
   format:'esm',platform:'browser',target:['chrome100'],jsx:'automatic',logLevel:'silent',
   plugins:[...(baseline?[{name:'published-preview11-workspace',setup(builder){builder.onLoad({filter:/[\\/]src[\\/]ui[\\/]RemoteWorkspace\.jsx$/},({path})=>({
     contents:execFileSync('git',['show','v0.1.0-preview.11:src/ui/RemoteWorkspace.jsx'],{cwd:root,encoding:'utf8'}),loader:'jsx',resolveDir:resolve(path,'..'),
-  }));}}]:[]),sdk.resolver,mobileApprovalAccessibility()],
+  }));}}]:[]),sdk.resolver,mobileLexical(root),mobileApprovalAccessibility()],
   alias:{...sdk.alias,...remoteSourceAliases(root,sdk),react:dirname(require.resolve('react/package.json')),
     'node:module':resolve(sdk.upstream,'apps/web/src/node-module-stub.ts')},nodePaths:[resolve(sdk.runtime,'node_modules'),resolve(root,'node_modules')],
   loader:{'.module.css':'local-css','.svg':'file','.png':'file','.woff2':'file','.woff':'file','.ttf':'file'},
@@ -57,7 +59,9 @@ const settle=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()
 const state=()=>page.evaluate(()=>window.preview15.state());
 try{
   await page.goto(`http://127.0.0.1:${server.address().port}/${mode.startsWith('table')?`?documents&builtin${aside?'&sidebar':''}`:['links','code-block'].includes(mode)?'?documents&builtin':mode==='sidebar'?'?sidebar':''}`);await page.waitForFunction(()=>!!window.preview15);
-  if(mode.startsWith('reasoning')){
+  if(mode==='recent-chat'){
+    report.recentChat=await checkRecentRemoteChat(page); assert.deepEqual(report.errors,[]);
+  }else if(mode.startsWith('reasoning')){
     report.reasoning=await checkRemoteReasoning(page,{aside}); assert.deepEqual(report.errors,[]);
   }else if(mode==='images'){
     report.images=await checkRemoteImages(page,{alpha2:sdk.version==='0.2.1-alpha.2'});

@@ -132,14 +132,23 @@ function RemoteConnection({ client, language, appearanceReady, interfaceUI }) {
     clearTimeout(recovery.current.timer);
     recovery.current.timer = null;
     if (!automatic) { recovery.current.epoch++; recovery.current.stopped = false; }
-    if (!automatic || !runtime.current?.presented) { await stop(); setStage('connecting'); }
-    try { await client.call('socket.connect'); }
-    catch (failure) { if (!runtime.current?.presented) setStage('disconnected'); throw failure; }
+    const carrier = {};
+    recovery.current.carrier = carrier;
+    try {
+      if (!automatic || !runtime.current?.presented) { await stop(); setStage('connecting'); }
+      if (recovery.current.carrier !== carrier || recovery.current.stopped) return;
+      await client.call('socket.connect');
+    } catch (failure) {
+      if (recovery.current.carrier !== carrier) return;
+      recovery.current.carrier = null;
+      if (!runtime.current?.presented) setStage('disconnected');
+      throw failure;
+    }
   };
   const disconnect = () => {
     pairingIntent.current++; setWatchApproval(false);
     const recover = recovery.current;
-    clearTimeout(recover.timer); recover.timer = null; recover.epoch++; recover.stopped = true; recover.resume = null;
+    clearTimeout(recover.timer); recover.timer = null; recover.epoch++; recover.stopped = true; recover.resume = null; recover.carrier = null;
     return client.disconnect();
   };
   useEffect(() => {
@@ -148,26 +157,56 @@ function RemoteConnection({ client, language, appearanceReady, interfaceUI }) {
     recover.stopped = true;
     const cancelRecovery = (forget = false) => {
       clearTimeout(recover.timer); recover.timer = null; recover.epoch++;
+      recover.carrier = null; recover.retry = null; recover.probe?.abort(); recover.probe = null;
       if (forget) { recover.resume = null; recover.stopped = true; }
     };
+    const currentIntent = epoch => mounted.current && !recover.stopped && epoch === recover.epoch;
+    const retryCarrier = async () => {
+      if (recover.stopped || recover.carrier || recover.retry) return;
+      clearTimeout(recover.timer); recover.timer = null;
+      const epoch = recover.epoch, retry = {};
+      recover.retry = retry;
+      try {
+        const device = await client.call('binding.status');
+        if (!currentIntent(epoch)) return;
+        setStatus(device.status);
+        if (device.status !== 'active') { cancelRecovery(true); await stop(); setStage('disconnected'); return; }
+        await connect(true);
+      } catch (failure) {
+        if (!currentIntent(epoch)) return;
+        if (['http_401', 'device_revoked', 'permissions_changed'].includes(failure.message)) { cancelRecovery(true); await stop(); setStage('disconnected'); report(failure); }
+        else scheduleRecovery();
+      } finally {
+        if (recover.retry === retry) recover.retry = null;
+      }
+    };
     const scheduleRecovery = () => {
-      if (!mounted.current || recover.stopped || recover.timer) return;
+      if (!mounted.current || recover.stopped || recover.timer || recover.carrier) return;
       const epoch = recover.epoch;
-      recover.timer = setTimeout(async () => {
+      recover.timer = setTimeout(() => {
         recover.timer = null;
-        try {
-          const device = await client.call('binding.status');
-          if (!mounted.current || recover.stopped || epoch !== recover.epoch) return;
-          setStatus(device.status);
-          if (device.status !== 'active') { cancelRecovery(true); await stop(); setStage('disconnected'); return; }
-          await connect(true);
-        } catch (failure) {
-          if (!mounted.current || recover.stopped || epoch !== recover.epoch) return;
-          if (['http_401', 'device_revoked', 'permissions_changed'].includes(failure.message)) { cancelRecovery(true); await stop(); setStage('disconnected'); report(failure); }
-          else scheduleRecovery();
-        }
+        if (currentIntent(epoch)) void retryCarrier();
       }, Math.min(1000 * 2 ** Math.min(recover.attempt++, 4), 15000));
     };
+    const resumeConnection = async () => {
+      const epoch = recover.epoch, current = runtime.current;
+      if (!currentIntent(epoch) || recover.carrier || recover.retry || recover.probe) return;
+      if (!client.connected) { await retryCarrier(); return; }
+      if (!current?.presented) return;
+      const probe = new AbortController();
+      recover.probe = probe;
+      try { await current.transport.checkHost({ signal: probe.signal }); }
+      catch (failure) {
+        if (currentIntent(epoch) && runtime.current === current) {
+          const reason = ['device_revoked', 'permissions_changed'].includes(failure.message) ? failure.message : undefined;
+          client.receive({ type: 'closed', reason });
+          await retryCarrier();
+        }
+      } finally {
+        if (recover.probe === probe) recover.probe = null;
+      }
+    };
+    window.addEventListener('dshm-remote-resume', resumeConnection);
     const load = async (resume, previous) => {
       if (previous && runtime.current !== previous) return;
       // 在旧运行环境释放前取草稿，任何在途写操作都不进入恢复队列。
@@ -291,7 +330,11 @@ function RemoteConnection({ client, language, appearanceReady, interfaceUI }) {
     };
     retryBinding.current = readBinding;
     void run(readBinding).finally(() => { if (mounted.current) setBindingReady(true); });
-    return () => { mounted.current = false; retryLoad.current = null; retryBinding.current = null; cancelRecovery(true); unsubscribe(); void stop(); void client.release().catch(() => {}); };
+    return () => {
+      mounted.current = false; retryLoad.current = null; retryBinding.current = null;
+      window.removeEventListener('dshm-remote-resume', resumeConnection);
+      cancelRecovery(true); unsubscribe(); void stop(); void client.release().catch(() => {});
+    };
   }, [client]);
   // 已领取后只轮询只读状态；批准由电脑完成，手机不自动重放领取或任何写操作。
   useEffect(() => {

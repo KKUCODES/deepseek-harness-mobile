@@ -1,3 +1,21 @@
+export function historyGroups(conversation) {
+  const groups = [];
+  for (const key of conversation?.order ?? []) {
+    const node = conversation.nodes.get(key);
+    if (!node || node.visibility === 'hidden') continue;
+    const locationTurn = node.location?.turn;
+    const turn = typeof locationTurn === 'number' ? locationTurn : locationTurn?.turn ?? node.data?.turn;
+    const id = turn === undefined ? key : `turn:${turn}`;
+    let group = groups.at(-1);
+    if (group?.turnId !== id || group.nodes.length >= 4) {
+      group = { id: group?.turnId === id ? `${id}:${key}` : id, turnId: id, nodes: [], seq: Math.max(0, Math.floor(node.seq ?? node.data?.seq ?? node.anchorSeq)) };
+      groups.push(group);
+    }
+    group.nodes.push(node);
+  }
+  return groups;
+}
+
 export async function loadRemoteHistory(binding, { isCurrent = () => true } = {}) {
   const { session, eventSource } = binding;
   const state = session.getSnapshot();

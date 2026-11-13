@@ -32,6 +32,32 @@ server.listen(0, '127.0.0.1'); await once(server, 'listening');
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const report = { source: 'actual RemoteApp with isolated lifecycle dependencies, not authentication or real transport', cases: [], failures: [] };
 try {
+  for (const mode of ['healthy', 'stale', 'carrier-closed', 'revoked']) {
+    const page = await browser.newPage(); page.setDefaultTimeout(5000);
+    try {
+      await page.goto(`http://127.0.0.1:${server.address().port}/`);
+      await page.getByTestId('workspace').waitFor();
+      await page.evaluate(() => window.fixture.seed());
+      await page.evaluate(mode => {
+        if (mode === 'carrier-closed') window.fixture.close();
+        window.fixture.resume(mode === 'stale' ? 'remote_resume_probe_failed' : mode === 'revoked' ? 'device_revoked' : undefined);
+        window.fixture.resume(mode === 'stale' ? 'remote_resume_probe_failed' : mode === 'revoked' ? 'device_revoked' : undefined);
+      }, mode);
+      const reconnect = mode === 'stale' || mode === 'carrier-closed';
+      if (reconnect) await page.waitForFunction(() => window.fixture.inspect().calls.filter(call => call === 'socket.connect').length === 2);
+      if (mode === 'revoked') await page.getByRole('alert').filter({ hasText: '电脑已撤销这台手机' }).waitFor();
+      else {
+        assert.equal(await page.getByTestId('selection').innerText(), 'test');
+        assert.equal(await page.getByTestId('draft').innerText(), '保留草稿');
+      }
+      const state = await page.evaluate(() => window.fixture.inspect());
+      assert.equal(state.models.length, 1);
+      assert.equal(state.calls.filter(call => call === 'checkHost').length, mode === 'carrier-closed' ? 0 : 1);
+      assert.equal(state.calls.filter(call => call === 'socket.connect').length, reconnect ? 2 : 1);
+      report.cases.push(`resume-${mode}`);
+    } catch (error) { report.failures.push({ mode: `resume-${mode}`, message: error.message }); }
+    finally { await page.close(); }
+  }
   for (const mode of ['disconnect', 'host_offline', 'cancel', 'revoked']) {
     const page = await browser.newPage(); page.setDefaultTimeout(5000);
     try {

@@ -2,11 +2,12 @@ import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useScrollFollow, scrollMetrics } from '@upstream/ui-chat/src/client/chat/use-scroll-follow.ts';
 
 /** 只绑定手机滚动容器；跟随判定和定位统一交给原DSH控制器。 */
-export function useRemoteScrollFollow(identity) {
+export function useRemoteScrollFollow(identity, readingResume) {
   // 与原useChatReading的FOLLOW_THRESHOLD + 1一致。
   const follow = useScrollFollow(true, 25);
   const [followingTail, setFollowingTail] = useState(follow.active);
   const scroll = useRef(null), position = useRef(0), frame = useRef(null), restore = useRef(null), dispose = useRef(null);
+  const resume = useRef(readingResume); resume.current = readingResume;
   const publish = useCallback(() => setFollowingTail(follow.active), [follow]);
   // 虚拟列表/分页只读写同一个原控制器，不另外维护可漂移的布尔状态。
   const bottom = useMemo(() => ({
@@ -32,6 +33,7 @@ export function useRemoteScrollFollow(identity) {
     const unbind = follow.bind(element);
     restore.current = requestAnimationFrame(() => {
       if (scroll.current !== element) return;
+      if (resume.current) return; // 虚拟列表按消息锚点定位。
       const active = follow.active;
       follow.jump(element, scrollMetrics(element), active ? element.scrollHeight : position.current);
       follow.setFollowing(active); position.current = element.scrollTop; publish();
@@ -71,7 +73,7 @@ export function useRemoteScrollFollow(identity) {
     followBottom();
   }, [follow, followBottom, publish]);
   useLayoutEffect(() => {
-    follow.reset(); follow.setFollowing(true); position.current = 0; publish();
+    follow.reset(); follow.setFollowing(!resume.current); position.current = 0; publish();
   }, [identity, follow, publish]);
   useLayoutEffect(() => () => {
     cancelAnimationFrame(restore.current); cancelAnimationFrame(frame.current); dispose.current?.();

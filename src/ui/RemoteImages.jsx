@@ -8,10 +8,10 @@ import { useLocale } from './locale.jsx';
 
 const Images = createContext(null);
 
-export function RemoteImages({ model, sessionId, children }) {
+export function RemoteImages({ model, sessionId, paused, children }) {
   const cache = useMemo(() => new RemotePluginImageUrls(model, sessionId), [model, sessionId]);
   useEffect(() => () => cache.dispose(), [cache]);
-  const value = useMemo(() => ({ load: cache.load, model }), [cache, model]);
+  const value = useMemo(() => ({ load: paused ? undefined : cache.load, model }), [cache, model, paused]);
   return <Images.Provider value={value}>{children}</Images.Provider>;
 }
 

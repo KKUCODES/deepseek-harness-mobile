@@ -7,6 +7,7 @@ import { remoteSourceAliases } from './remote-source-aliases.mjs';
 import { pdfAssets } from './pdf-assets.mjs';
 import { mobileApprovalAccessibility } from './mobile-approval-accessibility.mjs';
 import { latestMobileBuild } from './latest-mobile-build.mjs';
+import { mobileLexical } from './mobile-lexical.mjs';
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, '..');
@@ -53,7 +54,7 @@ const result = await build({
   // 保留上游语法库的动态加载，首页不解析尚未出现的代码语言。
   splitting: true, chunkNames: 'chunks/[name]-[hash]',
   target: ['chrome100'], jsx: 'automatic', minify: true, metafile: true,
-  plugins: [...(latest ? [latest.resolver] : []), mobileApprovalAccessibility(), { name: 'mobile-pdf-worker', setup(builder) {
+  plugins: [...(latest ? [latest.resolver] : []), mobileLexical(root), mobileApprovalAccessibility(), { name: 'mobile-pdf-worker', setup(builder) {
     builder.onLoad({ filter: /ui-sidebar-documentpreview[\\/]src[\\/]client[\\/]pdf[\\/]assets\.ts$/ }, async args => ({
       // 大型资产对象限定在 PDF 模块；全局 define 会与其他 define 合并成首屏共享块。
       contents: `const __DSH_PDFJS_ASSETS__ = ${JSON.stringify(pdf.assets)};\n${await readFile(args.path, 'utf8')}`,
@@ -94,6 +95,8 @@ const result = await build({
     'process.env.CORDIS_SHARED': 'undefined',
   },
 });
+const lexicalRuntimes = Object.keys(result.metafile.inputs).filter(path => /\/lexical\/dist\/Lexical\.prod\.[cm]?js$/.test(path));
+if (lexicalRuntimes.length !== 1) throw new Error(`Expected one Lexical runtime, found ${lexicalRuntimes.length}: ${lexicalRuntimes.join(', ')}`);
 // PDF 仅在打开文档时加载，避免内联字体/Worker 意外进入普通聊天或 Remote 首屏。
 const initial = new Set();
 function visitInitial(path) {

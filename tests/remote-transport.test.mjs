@@ -23,6 +23,25 @@ async function negotiated() {
   return f;
 }
 
+test('回前台的探测不改协商状态，也不取消同一载体上的在途操作', async () => {
+  const f = await negotiated();
+  const caps = f.transport.capabilities, generation = f.transport.generation;
+  const unrelated = f.client.request({ method: 'remote.negotiate', version: 2 });
+  const check = f.transport.checkHost();
+  f.reply({ transport: 2 });
+  await check;
+  assert.equal(f.client.requests.has(unrelated.id), true);
+  assert.equal(f.transport.capabilities, caps);
+  assert.equal(f.transport.generation, generation);
+  const owner = new AbortController();
+  const cancelled = f.transport.checkHost({ signal: owner.signal });
+  owner.abort();
+  await assert.rejects(cancelled, { name: 'AbortError' });
+  assert.equal(f.client.requests.has(unrelated.id), true);
+  unrelated.cancel();
+  f.transport.dispose();
+});
+
 test('载体重连后的订阅抢在能力确认前，不应使正在进行的确认失效', async () => {
   const f = await negotiated();
   f.client.receive({ type: 'closed' });

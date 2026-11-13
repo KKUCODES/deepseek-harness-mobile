@@ -27,6 +27,7 @@ class RemoteActivity : Activity() {
     private var startup: StartupScreen? = null
     private val rendererRecovery by lazy { RendererRecovery(this) }
     private var rendererGone = false
+    private var wasPaused = false
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,8 +98,15 @@ class RemoteActivity : Activity() {
         MobileWebWindow.updateAppearance(this)
     }
 
-    override fun onResume() { super.onResume(); rendererRecovery.onResume() }
-    override fun onPause() { rendererRecovery.onPause(); super.onPause() }
+    override fun onResume() {
+        super.onResume()
+        rendererRecovery.onResume()
+        if (wasPaused && !rendererGone && webView.url == RemoteBridge.ORIGIN + "/assets/web/remote.html") {
+            webView.evaluateJavascript("window.dispatchEvent(new Event('dshm-remote-resume'))", null)
+        }
+        wasPaused = false
+    }
+    override fun onPause() { wasPaused = true; rendererRecovery.onPause(); super.onPause() }
     override fun onDestroy() {
         startup?.close(); stopWindowAppearance?.invoke()
         if (!rendererGone) { files.cancel(); updates.close(); mobilePlugins.close(); bridge.close(); webView.destroy() }

@@ -13,6 +13,7 @@ export class RemoteClient {
   listeners = new Set();
   constructor() { state.clients.push(this); }
   publish(frame) { for (const listener of this.listeners) listener(frame); }
+  receive(frame) { if (frame.type === 'closed') this.connected = false; this.publish(frame); }
   subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   async call(op, data = {}) {
     state.calls.push(op);
@@ -68,8 +69,11 @@ export class RemoteModel {
   listeners = new Set();
   sending = new Set();
   snapshot = { selected: null, drafts: {}, attachments: {}, connectionState: 'connected' };
-  transport = { negotiate: async () => {} };
-  connection = { reconnect() {} };
+  transport = { negotiate: async () => {}, checkHost: async () => {
+    state.calls.push('checkHost');
+    if (state.probeError) throw Error(state.probeError);
+  } };
+  connection = { reconnect: () => this.publish({ connectionState: 'connected' }) };
   constructor(client) { this.client = client; this.plan = state.next; state.next = ''; state.models.push(this); }
   getSnapshot = () => this.snapshot;
   subscribe = listener => { this.listeners.add(listener); return () => this.listeners.delete(listener); };
@@ -146,6 +150,7 @@ window.fixture = {
   release() { state.release(); },
   close(reason) { const client = state.clients.at(-1); client.connected = false; client.publish({ type: 'closed', reason }); },
   ready() { const client = state.clients.at(-1); client.connected = true; client.publish({ type: 'ready' }); },
+  resume(error) { state.probeError = error; window.dispatchEvent(new Event('dshm-remote-resume')); },
   notification(mode) {
     state.notificationMode = mode; state.notification = { sessionId: 'test', id: 'notice-test' };
     window.dispatchEvent(new Event('dshm-notification-open'));
