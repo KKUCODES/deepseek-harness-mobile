@@ -2,7 +2,7 @@
 
 本页说明手机端的环境、构建和检查入口。命令在注明的目录执行；普通旧基线与官方候选使用不同资源和包名，需先选择目标版本。
 
-当前修复分支的默认官方构建与CI固定rc.2原SDK及只读源码；旧Host兼容、原生范围回归和隔离测试参数见[rc.2兼容说明](./integration/dsh-rc21-compatibility.md)。下方旧候选命令保留作历史/诊断，不代表当前发布流水线仍固定alpha.2。
+当前分支的 CI 使用官方 rc.3 SDK 和只读源码。旧 Host 兼容及历史诊断见 [rc.2 兼容说明](./integration/dsh-rc21-compatibility.md)。
 
 [返回项目首页](../README.md) · [使用指南](./usage.md) · [知识库总目录](./project-knowledge/catalog.md)
 
@@ -44,6 +44,18 @@ dsh-mobile/                  项目集合
 ```
 
 ## 构建当前官方候选
+
+### DSH 0.2.2-rc.3 本地兼容候选
+
+使用官方标签 `dsh-v0.2.2-rc.3`（`38a6a5c965aa99ab525161efb7cc5cf1fe62fced`）、官方 npm SDK `0.2.2-rc.3` 和旧定位 hook 所在的 `dsh-v0.2.1-alpha.2`（`d743267388641bc76f17c45ce8b4c231aed1d32c`）。`DSHM_RC3_SOURCE`、`DSHM_RC3_SDK`、`DSHM_RC3_LEGACY_SOURCE` 分别指向这三个准备好的目录。SDK 目录需安装 `@deepseek-ai/dsh`、`dsh-client-store`、`dsh-client-ui-dockkit`、`dsh-client-ui-primitives`、`dsh-client-ui-slots` 等同版官方包。构建器拒绝从父目录借用旧 SDK。
+
+在手机项目执行 `node scripts/build-web.mjs --latest-candidate --official-candidate --official-rc3`。再在 `android/` 执行 `./gradlew.bat :app:assembleDebug '-PlatestCompatibilityTest=true' '-PofficialPluginOnlyTest=true' '-PofficialDshVersion=0.2.2-rc.3'`。输出为 `artifacts/rc3/android/outputs/apk/debug/app-debug.apk`。包名为 `dev.dshmobile.validation.rc3test`，与公开 APK 分开。发行候选使用 Actions 中的 `npm run prepare:ci`、`npm run build:web:ci` 和 `:app:assembleRelease`，版本由 `ci/release.json` 指定。
+
+准备 CI SDK 并构建 Web 产物后，运行 `node scripts/verify-chat-code-block.mjs --user-bubble` 和 `node scripts/verify-remote-plugin-slots.mjs --user-bubble`。前者从普通聊天的本地历史打开会话，后者从 Remote 的协议快照打开会话。两项都检查窄屏下的气泡背景、内边距和长文本折行。
+
+Remote 聊天支持会话作用域的 `conversation.input.right`，插件可注册自己的控件。素材沿用 DSH 激活 npm 包的 `./assets/*` 导出契约。客户端可使用 `/plugins/<完整包名>/assets/<导出路径>`。只通过桌面 Web 自定义路由注册的文件需要由作者补上官方素材导出，手机沿用现有认证、缓存和资源范围。
+
+### 历史候选
 
 已通过本地验收的 Remote 组合为官方 DSH `0.2.1-alpha.2`、插件 `0.1.80-latest.0` 和配套 Android 候选。构建前需要已经准备以下固定版本材料：
 

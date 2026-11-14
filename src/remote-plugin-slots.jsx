@@ -322,9 +322,9 @@ function GuardedPresetSeat({ Component, model, ...props }) {
   return <Component {...props} {...seat.callbacks}/>;
 }
 
-function MobileSlotRoot({ children, reference, renderSlot, renderSlotChain, renderFactorySlot, SessionProvider, model, rootModel }) {
+function MobileSlotRoot({ workspaceContent, reference, renderSlot, renderSlotChain, renderFactorySlot, SessionProvider, model, rootModel }) {
   const value = useMemo(() => ({ reference, renderSlot, renderSlotChain, renderFactorySlot, SessionProvider, model }), [reference, renderSlot, renderSlotChain, renderFactorySlot, SessionProvider, model]);
-  return <PluginSlots.Provider value={value}>{children}
+  return <PluginSlots.Provider value={value}>{workspaceContent}
     {model === rootModel && <RemoteGlobalPanels model={model} renderSlot={renderSlot} SessionProvider={SessionProvider}/>}
     {/* 全局插槽只挂载一次，且不继承当前聊天；切换主/旁栏不会重复创建插件浮层。 */}
     {model === rootModel && <div className="remote-shell-overlays" data-shell-overlay>
@@ -401,6 +401,7 @@ export function installRemotePluginSlots(model) {
     main: { kind: 'keyed', scope: 'root' },
     'conversation.chat.turnTail': { kind: 'list', scope: 'session' },
     'conversation.chat.assistant-actions': { kind: 'list', scope: 'session' },
+    'conversation.input.right': { kind: 'list', scope: 'session' },
     'conversation.input.overlay': { kind: 'list', scope: 'session' },
     'conversation.session.header.leading': { kind: 'single', scope: 'session' },
     'conversation.session.header.actions': { kind: 'list', scope: 'session' },
@@ -602,7 +603,7 @@ export function RemoteHeaderAncestors({ model }) {
 }
 
 /** 复用原节点可见性和按会话保存的折叠状态，只替换最终内容的手机回退布局。 */
-function MobileChatNodeSeat({ node, dispatchNode, children, useSession, ...props }) {
+function MobileChatNodeSeat({ node, dispatchNode, fallbackContent: children, useSession, ...props }) {
   const historyIncomplete = useSession(snapshot => snapshot.hasMore);
   const t = useTranslate();
   const renderNode = useCallback((name, owner, options) => {
@@ -674,7 +675,7 @@ export function RemoteNodeExtension({ node, openFile, openAttachment, openComman
     })().catch(error => { if (model.reference === reference) model.publish({ error: error.message }); });
   };
   return <SessionProvider session={reference}>
-    {renderSlot('dshm.chat.node', { node, openSkill, loadImage, dispatchNode: renderSlot, children,
+    {renderSlot('dshm.chat.node', { node, openSkill, loadImage, dispatchNode: renderSlot, fallbackContent: children,
       renderMessageImages: owner => <RemoteImageBoundary resetKey={JSON.stringify(owner.images)}>
         {renderMessageImages(renderSlot, { ...owner, loadImage }, owner.align === 'end' ? 'user' : 'message')}
       </RemoteImageBoundary>,
@@ -698,7 +699,14 @@ export function RemotePluginScope({ model, children }) {
   const state = useSyncExternalStore(model.subscribeView, model.getSnapshot);
   // retain() 的 reference 在 ready 之前没有 binding；此时不得交给原 SessionProvider。
   const reference = state.session ? model.reference : undefined;
-  return <RemoteMarkdownLinks model={model}>{model.pluginSlots.render({ reference, children, model })}</RemoteMarkdownLinks>;
+  return <RemoteMarkdownLinks model={model}>{model.pluginSlots.render({ reference, workspaceContent: children, model })}</RemoteMarkdownLinks>;
+}
+
+export function RemoteComposerRight() {
+  const host = useContext(PluginSlots);
+  if (!host?.reference || host.model.getSnapshot().connectionState !== 'connected') return null;
+  const { SessionProvider, renderSlot, reference } = host;
+  return <SessionProvider session={reference}>{renderSlot('conversation.input.right', {})}</SessionProvider>;
 }
 
 /** 只替换首页席位；原会话、审批、插件作用域始终归宿主管理。 */

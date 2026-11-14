@@ -1,12 +1,13 @@
 import React from 'react';
 import { IconChevronDownOutline14, IconThinkOutline14 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import messageStyle from '@upstream/ui-chat/src/client/chat/MessageItem.module.css';
+import { UserMessageBubble } from '@dshm/user-message-bubble';
 import { useTranslate } from './locale.jsx';
 import { MotionDetails } from './motion.jsx';
 
 /** 两种会话只注入内容和操作；消息布局由同一组件维护。 */
 export function UserMessage({ children, attachments, actions }) {
-  return <div className={messageStyle.userRow}><div className={messageStyle.userStack}>{attachments}<div className={messageStyle.bubble}>{children}</div>{actions}</div></div>;
+  return <div className={messageStyle.userRow}><div className={messageStyle.userStack}>{attachments}<UserMessageBubble data-message-bubble="">{children}</UserMessageBubble>{actions}</div></div>;
 }
 
 export function MessageReasoning({ text, active, renderContent }) {

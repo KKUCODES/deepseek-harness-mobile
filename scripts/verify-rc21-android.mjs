@@ -18,7 +18,7 @@ async function readJson(file) {
 const state = await readJson(resolve(control, 'state.json'));
 assert.equal(state.stage, 'ready');
 const pkg = process.env.DSHM_CHECK_APP ?? 'dev.dshmobile.validation.rc21test';
-assert.ok(['dev.dshmobile.validation.rc21test', 'dev.dshmobile.validation.compatibilitytest'].includes(pkg));
+assert.ok(['dev.dshmobile.validation.rc21test', 'dev.dshmobile.validation.rc3test', 'dev.dshmobile.validation.compatibilitytest'].includes(pkg));
 const serial = process.env.DSHM_ANDROID_SERIAL ?? '127.0.0.1:16384';
 const device = (await _android.devices({ omitDriverInstall: true })).find(d => d.serial() === serial);
 assert.ok(device); device.setDefaultTimeout(20000);
@@ -88,17 +88,29 @@ try {
   const name = `DSHM rc21 ${randomUUID().slice(0, 8)}`;
   await page.getByLabel('设备名称', { exact: true }).fill(name);
   await page.getByRole('button', { name: '继续配对', exact: true }).click();
-  await page.getByRole('heading', { name: '等待电脑批准', exact: true }).waitFor();
+  await page.getByTestId('remote-fingerprint').waitFor();
   const fingerprint = await page.getByTestId('remote-fingerprint').innerText();
   await command('approve', { name, fingerprint });
-  await page.getByRole('button', { name: '我已在电脑批准', exact: true }).click();
+  const manualApproval = page.getByRole('button', { name: '我已在电脑批准', exact: true });
+  if (await manualApproval.isVisible()) await manualApproval.click();
   await page.getByTestId('remote-workspace').waitFor({ timeout: 60000 });
   report.remoteReady = true;
   report.ownPage = (await page.locator('iframe').count()) === 0;
+  if (state.version === '0.2.2-rc.3') {
+    const asset = await page.evaluate(async () => {
+      const path = '/plugins/@deepseek-ai/dsh-client-ui-chat/assets/running-whale%402x-06738fa29b2f.png';
+      const response = await fetch(path);
+      if (!response.ok) throw Error(`official_asset_${response.status}`);
+      const image = await createImageBitmap(await response.blob());
+      try { return [image.width, image.height]; } finally { image.close(); }
+    });
+    assert.deepEqual(asset, [28, 28]);
+    report.officialAsset = true;
+  }
   if (state.largeHistory) {
     await auditChunks();
     // 官方冷会话列表在首次观察前用工作区名作标题；隔离home只有这一条非空聊天。
-    const historyRow = page.locator('.remote-session-row');
+    const historyRow = page.locator('.remote-session-row, [data-remote-home-session]');
     await historyRow.waitFor(); assert.equal(await historyRow.count(), 1);
     await historyRow.click();
     await page.locator('[data-composer-input]').waitFor();
@@ -109,6 +121,8 @@ try {
       await page.locator('[data-history-loader]').click();
       await expectHistoryIdle(page);
     }
+    // 前插保留原阅读锚点。回到顶部后，虚拟列表才会挂载首条记录。
+    await page.locator('section.conversation').evaluate(element => element.scrollTo({ top: 0, behavior: 'instant' }));
     await page.getByText('历史分页验收，请查看结果。', { exact: true }).waitFor({ timeout: 60000 });
     report.largeHistoryPage = true;
     console.log(JSON.stringify({ stage: 'large_history_rendered' }));
@@ -121,7 +135,7 @@ try {
     await page.getByTestId('remote-workspace').waitFor({ timeout: 60000 });
     console.log(JSON.stringify({ stage: 'reloaded_remote_ready' }));
     await auditChunks();
-    await page.locator('.remote-session-row').filter({ hasText: state.largeHistory.title }).click();
+    await historyRow.click();
     await page.locator('[data-composer-input]').waitFor({ timeout: 60000 });
     await page.getByText('首次快照验收，请查看结果。', { exact: true }).waitFor({ timeout: 60000 });
     report.reconnectChunkAudit = await page.evaluate(() => globalThis.__dshmChunkAudit);

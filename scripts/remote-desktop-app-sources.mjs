@@ -9,7 +9,7 @@ export function remoteDesktopAppSources(root, { upstream = resolve(root, '../dee
   let source = readFileSync(resolve(base, 'OpenInAppAction.tsx'), 'utf8');
   if (isProfileDshVersion(version)) {
     // 新共享按钮已提供 portal；保持其业务组件原样，不重复补丁。
-    if (!readFileSync(resolve(base, 'OpenTargetButton.tsx'), 'utf8').includes('        portal')) throw Error('Latest OpenTargetButton portal needs review');
+    if (!/^[ \t]+portal\s*$/m.test(readFileSync(resolve(base, 'OpenTargetButton.tsx'), 'utf8'))) throw Error('Latest OpenTargetButton portal needs review');
     return { '@dshm/desktop-app-action': resolve(base, 'OpenInAppAction.tsx') };
   }
   const anchor = '<Menu\n';

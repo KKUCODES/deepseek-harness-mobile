@@ -92,7 +92,14 @@ export class RemoteModel {
     registerConversationNodes(this.ctx);
     this.ctx.uiConversation.events.register(remoteChangesDefinition);
     this.ctx.uiConversation.events.register(remoteTurnBlockedDefinition);
-    this.control = createSessionControlStream(this.remote, { accept: frame => this.sessions.handleControlFrame(frame), failed: error => this.fail(error) });
+    this.control = createSessionControlStream(this.remote, { accept: frame => {
+      // 旧 Host 逐项发送投影，rc.3 客户端按帧消费一批变化。
+      const legacyProjection = typeof DSHM_MOBILE_SDK_VERSION !== 'undefined' && DSHM_MOBILE_SDK_VERSION === '0.2.2-rc.3'
+        && frame.type === 'projection' && typeof frame.key === 'string' && Object.hasOwn(frame, 'value') && frame.changes === undefined;
+      this.sessions.handleControlFrame(legacyProjection
+        ? { type: frame.type, sessionId: frame.sessionId, seq: frame.seq, changes: [{ key: frame.key, val: frame.value }] }
+        : frame);
+    }, failed: error => this.fail(error) });
     this.workspaceStream = createWorkspaceStateStream(this.remote, { accept: this.workspaces, failed: error => this.fail(error) });
     this.disposers.push(this.sessions.list.subscribe(() => this.publish()), this.workspaces.subscribe(() => this.publish()));
     bindRemoteSessions(this);

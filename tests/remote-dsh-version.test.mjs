@@ -18,3 +18,11 @@ test('legacy builds do not silently inherit the new compatibility range', () => 
     assert.equal(acceptsRemoteDshVersion(sdk, '0.2.1-alpha.2'), false);
   }
 });
+
+test('rc.3 SDK admits both rc.3 and the legacy alpha.2 Host', () => {
+  const sdk = '0.2.2-rc.3';
+  for (const host of ['0.2.0-rc.2', '0.2.1-alpha.2', '0.2.1-rc.2', sdk]) {
+    assert.equal(acceptsRemoteDshVersion(sdk, host), true);
+  }
+  assert.equal(acceptsRemoteDshVersion(sdk, '0.3.0-alpha.1'), false);
+});

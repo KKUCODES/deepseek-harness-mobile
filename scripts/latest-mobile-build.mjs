@@ -22,18 +22,19 @@ export function selectSdkPackage(name, candidates, version) {
 
 /** 只供固定版本候选构建；普通构建和日常 App 不受影响。 */
 export function latestMobileBuild(root, { officialOnly = false, officialVersion = '0.2.1-alpha.1', ci = false } = {}) {
-  if (!['0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-rc.2'].includes(officialVersion)) throw Error('Unreviewed mobile SDK');
+  if (!['0.2.1-alpha.1', '0.2.1-alpha.2', '0.2.1-rc.2', '0.2.2-rc.3'].includes(officialVersion)) throw Error('Unreviewed mobile SDK');
+  const rc3 = officialVersion === '0.2.2-rc.3';
   const rc21 = officialVersion === '0.2.1-rc.2';
   const modernPlatform = officialVersion !== '0.2.1-alpha.1';
   if (modernPlatform && !officialOnly) throw Error('Modern SDK requires the official candidate');
-  if (ci && (!rc21 || !officialOnly)) throw Error('CI requires the reviewed official rc.2 candidate');
-  const upstream = ci ? resolve(root, 'artifacts/ci/official-source-rc21') : rc21 ? resolve(root, 'artifacts/rc21/source') : resolve(root, 'artifacts', modernPlatform ? 'official-alpha2-source' : 'latest-mobile-source');
-  const runtime = ci ? resolve(root, 'artifacts/ci/sdk/rc21') : rc21 ? resolve(root, '../plugin/artifacts/ci/sdk/rc21') : resolve(root, 'artifacts', modernPlatform ? 'official-alpha2-mobile-runtime' : officialOnly ? 'official-mobile-runtime' : 'latest-mobile-runtime');
+  if (ci && (!rc3 || !officialOnly)) throw Error('CI requires the reviewed official rc.3 candidate');
+  const upstream = ci ? resolve(root, 'artifacts/ci/official-source-rc3') : rc3 ? resolve(root, process.env.DSHM_RC3_SOURCE ?? '../dsh-mobile/artifacts/official-source-rc22-rc3') : rc21 ? resolve(root, 'artifacts/rc21/source') : resolve(root, 'artifacts', modernPlatform ? 'official-alpha2-source' : 'latest-mobile-source');
+  const runtime = ci ? resolve(root, 'artifacts/ci/sdk/rc3') : rc3 ? resolve(root, process.env.DSHM_RC3_SDK ?? '../plugin/artifacts/official-dsh-rc22-rc3') : rc21 ? resolve(root, '../plugin/artifacts/ci/sdk/rc21') : resolve(root, 'artifacts', modernPlatform ? 'official-alpha2-mobile-runtime' : officialOnly ? 'official-mobile-runtime' : 'latest-mobile-runtime');
   const official = rc21 ? runtime : resolve(root, '../plugin/artifacts', modernPlatform ? 'official-dsh-alpha2' : officialOnly ? 'official-dsh-plugin-only' : 'latest-runtime-check');
   const localRequire = createRequire(resolve(runtime, 'package.json'));
   const officialRequire = createRequire(resolve(official, modernPlatform ? 'node_modules/@deepseek-ai/dsh/package.json' : 'package.json'));
   const pluginSdk = ci ? resolve(root, 'artifacts/ci/sdk/host') : resolve(root, '../plugin/artifacts/official-alpha2-sdk');
-  const candidates = rc21 ? [{ root: runtime, require: localRequire }] : modernPlatform ? [
+  const candidates = rc3 || rc21 ? [{ root: runtime, require: localRequire }] : modernPlatform ? [
     { root: runtime, require: localRequire },
     { root: pluginSdk, require: createRequire(resolve(pluginSdk, 'package.json')) },
     ...(!ci ? [{ root: official, require: officialRequire }] : []),
@@ -57,7 +58,12 @@ export function latestMobileBuild(root, { officialOnly = false, officialVersion 
     '@deepseek-ai/dsh-client-ui-slots', '@deepseek-ai/dsh-client-ui-primitives']) alias[name] = sdk(name);
   alias['@deepseek-ai/dsh-util-values'] = resolve(upstream, 'packages/util/values/src/index.ts');
   alias['@deepseek-ai/dsh-file-reference/grammar'] = resolve(upstream, 'packages/context/file-reference/src/grammar.ts');
-  const generated = ci ? resolve(root, 'artifacts/ci/generated') : rc21 ? resolve(root, 'artifacts/rc21/generated') : resolve(root, 'artifacts', modernPlatform ? 'official-alpha2-mobile-generated' : 'latest-mobile-generated');
+  if (rc3) {
+    // 旧版远端插件仍从平台单例取原浮层定位 hook。
+    const legacySource = resolve(root, ci ? 'artifacts/ci/official-source-alpha2' : process.env.DSHM_RC3_LEGACY_SOURCE ?? '../dsh-mobile/artifacts/official-alpha2-source');
+    alias['@dshm/legacy-anchored-position'] = resolve(legacySource, 'packages/client/ui-primitives/src/useAnchoredPosition.ts');
+  }
+  const generated = rc3 ? resolve(root, 'artifacts/rc3/generated') : ci ? resolve(root, 'artifacts/ci/generated') : rc21 ? resolve(root, 'artifacts/rc21/generated') : resolve(root, 'artifacts', modernPlatform ? 'official-alpha2-mobile-generated' : 'latest-mobile-generated');
   mkdirSync(generated, { recursive: true });
   const icons = resolve(upstream, 'packages/client/ui-primitives/src/icons/index.tsx');
   const oldIconNames = ['IconBranchOutline16', 'IconCheckOutline16', 'IconChevronDownOutline14', 'IconChevronLeftOutline14',
@@ -74,6 +80,19 @@ export function latestMobileBuild(root, { officialOnly = false, officialVersion 
     name: 'verified-latest-mobile-sdk',
     setup(builder) {
       latestTurnProcessSources(upstream).setup(builder);
+      if (rc3) {
+        // 官方 Web 启动先设客户端载体，文件系统 resolver 在浏览器中不可用。
+        builder.onResolve({ filter: /^node:(?:fs(?:\/promises)?|path|url)$/ }, args => {
+          if (args.importer.includes('cordis-plugin-loader')) return { path: args.path, namespace: 'browser-loader-node' };
+        });
+        builder.onLoad({ filter: /.*/, namespace: 'browser-loader-node' }, () => ({
+          contents: 'export default new Proxy({}, { get() { throw Error("Node loader resolver is unavailable in the browser") } });',
+          loader: 'js',
+        }));
+        builder.onResolve({ filter: /ui-commands[\\/]src[\\/]client[\\/]resolution\.ts$/ }, args => {
+          if (/[\\/]remote-(?:plan-mode|skills)\.mjs$/.test(args.importer)) return { path: sdk('@deepseek-ai/dsh-commands/builtin') };
+        });
+      }
       builder.onResolve({ filter: /ui-primitives[\\/]src[\\/]icons[\\/]index\.tsx$/ }, args => {
         if (args.importer.replaceAll('\\', '/').startsWith(resolve(root, 'src').replaceAll('\\', '/') + '/')) return { path: iconAliases };
       });
@@ -102,6 +121,6 @@ export function latestMobileBuild(root, { officialOnly = false, officialVersion 
     },
   };
   return { upstream, version: officialVersion, generated, nativeNavigation: true,
-    dist: ci ? resolve(root, 'artifacts/ci/web') : resolve(root, 'artifacts', rc21 ? 'official-rc21-mobile-dist' : modernPlatform ? 'official-alpha2-mobile-dist' : officialOnly ? 'official-mobile-dist' : 'latest-mobile-dist'),
+    dist: ci ? resolve(root, 'artifacts/ci/web') : resolve(root, 'artifacts', rc3 ? 'official-rc3-mobile-dist' : rc21 ? 'official-rc21-mobile-dist' : modernPlatform ? 'official-alpha2-mobile-dist' : officialOnly ? 'official-mobile-dist' : 'latest-mobile-dist'),
     alias, resolver, sdk, versions, runtime, officialOnly };
 }

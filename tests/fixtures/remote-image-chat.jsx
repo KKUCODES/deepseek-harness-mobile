@@ -35,13 +35,13 @@ export function imageChatFixture(model, transport, channels, history) {
     })();
     return { id: `image-fixture-${reads}`, promise, cancel() { if (!cancelled) { cancelled = true; cancels++; } } };
   };
-  const records = (count, asFile = false) => [
+  const records = (count, asFile = false, prompt = 'IMAGE_USER_TEXT') => [
     { type: 'turn/start', data: { turn: 1 } },
     { type: 'step/start', data: { turn: 1, step: 1 } },
     { type: 'user/message', surfaceOp: 'append', data: { id: 'image-user', role: 'user', source: { kind: 'user' },
-      content: [{ type: 'text', text: 'IMAGE_USER_TEXT' }, ...Array.from({ length: count }, () => ({ type: asFile ? 'file' : 'image', attachment }))] } },
+      content: [{ type: 'text', text: prompt }, ...Array.from({ length: count }, () => ({ type: asFile ? 'file' : 'image', attachment }))] } },
     { type: 'assistant/message', surfaceOp: 'append', data: { turn: 1, step: 1, stream: [], message: { id: 'image-answer', role: 'assistant',
-      source: { kind: 'model', provider: 'fixture', model: 'fixture' }, content: [{ type: 'text', text: 'IMAGE_ANSWER_TEXT' }, { type: 'image', attachment }] } } },
+      source: { kind: 'model', provider: 'fixture', model: 'fixture' }, content: [{ type: 'text', text: 'IMAGE_ANSWER_TEXT' }, ...(count ? [{ type: 'image', attachment }] : [])] } } },
     { type: 'step/end', data: { turn: 1, step: 1 } },
     { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } },
   ].map((event, seq) => ({ ...event, seq, time: seq + 1 }));
@@ -72,11 +72,11 @@ export function imageChatFixture(model, transport, channels, history) {
       history.snapshot = () => ({ cursor: events.at(-1).seq, hasMore: false, records: events.map(event => ({ type: 'event', event })) });
       await model.select('one');
     },
-    async open({ count = 1, live = false, asFile = false } = {}) {
+    async open({ count = 1, live = false, asFile = false, prompt } = {}) {
       active = true;
       transport.capabilities.channels = [...new Set([...(transport.capabilities.channels ?? []), 'attachment'])];
       await model.select(null);
-      const events = records(count, asFile);
+      const events = records(count, asFile, prompt);
       history.active = true; history.sessionId = 'one';
       history.snapshot = () => ({ cursor: live ? -1 : events.at(-1).seq, hasMore: false,
         records: live ? [] : events.map(event => ({ type: 'event', event })) });

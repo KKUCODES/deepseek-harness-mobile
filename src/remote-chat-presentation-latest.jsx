@@ -8,7 +8,7 @@ export { bindDisclosure as bindChatDisclosure } from '@upstream/ui-chat/src/clie
 export { RunningStatus as ChatRunningStatus } from '@upstream/ui-chat/src/client/chat/RunningStatus.tsx';
 
 // 手机沿用现有紧凑过程布局，新版节点统一从原 presentation 策略读取。
-export const chatPresentation = derivePresentationPolicy(createSnapshotStore('compact'), createSnapshotStore('completion'));
+export const chatPresentation = derivePresentationPolicy(createSnapshotStore('compact'), createSnapshotStore('completion'), createSnapshotStore('all'));
 // 与新版原ChatNodeSeat的hookContext契约一致，折叠复位仍由原节点管理。
 export const chatNodeHooks = {
   turnData: (_standard, { turnData }) => key => useTurnDataValue(turnData, key),

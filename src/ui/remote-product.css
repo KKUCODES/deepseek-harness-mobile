@@ -1,6 +1,7 @@
 .remote-runtime { height: 100dvh; display: flex; flex-direction: column; min-width: 0; overflow: clip; }
 /* 原ChatView浮动控件依赖ConversationRoot提供的手机输入区边距。 */
 .remote-app { --dsh-composer-side-clearance: 8px; }
+.remote-composer-extension { display: contents; }
 .remote-chat-frame[data-chat-following-tail] > .conversation { overflow-anchor: none; }
 .remote-home-surface { display:flex; flex:1; min-height:0; min-width:0; flex-direction:column; background:var(--dshm-bg); color:var(--dshm-text); }
 /* 仅限制挂载的历史节点，已读取记录仍由原Session连续持有，不裁剪成分页窗口。 */

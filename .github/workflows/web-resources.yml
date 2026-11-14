@@ -52,7 +52,13 @@ jobs:
         with:
           repository: deepseek-ai/deepseek-harness
           ref: ${{ steps.config.outputs.upstream_ref }}
-          path: dsh-mobile/artifacts/ci/official-source-rc21
+          path: dsh-mobile/artifacts/ci/official-source-rc3
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ steps.config.outputs.legacy_upstream_ref }}
+          path: dsh-mobile/artifacts/ci/official-source-alpha2
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:

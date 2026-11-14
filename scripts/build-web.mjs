@@ -15,11 +15,13 @@ const officialOnly = process.argv.includes('--official-candidate');
 if (officialOnly && !process.argv.includes('--latest-candidate')) throw Error('Official candidate requires the latest SDK');
 const alpha2 = process.argv.includes('--official-alpha2');
 const rc21 = process.argv.includes('--official-rc21');
-if (rc21 && alpha2) throw Error('Select one official SDK');
+const rc3 = process.argv.includes('--official-rc3');
+if ([rc3, rc21, alpha2].filter(Boolean).length > 1) throw Error('Select one official SDK');
+if (rc3 && !officialOnly) throw Error('Rc.3 requires the official candidate');
 if (rc21 && !officialOnly) throw Error('Rc.2 requires the official candidate');
 if (alpha2 && !officialOnly) throw Error('Alpha.2 requires the official candidate');
 const latest = process.argv.includes('--latest-candidate') ? latestMobileBuild(root, {
-  officialOnly, officialVersion: rc21 ? '0.2.1-rc.2' : alpha2 ? '0.2.1-alpha.2' : '0.2.1-alpha.1',
+  officialOnly, officialVersion: rc3 ? '0.2.2-rc.3' : rc21 ? '0.2.1-rc.2' : alpha2 ? '0.2.1-alpha.2' : '0.2.1-alpha.1',
   ci: process.argv.includes('--ci-candidate'),
 }) : null;
 const dist = latest?.dist ?? resolve(root, 'dist');
@@ -54,7 +56,7 @@ const result = await build({
   // 保留上游语法库的动态加载，首页不解析尚未出现的代码语言。
   splitting: true, chunkNames: 'chunks/[name]-[hash]',
   target: ['chrome100'], jsx: 'automatic', minify: true, metafile: true,
-  plugins: [...(latest ? [latest.resolver] : []), mobileLexical(root), mobileApprovalAccessibility(), { name: 'mobile-pdf-worker', setup(builder) {
+  plugins: [...(latest ? [latest.resolver] : []), mobileLexical(root), mobileApprovalAccessibility(latest ?? {}), { name: 'mobile-pdf-worker', setup(builder) {
     builder.onLoad({ filter: /ui-sidebar-documentpreview[\\/]src[\\/]client[\\/]pdf[\\/]assets\.ts$/ }, async args => ({
       // 大型资产对象限定在 PDF 模块；全局 define 会与其他 define 合并成首屏共享块。
       contents: `const __DSH_PDFJS_ASSETS__ = ${JSON.stringify(pdf.assets)};\n${await readFile(args.path, 'utf8')}`,

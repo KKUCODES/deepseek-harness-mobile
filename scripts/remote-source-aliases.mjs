@@ -7,6 +7,10 @@ import { remoteDesktopAppSources } from './remote-desktop-app-sources.mjs';
 export function remoteSourceAliases(root, options = {}) {
   const source = path => resolve(options.upstream ?? resolve(root, '../deepseek-harness'), 'packages', path);
   return {
+    '@dshm/user-message-bubble': options.version === '0.2.2-rc.3'
+      ? source('client/ui-primitives/src/UserMessageBubble.tsx')
+      : resolve(root, 'src/ui/LegacyUserMessageBubble.jsx'),
+    '@dshm/legacy-anchored-position': resolve(root, 'src/no-legacy-anchored-position.mjs'),
     '@dshm/settings-components': resolve(root, options.nativeNavigation ? 'src/remote-settings-components-latest.jsx' : 'src/remote-settings-components.jsx'),
     '@dshm/config-forms': resolve(root, options.nativeNavigation ? 'src/remote-config-forms-latest.mjs' : 'src/remote-config-forms.mjs'),
     '@dshm/chat-presentation': resolve(root, options.nativeNavigation && options.version !== '0.2.1-alpha.1' ? 'src/remote-chat-presentation-alpha2.jsx'

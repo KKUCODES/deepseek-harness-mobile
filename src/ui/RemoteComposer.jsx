@@ -5,7 +5,7 @@ import { DecoratorPortals } from '../../../deepseek-harness/packages/client/ui-c
 import { registerComposerKeymap } from '../../../deepseek-harness/packages/client/ui-conversation/src/client/input/editor/keymap.ts';
 import { MobileComposer } from './MobileComposer.jsx';
 import { useTranslate } from './locale.jsx';
-import { RemoteComposerBar, useRemoteConversationLayout } from '../remote-plugin-slots.jsx';
+import { RemoteComposerBar, RemoteComposerRight, useRemoteConversationLayout } from '../remote-plugin-slots.jsx';
 
 const inputErrors = {
   remote_attachment_expired: '附件已变化，请检查后重新发送。',
@@ -83,6 +83,7 @@ export function RemoteComposer({ model, view = model, attachments, onAdmissionCh
     {notice && <p role={notice.level === 'error' ? 'alert' : 'status'}>{t(inputErrors[notice.text] ?? notice.text)}</p>}
     <RemoteComposerBar input={snapshot} blocked={block} disabled={props.disabled || locked} placeholder={placeholder}>
     <MobileComposer {...props} placeholder={placeholder} value={snapshot.draft} disabled={props.disabled || locked || (!!block && !props.stopping)}
+      toolbar={focused => <><fieldset disabled={props.disabled || locked || !!block} className="remote-composer-extension"><RemoteComposerRight/></fieldset>{props.toolbar?.(focused)}</>}
       attachDisabled={props.disabled || locked || !!block}
       onAttach={() => { if (!blockStore.getSnapshot()) props.onAttach?.(); }}
       onSend={() => { if (props.stopping) props.onSend(); else if (input.current() && !props.disabled) input.submit('queue'); }}

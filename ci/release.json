@@ -1,10 +1,11 @@
 {
-  "version": "0.1.0-preview.16",
-  "versionCode": 26,
-  "requiredPluginVersion": "0.1.87-latest.0",
-  "dshVersion": "0.2.1-rc.2",
-  "remoteDshVersions": ["0.2.0-rc.2", "0.2.1-alpha.2", "0.2.1-rc.2"],
-  "upstreamCommit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "version": "0.1.0-preview.17",
+  "versionCode": 27,
+  "requiredPluginVersion": "0.1.88-latest.0",
+  "dshVersion": "0.2.2-rc.3",
+  "remoteDshVersions": ["0.2.2-rc.3"],
+  "upstreamCommit": "38a6a5c965aa99ab525161efb7cc5cf1fe62fced",
+  "legacyUpstreamCommit": "d743267388641bc76f17c45ce8b4c231aed1d32c",
   "applicationId": "dev.dshmobile.validation.officialtest",
   "backendCommit": "94183d08ccbb8752d14c819608d79fe3870a9a60",
   "signingCertificateSha256": "d97f5b68c6a327f4ae455834ba30f23ce7b64f2eeafd8a222e0e74b0a998e51e"

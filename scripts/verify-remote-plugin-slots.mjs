@@ -28,6 +28,7 @@ import { checkRemoteFileListLayout } from './check-remote-file-list-layout.mjs';
 import { checkBuiltinPanelLayout } from './check-builtin-panel-layout.mjs';
 import { checkRemoteRunningStatus } from './check-remote-running-status.mjs';
 import { checkRemoteForkActions } from './check-remote-fork-actions.mjs';
+import { bubblePrompt, checkUserMessageBubble } from './check-user-message-bubble.mjs';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
 import { createRequire } from 'node:module';
@@ -74,8 +75,10 @@ const builtinPanelsOnly = process.argv.includes('--builtin-panels');
 const runningOnly = process.argv.includes('--running-status');
 const forkActionsOnly = process.argv.includes('--fork-actions');
 const backNavigationOnly = process.argv.includes('--back-navigation');
-const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly;
-const layoutSdk = backNavigationOnly && !process.argv.includes('--official-alpha2')
+const bubbleOnly = process.argv.includes('--user-bubble');
+const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly || bubbleOnly;
+const layoutSdk = bubbleOnly ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.2-rc.3', ci: true })
+  : backNavigationOnly && !process.argv.includes('--official-alpha2')
   ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-rc.2' }) : layoutOnly && process.argv.includes('--official-alpha2')
   ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.1-alpha.2' }) : null;
 const documentOnly = process.argv.includes('--documents');
@@ -100,7 +103,10 @@ await build({ absWorkingDir: root,
   ...(layoutOnly ? { stdin: { contents: "import {model} from './tests/fixtures/remote-plugin-slots.jsx'; import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css'; import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';" + (builtinPanelsOnly ? "import {builtinPanelFixture} from './tests/fixtures/builtin-panel-layout.jsx'; Object.assign(window.fixture,builtinPanelFixture(model));" : ''), resolveDir: root, loader: 'jsx' } }
     : { entryPoints: ['tests/fixtures/remote-plugin-slots.jsx'] }),
   outfile: resolve(directory, 'test.js'), bundle: true, format: 'esm', platform: 'browser', jsx: 'automatic', logLevel: 'silent',
-  plugins: [...(layoutSdk ? [layoutSdk.resolver] : []), mobileApprovalAccessibility()],
+  plugins: [...(bubbleOnly ? [{ name: 'text-only-chat-fixture', setup(builder) {
+    builder.onResolve({ filter: /^@upstream\/ui-attachment\/src\/client\/index\.ts$/ }, () => ({ path: 'attachments', namespace: 'text-chat-fixture' }));
+    builder.onLoad({ filter: /^attachments$/, namespace: 'text-chat-fixture' }, () => ({ contents: 'export function apply() {}' }));
+  } }] : []), ...(layoutSdk ? [layoutSdk.resolver] : []), mobileApprovalAccessibility(layoutSdk ?? {})],
   loader: { '.module.css': 'local-css', '.svg': 'file', '.png': 'file', '.woff2': 'file', '.woff': 'file', '.ttf': 'file' }, nodePaths: [...(layoutSdk ? [resolve(layoutSdk.runtime, 'node_modules')] : []), resolve(root, 'node_modules')],
   alias: { ...remoteSourceAliases(root, layoutSdk ?? {}), '@upstream': resolve(root, '../deepseek-harness/packages/client'), react: dirname(require.resolve('react/package.json')),
     'node:module': resolve(root, '../deepseek-harness/apps/web/src/node-module-stub.ts'),
@@ -111,6 +117,7 @@ await build({ absWorkingDir: root,
   define: { DSHM_MOBILE_SDK_VERSION: JSON.stringify(layoutSdk?.version ?? '0.1.6-alpha.2'), 'process.env.NODE_ENV': '"production"', 'process.versions.node': '"0.0.0"', 'process.execArgv': '[]', 'process.env.CORDIS_SHARED': 'undefined' },
 });
 const server = createServer(async (req, res) => {
+  if (bubbleOnly && req.url === '/favicon.ico') return res.writeHead(204).end();
   if (req.url === '/' || req.url === '/?documents' || req.url === '/?documents&files' || req.url === '/?documents&builtin' || req.url === '/?cold-draft') return res.setHeader('Content-Type', 'text/html').end('<div id="app"></div><script type="module" src="/test.js"></script>');
   if (req.url === '/test.js') return res.setHeader('Content-Type', 'text/javascript').end(await readFile(resolve(directory, 'test.js')));
   // 原运行状态引用打包后的鲸鱼动画，按受限资源名提供，不能将缺图误判成状态故障。
@@ -130,7 +137,7 @@ try {
   page = await browser.newPage({ viewport: { width: 375, height: 667 }, hasTouch: forkActionsOnly });
   page.setDefaultTimeout(8000);
   page.on('pageerror', error => report.errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') report.errors.push(message.text()); });
+  page.on('console', message => { if (message.type() === 'error' && (!bubbleOnly || !message.text().startsWith('Failed to load resource:'))) report.errors.push(message.text()); });
   await page.route('https://remote.dshm.invalid/plugins/**', async route => {
     const url = route.request().url();
     let body;
@@ -144,7 +151,14 @@ try {
     await route.fulfill({ status: 200, contentType: 'text/javascript', body });
   });
   await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : builtinPanelsOnly ? '?documents&builtin' : fileListOnly ? '?documents&files' : fileLayoutOnly || documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly ? '?documents' : ''}`);
-  if (backNavigationOnly) {
+  if (bubbleOnly) {
+    for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
+    await page.waitForFunction(() => !!window.preview15);
+    await page.evaluate(prompt => window.preview15.images.open({ count: 0, prompt }), bubblePrompt);
+    await checkUserMessageBubble(page);
+    assert.deepEqual(report.errors, []);
+    console.log(JSON.stringify({ ...report, userBubble: true }));
+  } else if (backNavigationOnly) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
     report.backNavigation = await checkRemoteBackNavigation(page);
     assert.deepEqual(report.errors, []);
