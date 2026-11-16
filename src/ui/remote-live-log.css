@@ -1,0 +1,13 @@
+.remote-live-log { display: grid; gap: 10px; min-width: 0; }
+.remote-live-log label, .remote-live-log-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.remote-live-log-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.remote-live-log-toggle input { width: 18px; height: 18px; margin: 0; }
+.remote-live-log select { padding: 6px 8px; border: 1px solid var(--dshm-border); border-radius: 8px; background: var(--dshm-bg); color: var(--dshm-text); }
+.remote-live-log-lines { height: min(48dvh, 440px); overflow: auto; overscroll-behavior: contain; padding: 10px; border-radius: 12px; background: var(--dshm-subtle); font: 13px/20px ui-monospace, monospace; }
+.remote-live-log-lines > div { display: grid; grid-template-columns: max-content 5ch minmax(0, 1fr); gap: 6px; padding-block: 3px; overflow-wrap: anywhere; }
+.remote-live-log-lines time { color: var(--dshm-secondary); }
+.remote-live-log-lines [data-level="WARN"] strong { color: var(--dshm-secondary); }
+.remote-live-log-lines [data-level="ERROR"] strong { color: var(--dshm-error); }
+.remote-live-log-row { text-align: start; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.remote-live-log-detail pre { max-height: 30dvh; overflow: auto; margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.remote-live-log:has(.remote-live-log-detail) .remote-live-log-lines { height: min(24dvh, 240px); }

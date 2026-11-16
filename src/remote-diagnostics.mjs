@@ -102,7 +102,8 @@ export class RemoteDiagnostics {
       if (latest && !latest.resolvedAt && Date.now() - latest.at < 3000
         && (latest.code === code || derivative && latest.code !== 'unknown_error')) return latest;
     }
-    const stack = safeJavascriptFrames(error?.stack);
+    diagnostics.record('remote', 'connection_error', { level: 'ERROR', code, error });
+    const stack = globalThis.__dshmDiagnostics?.enabled === false ? [] : safeJavascriptFrames(error?.stack);
     try { const data = await this.client.call('diagnostics.record', { code, phase: phases.has(phase) ? phase : 'unknown', stack }); if (data.record) { await this.refresh(); return diagnosticRecord(data.record); } }
     catch { /* Keep the same UI available on older APKs. */ }
     const record = diagnosticRecord({ id: crypto.randomUUID(), at: Date.now(), phase, code, exceptions: stack.length ? [{ type: 'JavaScriptError', frames: stack }] : [] });
@@ -113,3 +114,4 @@ export class RemoteDiagnostics {
     this.publish(this.records.map(record => record.source === 'remote' && !record.resolvedAt ? { ...record, resolvedAt: Date.now() } : record));
   }
 }
+import { diagnostics } from './app-diagnostics.mjs';

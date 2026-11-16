@@ -8,6 +8,7 @@ import { pdfAssets } from './pdf-assets.mjs';
 import { mobileApprovalAccessibility } from './mobile-approval-accessibility.mjs';
 import { latestMobileBuild } from './latest-mobile-build.mjs';
 import { mobileLexical } from './mobile-lexical.mjs';
+import { archiveWebSymbols } from './web-symbols.mjs';
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, '..');
@@ -56,6 +57,7 @@ const result = await build({
   // 保留上游语法库的动态加载，首页不解析尚未出现的代码语言。
   splitting: true, chunkNames: 'chunks/[name]-[hash]',
   target: ['chrome100'], jsx: 'automatic', minify: true, metafile: true,
+  sourcemap: 'external', sourcesContent: false,
   plugins: [...(latest ? [latest.resolver] : []), mobileLexical(root), mobileApprovalAccessibility(latest ?? {}), { name: 'mobile-pdf-worker', setup(builder) {
     builder.onLoad({ filter: /ui-sidebar-documentpreview[\\/]src[\\/]client[\\/]pdf[\\/]assets\.ts$/ }, async args => ({
       // 大型资产对象限定在 PDF 模块；全局 define 会与其他 define 合并成首屏共享块。
@@ -130,12 +132,16 @@ if (latest) {
 await copyFile(resolve(root, 'src/index.html'), resolve(dist, 'index.html'));
 // 两个原生入口使用同一份首帧封面；无需在脚本加载后再拼DOM，避免裸文字和白屏。
 const startup = await readFile(resolve(root, 'src/startup.html'), 'utf8');
+await build({ absWorkingDir: root, entryPoints: ['src/app-diagnostics-entry.mjs'], outfile: resolve(dist, 'app-diagnostics.js'),
+  bundle: true, format: 'iife', platform: 'browser', target: ['chrome100'], minify: true, sourcemap: 'external', sourcesContent: false });
+await copyFile(resolve(root, 'src/startup.js'), resolve(dist, 'startup.js'));
+const webBuild = await archiveWebSymbols({ dist, outputs: Object.keys(result.metafile.outputs).map(path => resolve(root, path)), files: Object.keys(result.metafile.outputs).map(path => resolve(root, path))
+  .filter(path => path.endsWith('.js')).concat(resolve(dist, 'app-diagnostics.js'), resolve(dist, 'startup.js')) });
 for (const entry of ['mobile.html', 'remote.html']) {
   const template = await readFile(resolve(root, 'src', entry), 'utf8');
   if (!template.includes('<!-- dshm-startup -->')) throw new Error(`Missing startup cover: ${entry}`);
-  await writeFile(resolve(dist, entry), template.replace('<!-- dshm-startup -->', startup));
+  await writeFile(resolve(dist, entry), template.replace('__DSHM_WEB_BUILD__', webBuild).replace('<!-- dshm-startup -->', startup));
 }
-await copyFile(resolve(root, 'src/startup.js'), resolve(dist, 'startup.js'));
 await copyFile(resolve(root, 'src/startup.css'), resolve(dist, 'startup.css'));
 await copyFile(resolve(root, 'android/app/src/main/res/drawable-nodpi/ic_launcher_foreground.png'), resolve(dist, 'startup-logo.png'));
 console.log(`Built Web validation with ${records.length} recorded original plugin artifacts.`);

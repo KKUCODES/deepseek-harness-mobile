@@ -5,6 +5,7 @@ import { zh, en } from '@upstream/ui-conversation/src/client/locales.ts';
 import galleryCss from '@upstream/ui-attachment/src/MessageImage.module.css';
 import { RemotePluginImageUrls } from '../remote-images.mjs';
 import { useLocale } from './locale.jsx';
+import { diagnostics } from '../app-diagnostics.mjs';
 
 const Images = createContext(null);
 const noImageMenu = () => ({});
@@ -26,7 +27,7 @@ export function RemoteImages({ model, sessionId, paused, children }) {
 export class RemoteImageBoundary extends React.Component {
   state = { failed: false, failedUrl: undefined, attempt: 0 };
   static getDerivedStateFromError() { return { failed: true }; }
-  componentDidCatch(error) { console.warn('[DSHM image]', error?.name ?? 'Error'); }
+  componentDidCatch(error) { diagnostics.record('remote', 'image_render_failed', { level: 'ERROR', code: 'render_failed', error }); }
   componentDidUpdate(previous) {
     if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false, failedUrl: undefined });
   }

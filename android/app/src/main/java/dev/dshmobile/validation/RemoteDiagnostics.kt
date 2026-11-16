@@ -14,8 +14,9 @@ import java.util.concurrent.CopyOnWriteArraySet
 import javax.net.ssl.SSLException
 
 /** Local structural diagnostics only. Exception messages, response bodies, addresses and identities never enter this store. */
-internal class RemoteDiagnostics(private val preferences: SharedPreferences, private val now: () -> Long = System::currentTimeMillis) {
-    constructor(context: Context) : this(context.getSharedPreferences("dshm.remote.diagnostics.v1", Context.MODE_PRIVATE))
+internal class RemoteDiagnostics(private val preferences: SharedPreferences, private val appLog: AppDiagnostics? = null,
+    private val now: () -> Long = System::currentTimeMillis) {
+    constructor(context: Context, appLog: AppDiagnostics? = null) : this(context.getSharedPreferences("dshm.remote.diagnostics.v1", Context.MODE_PRIVATE), appLog = appLog)
     private val listeners = CopyOnWriteArraySet<() -> Unit>()
     private val entries = mutableListOf<JSONObject>()
     init {
@@ -29,6 +30,7 @@ internal class RemoteDiagnostics(private val preferences: SharedPreferences, pri
     @Synchronized fun read() = JSONObject().put("records", JSONArray(entries.map { JSONObject(it.toString()) }))
     @Synchronized fun clear() { entries.clear(); save() }
     @Synchronized fun recovered(source: String = "remote") {
+        if (appLog?.enabled == false) return
         var changed = false
         for (entry in entries) if (entry.optString("source") == source && !entry.has("resolvedAt")) {
             entry.put("resolvedAt", now()); changed = true
@@ -46,16 +48,19 @@ internal class RemoteDiagnostics(private val preferences: SharedPreferences, pri
             else -> "remote_closed"
         }
         val stamp = now()
-        entries.firstOrNull()?.let { previous ->
+        val capture = appLog?.enabled != false
+        if (capture) entries.firstOrNull()?.let { previous ->
             if (!previous.has("resolvedAt") && previous.optString("source") == source && previous.optString("phase") == safePhase
                 && previous.optString("code") == safeCode && stamp - previous.optLong("at") in 0..1500)
                 return JSONObject(previous.toString())
         }
         val record = JSONObject().put("id", UUID.randomUUID().toString()).put("at", stamp)
             .put("phase", safePhase).put("code", safeCode).put("source", if (source == "notifications") source else "remote")
+        if (error != null || javascriptFrames.isEmpty()) appLog?.native("remote", "connection_$safePhase", "remote", if (error == null) "WARN" else "ERROR", safeCode, error)
         if (httpStatus != null && httpStatus in 100..599) record.put("httpStatus", httpStatus)
         if (closeCode != null && closeCode in 1000..4999) record.put("closeCode", closeCode)
         if (reason in REASONS) record.put("closeReason", reason)
+        if (!capture) return record.put("exceptions", JSONArray())
         val exceptions = if (error != null) trace(error) else JSONArray().apply {
             val frames = javascriptFrames.filter { JS_FRAME.matches(it) }.take(18)
             if (frames.isNotEmpty()) put(JSONObject().put("type", "JavaScriptError").put("frames", JSONArray(frames)))

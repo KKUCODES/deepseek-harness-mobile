@@ -1,3 +1,5 @@
+import { diagnostics } from './app-diagnostics.mjs';
+
 const emptySelection = () => ({ selected: null, selectedTarget: null, selectionTrail: [], selectionRevision: 0,
   session: null, conversation: null, model: null, permission: null, agentPreset: null,
   schedules: null, plan: null, inbox: null, cachedHistory: null, cachedReadingResume: null, restoringHistory: false, selectionError: null, error: null });
@@ -65,7 +67,15 @@ export class RemoteSessionView {
       && model.connection.generation.getSnapshot() === generation
       && model.getSnapshot().connectionState === 'connected';
   }
-  async select(target, { trail = [] } = {}) {
+  async select(target, options) {
+    if (!target) return this.selectTarget(target, options);
+    const finish = diagnostics.span('remote', 'session_open');
+    try {
+      const result = await this.selectTarget(target, options);
+      finish(result ? 'done' : 'cancelled');
+    } catch (error) { finish('failed', { code: 'history_read_failed', error }); throw error; }
+  }
+  async selectTarget(target, { trail = [] } = {}) {
     this.lifetime.signal.throwIfAborted();
     const { model } = this, { sessions } = model;
     const checkConnection = () => {
@@ -134,6 +144,7 @@ export class RemoteSessionView {
       }
     };
     this.releases.push(binding.eventSource.subscribe(reconcile), binding.session.projections.faceOf('inbox').subscribe(reconcile));
+    if (this.source === 'mainView') this.releases.push(observeTurnDiagnostics(binding.eventSource, model.diagnosticSubmissions));
     reconcile();
     const conversation = model.conversations.binding(binding).target('chat');
     // 重新使用原 Session 的连续历史；读到过较早位置时先让该锚点重新进入官方窗口。
@@ -174,6 +185,7 @@ export class RemoteSessionView {
     const reading = this.snapshot.cachedHistory ? this.readingAnchor : null;
     this.publish({ cachedHistory: null, cachedReadingResume: reading ?? null, ...read() });
     if (generation === this.selection && !this.lifetime.signal.aborted) this.callbacks.onReady?.(id, binding);
+    return true;
   }
   dispose() {
     if (this.lifetime.signal.aborted) return;
@@ -181,4 +193,39 @@ export class RemoteSessionView {
     this.release(); this.lifetime.abort(); this.listeners.clear();
     this.model.lifetime.signal.removeEventListener('abort', this.parentAbort);
   }
+}
+
+function observeTurnDiagnostics(source, submissions) {
+  let revision = source.getSnapshot().revision;
+  let active = null;
+  return source.subscribe(() => {
+    const snapshot = source.getSnapshot();
+    if (snapshot.revision === revision) return;
+    revision = snapshot.revision;
+    if (snapshot.change?.kind !== 'append') return;
+    for (const item of snapshot.change.entries ?? []) {
+      if (item.type !== 'event') continue;
+      const { type, data } = item.event;
+      if (type === 'turn/start') {
+        active = globalThis.__dshmDiagnostics?.enabled === false ? null : { trace: crypto.randomUUID(), started: performance.now() };
+        if (active) diagnostics.record('remote', 'remote_turn_started', { trace: active.trace });
+      } else if (type === 'user/message' && data.source?.kind === 'user') {
+        const trace = submissions?.get(data.source.rpcId);
+        if (trace) {
+          submissions.delete(data.source.rpcId);
+          active = { trace, started: active?.started ?? performance.now() };
+          diagnostics.record('remote', 'remote_turn_input_received', { trace });
+        }
+      } else if (type === 'turn/end') {
+        const reason = data.reason;
+        const failed = reason?.kind === 'error' || reason?.kind === 'blocked';
+        const level = failed ? 'ERROR' : ['aborted', 'cancelled'].includes(reason?.kind) ? 'WARN' : 'INFO';
+        diagnostics.record('remote', failed ? 'remote_turn_failed' : 'remote_turn_done', {
+          level, trace: active?.trace, duration: active ? Math.round(performance.now() - active.started) : undefined,
+          code: failed ? reason.error?.code ?? 'model_error' : undefined,
+        });
+        active = null;
+      }
+    }
+  });
 }

@@ -29,6 +29,7 @@ import { RemoteConnectionPage } from './ui/RemoteConnectionPage.jsx';
 import { DesignButton, DesignDialog } from './ui/system/Primitives.jsx';
 import { LoadingToast } from './ui/system/LoadingToast.jsx';
 import { RemoteDiagnostics } from './remote-diagnostics.mjs';
+import { remoteLiveLog } from './remote-live-log.mjs';
 import { RemoteDiagnosticsContext, RemoteDiagnosticSheet } from './ui/RemoteDiagnostics.jsx';
 
 const scanFailures = { scan_unavailable: '暂时无法打开扫码，请粘贴配对链接。', scan_busy: '扫码窗口已打开，请先完成或返回。', scan_timeout: '扫码已超时，请重新尝试。', scan_camera_permission: '未获得相机权限，可从图片识别或粘贴配对链接。', scan_image_invalid: '无法读取这张图片，请选择其他图片。', scan_image_too_large: '图片过大，请裁剪二维码后重试。', scan_qr_not_found: '未识别到二维码，请使用清晰的二维码图片。' };
@@ -77,11 +78,20 @@ function RemoteConnection({ client, language, appearanceReady, interfaceUI }) {
   const [diagnosticStore] = useState(() => new RemoteDiagnostics(client));
   const diagnosticRecords = useSyncExternalStore(diagnosticStore.subscribe, diagnosticStore.getSnapshot);
   const [diagnosticSelection, setDiagnosticSelection] = useState(null);
+  useEffect(() => { if (stage === 'connecting') remoteLiveLog.record('connection_start'); }, [stage]);
+  useEffect(() => {
+    const picker = ({ detail }) => {
+      if (typeof detail?.event === 'string' && detail.event.startsWith('picker_')) remoteLiveLog.record(detail.event, detail.count);
+    };
+    window.addEventListener('dshm-picker-log', picker);
+    return () => window.removeEventListener('dshm-picker-log', picker);
+  }, []);
   useEffect(() => {
     if (!model) return;
     let connected = false;
     const observe = () => {
       const next = model.getSnapshot().connectionState === 'connected';
+      if (next !== connected) remoteLiveLog.record(next ? 'connection_ready' : 'connection_closed');
       if (next && !connected) void diagnosticStore.recovered();
       connected = next;
     };

@@ -314,7 +314,7 @@ Key状态：[原事件失效、读取顺序和真实手机验证](../integration
 
 收尾入口：[完整编号与具体缺口](../integration/completion-audit.md)。区分功能缺失、实际验证不足、环境限制和范围待定；不以旧技术验证页代替正式入口。
 
-问题诊断：[正式双模式入口与字段范围](../integration/diagnostics-current.md)。新版 APK 在 MuMu 通过普通/在线/断开三入口、复制刷新及返回恢复；报告不含聊天或凭据，完整 A06 继续。
+问题诊断：[实时日志、调用栈与发布符号还原](../integration/diagnostics-current.md)。同一日志库覆盖普通聊天、Remote、启动、插件和更新，保留原有环境快照。Android 主进程异常和 WebView 异常使用结构化栈。
 
 窗口叠层交互：[被遮挡窗口的焦点与恢复](../integration/appearance-current.md#插件窗口叠层交互2026-09-27)。浏览器复现后修复，新版 APK 在 MuMu 验证旁栏保护、返回恢复与草稿保持；不代表完整读屏验收。
 

@@ -29,10 +29,23 @@ internal class WebUpdates(private val context: Context, private val httpFactory:
     @Volatile private var generation = 0L
     private var network: AppUpdateHttp? = null
     private val busy get() = phase in setOf("checking", "downloading", "verifying")
-    init { store.beginProcess() }
+    private val diagnostics get() = (context.applicationContext as? DshmApplication)?.diagnosticsOrNull()
+    init {
+        store.beginProcess()
+        val snapshot = store.snapshot()
+        val revision = snapshot.optInt("currentRevision")
+        diagnostics?.native("update", "resource_active", count = revision)
+        if (snapshot.optString("notice") == "web_rolled_back")
+            diagnostics?.native("update", "resource_rollback", level = "WARN", code = "web_rolled_back")
+    }
     fun observe(listener: () -> Unit): () -> Unit { listeners.add(listener); return { listeners.remove(listener) } }
     private fun publish() { main.post { listeners.forEach { it() } } }
-    @Synchronized private fun state(value: String, failure: String? = null) { phase = value; error = failure; publish() }
+    @Synchronized private fun state(value: String, failure: String? = null, cause: Throwable? = null) {
+        phase = value; error = failure; publish()
+        diagnostics?.native("update", "web_update_$value",
+            level = if (cause != null || value == "error") "ERROR" else if (failure != null || value == "cancelled") "WARN" else "INFO",
+            code = failure, error = cause, synchronous = value == "restarting")
+    }
     @Synchronized private fun finish(owner: Long, action: () -> Unit) { if (owner == generation) action() }
     @Synchronized fun snapshot(): JSONObject = store.snapshot().put("phase", phase).put("error", error ?: JSONObject.NULL).put("received", received).put("restartSupported", true)
         .put("release", candidate?.let { JSONObject().put("revision", it.revision).put("notes", it.notes).put("bytes", it.archive.bytes) } ?: JSONObject.NULL)
@@ -66,7 +79,7 @@ internal class WebUpdates(private val context: Context, private val httpFactory:
                 }
             } catch (failure: Exception) { finish(owner) {
                 if (failure.message == "web_resource_superseded") { candidate = null; state("current") }
-                else state("error", failureCode(failure))
+                else state("error", failureCode(failure), failure)
             } }
             finally { finish(owner) { network = null } }
         }
@@ -87,7 +100,7 @@ internal class WebUpdates(private val context: Context, private val httpFactory:
                 finish(owner) { state("verifying") }
                 store.stage(manifest, temporary) { generation != owner }
                 finish(owner) { state("staged") }
-            } catch (failure: Exception) { finish(owner) { state("error", failureCode(failure)) } }
+            } catch (failure: Exception) { finish(owner) { state("error", failureCode(failure), failure) } }
             finally { temporary.delete(); finish(owner) { network = null } }
         }
     }
@@ -99,7 +112,7 @@ internal class WebUpdates(private val context: Context, private val httpFactory:
         AppUpdateBridge.prepareAll { failure ->
             if (failure != null) state("staged", failure)
             else try { state("restarting"); UpdateRestartActivity.launch(activity) }
-            catch (_: Exception) { state("staged", "web_restart_unavailable") }
+            catch (cause: Exception) { state("staged", "web_restart_unavailable", cause) }
         }
     }
     fun started(page: String) = store.started(page)
@@ -114,7 +127,7 @@ internal class WebUpdates(private val context: Context, private val httpFactory:
                 val applyRecovery = { failure: String? ->
                     if (failure != null) state("staged", failure)
                     else try { store.recoverBundled(); state("restarting"); UpdateRestartActivity.launch(activity) }
-                    catch (_: Exception) { state("staged", "web_restart_unavailable") }
+                    catch (cause: Exception) { state("staged", "web_restart_unavailable", cause) }
                 }
                 // 页面损坏时原生恢复必须独立可用，不能等待已无法运行的JS确认。
                 if (preparePages) AppUpdateBridge.prepareAll(applyRecovery) else applyRecovery(null)

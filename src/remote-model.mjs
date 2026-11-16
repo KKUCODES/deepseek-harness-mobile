@@ -1,6 +1,8 @@
 import { Context } from '@deepseek-ai/cordis';
 import { RemoteError } from '../../deepseek-harness/packages/typert/protocol/src/index.ts';
 import { RemoteSessions } from './remote-sessions.mjs';
+import { remoteLiveLog } from './remote-live-log.mjs';
+import { diagnostics } from './app-diagnostics.mjs';
 import { remoteSessionCatalogs } from './remote-session-catalogs.mjs';
 import { createSessionControlStream } from '../../deepseek-harness/packages/api/session-controller/src/client/transport.ts';
 import { ClientWorkspaceModel, createWorkspaceStateStream } from '../../deepseek-harness/packages/api/workspace-controller/src/client/index.ts';
@@ -38,6 +40,7 @@ import { RemoteRecentChats } from './remote-recent-chat.mjs';
 
 /** 只组装数据和会话投影；不启动 bootClient，不挂载电脑页面。 */
 export class RemoteModel {
+  diagnosticSubmissions = new Map();
   listeners = new Set();
   viewNotifications = new RemoteViewNotifications(() => this.lifetime.signal.aborted);
   snapshot = { ready: false, error: null, selected: null, conversation: null, session: null, catalog: null, events: [], drafts: {}, draftEditors: {}, draftErrors: {}, draftSaving: {}, attachments: {} };
@@ -392,8 +395,11 @@ export class RemoteModel {
         ? { ...item, source, ...(mediaType ? { kind: 'image', mediaType } : {}) } : item));
       await this.prepareAttachment(id, sessionId, controller);
     } catch (error) {
-      if (!controller.signal.aborted) await this.changeAttachments(sessionId, items => items.map(item => item.id === id
-        ? { ...item, state: 'error', error: error.message } : item));
+      if (!controller.signal.aborted) {
+        remoteLiveLog.record('files_failed', 1, error);
+        await this.changeAttachments(sessionId, items => items.map(item => item.id === id
+          ? { ...item, state: 'error', error: error.message } : item));
+      }
     } finally { if (this.uploads.get(id) === controller) this.uploads.delete(id); }
   }
   async prepareAttachment(id, sessionId = this.snapshot.selected, controller = new AbortController()) {
@@ -425,7 +431,14 @@ export class RemoteModel {
     } catch (error) {
       if (!controller.signal.aborted) await this.changeAttachments(sessionId, items => items.map(item => item.id === id
         ? { ...item, state: 'error', error: error.message } : item));
-    } finally { if (this.uploads.get(id) === controller) this.uploads.delete(id); }
+    } finally {
+      if (!controller.signal.aborted && this.uploads.get(id) === controller) {
+        const state = this.snapshot.attachments[sessionId]?.find(item => item.id === id)?.state;
+        if (state === 'ready') remoteLiveLog.record('files_ready', 1);
+        if (state === 'error') remoteLiveLog.record('files_failed', 1);
+      }
+      if (this.uploads.get(id) === controller) this.uploads.delete(id);
+    }
   }
   removeAttachment(id, sessionId = this.snapshot.selected) {
     if (this.sending.has(sessionId) || this.draftTransfers.has(sessionId)) return;
@@ -466,6 +479,7 @@ export class RemoteModel {
     if (!access.canSend) throw new Error(access.message);
     if (access.address && attachments.some(item => item.kind !== 'image')) throw new Error('子会话不支持发送文件附件。');
     const session = reference.binding.session;
+    const finish = diagnostics.span('remote', 'remote_send');
     // 不自动重放失败或未知结果；等待原始 requestId 在电脑事件中确认。
     this.sending.add(id);
     this.sendingAttachmentIds.set(id, attachments.map(item => item.id));
@@ -491,6 +505,10 @@ export class RemoteModel {
           checkInput();
         }
         dispatched = true;
+        if (finish.trace) {
+          if (this.diagnosticSubmissions.size >= 100) this.diagnosticSubmissions.delete(this.diagnosticSubmissions.keys().next().value);
+          this.diagnosticSubmissions.set(submission.requestId, finish.trace);
+        }
         // 基线上游 Session.prompt 的子会话分支会重新生成 requestId，导致本地回显无法退休。
         // 调用同一原生成接口并保留 beginSubmission 的 id，电脑记录仍是唯一事实来源。
         result = access.address ? await this.remote.subagents.prompt({
@@ -510,10 +528,14 @@ export class RemoteModel {
         submission.abandon(); await this.draftStore?.forgetSubmission?.(id, submission.requestId); await this.saveAttachmentDrafts(id);
       }
       unwrap(result);
+      finish('done', { count: attachments.length });
       await this.reconcileSubmission(id, reference.binding, submission.requestId);
       // 原 shell 自己提交/恢复编辑器；它的持久化草稿可能是引用的展示形式。
       if (!input && this.snapshot.drafts[id] === text) await this.writeDraft(id, '');
       await this.changeAttachments(id, items => items.filter(item => !attachments.includes(item)));
+    } catch (error) {
+      finish(signal.aborted && !dispatched ? 'cancelled' : 'failed', { code: error?.code ?? (dispatched ? 'send_unconfirmed' : 'send_rejected'), error });
+      throw error;
     } finally { this.sending.delete(id); this.sendingAttachmentIds.delete(id); if (!dispatched && attachments.length) await this.saveAttachmentDrafts(id); }
   }
   async create(workspaceId, view = this) {

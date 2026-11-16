@@ -1,3 +1,5 @@
+import { diagnostics } from './app-diagnostics.mjs';
+
 export function historyGroups(conversation) {
   const groups = [];
   for (const key of conversation?.order ?? []) {
@@ -20,16 +22,22 @@ export async function loadRemoteHistory(binding, { isCurrent = () => true } = {}
   const { session, eventSource } = binding;
   const state = session.getSnapshot();
   if (!isCurrent() || state.openState !== 'open' || !state.hasMore || state.loadingOlder) return;
-  let received = false, replaced = false;
+  const finish = diagnostics.span('remote', 'history_page');
+  let received = false, replaced = false, count;
   // 原 loadOlder 会消化读取错误；只认可分页发布，实时追加不代表分页成功。
   const off = eventSource.subscribe(() => {
-    const kind = eventSource.getSnapshot().change.kind;
-    if (kind === 'prepend') received = true;
+    const change = eventSource.getSnapshot().change;
+    const kind = change.kind;
+    if (kind === 'prepend') { received = true; count = change.entries?.length; }
     if (kind === 'replace') replaced = true;
   });
   try {
     await session.loadOlder();
     // 重连会替换窗口；当前请求已失效，由新连接状态接管提示。
     if (isCurrent() && !replaced && !received) throw new Error('未能加载更早的记录，请重试。');
+    finish(isCurrent() && !replaced ? 'done' : 'cancelled', { count });
+  } catch (error) {
+    finish('failed', { code: 'history_read_failed', error });
+    throw error;
   } finally { off(); }
 }

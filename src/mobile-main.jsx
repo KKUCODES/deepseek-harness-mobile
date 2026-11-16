@@ -7,6 +7,7 @@ import '@upstream/ui-theme/src/styles/corner-shape.css';
 import './ui/mobile.css';
 import './ui/ordinary-product.css';
 
-await startHost(props => <LocalizedApp host={props.host}><OrdinaryApp {...props}/></LocalizedApp>);
+await startHost(props => <LocalizedApp host={props.host}><RemoteErrorBoundary logDomain="ordinary" onRecover={() => location.reload()}><OrdinaryApp {...props}/></RemoteErrorBoundary></LocalizedApp>);
 import React from 'react';
 import { LocalizedApp } from './ui/locale.jsx';
+import { RemoteErrorBoundary } from './ui/RemoteRecovery.jsx';

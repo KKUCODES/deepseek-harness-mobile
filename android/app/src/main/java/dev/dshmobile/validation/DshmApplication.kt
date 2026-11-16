@@ -24,6 +24,9 @@ open class DshmApplication : Application(), Application.ActivityLifecycleCallbac
         private set
     internal lateinit var remoteDiagnostics: RemoteDiagnostics
         private set
+    internal lateinit var appDiagnostics: AppDiagnostics
+        private set
+    internal fun diagnosticsOrNull() = if (::appDiagnostics.isInitialized) appDiagnostics else null
     internal lateinit var mobilePlugins: MobilePluginPreferences
         private set
     internal lateinit var phonePlugins: PhonePluginStore
@@ -43,20 +46,25 @@ open class DshmApplication : Application(), Application.ActivityLifecycleCallbac
         super.onCreate()
         // 重启接力进程不初始化资源存储，防止它提前激活pending或与主进程写入竞争。
         if (getProcessName() == "$packageName:updateRestart") return
+        appDiagnostics = AppDiagnostics(this)
+        appDiagnostics.installCrashHandler()
+        appDiagnostics.native("startup", "process_started")
         webUpdates = createWebUpdates()
         updates = createAppUpdates()
         appearance = PhoneAppearance(this)
         mobilePlugins = MobilePluginPreferences(getSharedPreferences("dshm.mobile-plugins.v1", MODE_PRIVATE))
         phonePluginPackages = PhonePluginPackages(File(noBackupFilesDir, "phone-plugins-v1"))
         val preinstalled = runCatching { PhonePreinstalledPlugins(assets) }.getOrElse {
+            appDiagnostics.native("plugin", "preinstalled_catalog_failed", level = "ERROR", error = it)
             android.util.Log.w("DSHMPlugins", "Preinstalled catalog unavailable"); PhonePreinstalledPlugins(emptyList())
         }
         phonePlugins = PhonePluginStore(getSharedPreferences("dshm.phone-plugins.v2", MODE_PRIVATE), getSharedPreferences("dshm.mobile-plugins.v1", MODE_PRIVATE), phonePluginPackages, preinstalled)
-        runCatching { phonePlugins.initializePreinstalled() }.onFailure { android.util.Log.w("DSHMPlugins", "Preinstalled initialization incomplete") }
+        runCatching { phonePlugins.initializePreinstalled() }.onSuccess { appDiagnostics.native("plugin", "preinstalled_ready") }
+            .onFailure { appDiagnostics.native("plugin", "preinstalled_failed", level = "ERROR", error = it) }
         saveJournal = RemoteSaveJournal(File(noBackupFilesDir, "remote-save-writes"))
         saveRecovery = RemoteSaveRecovery(saveJournal, appearance)
         notices = RemoteNotifications(this, appearance)
-        remoteDiagnostics = RemoteDiagnostics(this)
+        remoteDiagnostics = RemoteDiagnostics(this, appDiagnostics)
         noticeConnection = RemoteNoticeConnection(this, notices)
         registerActivityLifecycleCallbacks(this)
         noticeConnection.start()

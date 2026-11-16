@@ -94,6 +94,12 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           path: dsh-mobile/artifacts/ci/packages/*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dshm-web-symbols
+          retention-days: 30
+          if-no-files-found: error
+          path: dsh-mobile/artifacts/ci/web-symbols/DSHM-Web-Symbols-*.zip
 
   sign:
     needs: build
@@ -189,6 +195,10 @@ jobs:
         with:
           name: dshm-signed-apk
           path: signed
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dshm-web-symbols
+          path: symbols
       - name: Publish signed development preview
         env:
           GH_TOKEN: ${{ github.token }}
@@ -202,4 +212,4 @@ jobs:
           fi
           gh api "repos/$GH_REPO/contents/ci/release-notes/$APP_VERSION.md?ref=$GITHUB_SHA" --header 'Accept: application/vnd.github.raw+json' > "$RUNNER_TEMP/release-notes.md"
           test -s "$RUNNER_TEMP/release-notes.md"
-          gh release create "$tag" "signed/DSHM-$APP_VERSION.apk" signed/SHA256SUMS.txt signed/compatibility.json signed/signature.txt --target "$GITHUB_SHA" --prerelease --title "DSHM $APP_VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
+          gh release create "$tag" "signed/DSHM-$APP_VERSION.apk" signed/SHA256SUMS.txt signed/compatibility.json signed/signature.txt symbols/DSHM-Web-Symbols-*.zip --target "$GITHUB_SHA" --prerelease --title "DSHM $APP_VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"

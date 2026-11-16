@@ -20,6 +20,8 @@ class ValidationActivity : Activity() {
     private lateinit var ordinary: OrdinaryBridge
     private lateinit var updates: AppUpdateBridge
     private lateinit var mobilePlugins: MobilePluginBridge
+    private lateinit var diagnostics: AppDiagnosticsBridge
+    private val log get() = (application as DshmApplication).appDiagnostics
     private var pendingAppearance = false
     private var startup: StartupScreen? = null
     private val rendererRecovery by lazy { RendererRecovery(this) }
@@ -43,8 +45,11 @@ class ValidationActivity : Activity() {
             // 网页仍只能加载本地资源；模型联网由原生受限请求桥负责。
             webViewClient = object : WebViewClient() {
                 override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    log.native("startup", "renderer_gone", "ordinary", if (detail.didCrash()) "ERROR" else "WARN",
+                        if (detail.didCrash()) "renderer_crashed" else "renderer_reclaimed", synchronous = true)
                     android.util.Log.w("DSHMRenderer", if (detail.didCrash()) "Chat renderer crashed" else "Chat renderer reclaimed")
                     rendererGone = true
+                    if (::diagnostics.isInitialized) diagnostics.close()
                     if (::ordinary.isInitialized) ordinary.close()
                     if (::updates.isInitialized) updates.close()
                     if (::mobilePlugins.isInitialized) mobilePlugins.close()
@@ -60,10 +65,10 @@ class ValidationActivity : Activity() {
                     if (::ordinary.isInitialized) ordinary.pageLeaving()
                 }
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
-                    if (request.isForMainFrame) startup?.fail()
+                    if (request.isForMainFrame) { log.native("startup", "page_load_failed", "ordinary", "ERROR", "webview_load_failed"); startup?.fail() }
                 }
                 override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
-                    if (request.isForMainFrame) startup?.fail()
+                    if (request.isForMainFrame) { log.native("startup", "page_load_failed", "ordinary", "ERROR", "http_${response.statusCode}"); startup?.fail() }
                 }
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     val uri = request.url
@@ -85,6 +90,7 @@ class ValidationActivity : Activity() {
         }
         ordinary = OrdinaryBridge(this, webView)
         ordinary.install()
+        diagnostics = AppDiagnosticsBridge(this, log, webView, StartupScreen.Page.ORDINARY).also { it.install() }
         updates = AppUpdateBridge(this, webView, OrdinaryBridge.ORIGIN, "mobile.html").also { it.install() }
         mobilePlugins = MobilePluginBridge(this, webView, OrdinaryBridge.ORIGIN, "mobile.html").also { it.install() }
         if (!MobileWebWindow.install(this, webView)) setContentView(webView)
@@ -119,6 +125,7 @@ class ValidationActivity : Activity() {
         startup?.close()
         stopWindowAppearance?.invoke()
         mobilePlugins.close()
+        diagnostics.close()
         if (!rendererGone) { ordinary.close(); updates.close(); webView.destroy() }
         super.onDestroy()
     }

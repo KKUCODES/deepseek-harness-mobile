@@ -14,6 +14,7 @@ try {
   await ordinary.getByRole('button', { name: '设置', exact: true }).click();
   async function inspect(page, mode, expectedStage) {
     const dialog = page.getByRole('dialog', { name: '问题诊断', exact: true });
+    await dialog.getByText('环境信息', { exact: true }).click();
     const text = dialog.getByTestId('support-diagnostics'); await text.waitFor();
     const value = JSON.parse(await text.innerText());
     assert.equal(value.mode, mode); assert.equal(value.app.version, '0.1.0-ordinary');

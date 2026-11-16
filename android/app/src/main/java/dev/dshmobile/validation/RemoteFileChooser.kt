@@ -15,6 +15,7 @@ class RemoteFileChooser(
     private val onSelectionExpired: () -> Unit = {
         Toast.makeText(activity, R.string.remote_file_selection_expired, Toast.LENGTH_LONG).show()
     },
+    private val log: (String, Int?) -> Unit = { _, _ -> },
 ) {
     private class Selection(val owner: Int, var callback: ValueCallback<Array<Uri>>?)
     private var pending: Selection? = null
@@ -23,6 +24,7 @@ class RemoteFileChooser(
         val current = generation()
         if (pending != null || current == null || params.mode !in setOf(WebChromeClient.FileChooserParams.MODE_OPEN,
                 WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE)) {
+            log("picker_rejected", null)
             callback.onReceiveValue(null)
             return true
         }
@@ -36,7 +38,11 @@ class RemoteFileChooser(
         }
         pending = Selection(current, callback)
         try { launch(intent, REQUEST) }
-        catch (_: Exception) { pending = null; callback.onReceiveValue(null) }
+        catch (_: Exception) {
+            pending = null; callback.onReceiveValue(null); log("picker_failed", null)
+            return true
+        }
+        log("picker_open", null)
         return true
     }
 
@@ -50,6 +56,11 @@ class RemoteFileChooser(
         val safe = !expired && !selected.isNullOrEmpty() && selected.all {
             it.scheme == "content" && !it.authority.orEmpty().startsWith(activity.packageName)
         }
+        if (resultCode == Activity.RESULT_OK) {
+            data?.clipData?.let { log("picker_clipdata", it.itemCount) }
+            log("picker_returned", selected?.size ?: 0)
+            if (!safe) log(if (expired && !selected.isNullOrEmpty()) "picker_expired" else "picker_rejected", selected?.size)
+        } else if (resultCode == Activity.RESULT_CANCELED) log("picker_canceled", null)
         // 切页、断线或重新绑定后，旧选择结果不能进入另一代电脑连接。
         callback?.onReceiveValue(if (safe) selected?.toTypedArray() else null)
         if (expired && !selected.isNullOrEmpty()) onSelectionExpired()

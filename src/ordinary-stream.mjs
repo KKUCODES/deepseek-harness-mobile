@@ -92,7 +92,7 @@ export class OrdinaryTurn {
 
   dispose() { this.stop(); this.#disposed = true; this.#listeners.clear(); }
 
-  async run(openResponse) {
+  async run(openResponse, onFailure) {
     if (this.#disposed || this.#state.status !== 'idle') throw new Error('turn_already_used');
     this.#publish({ status: 'sending' });
     const signal = this.#abort.signal;
@@ -126,6 +126,7 @@ export class OrdinaryTurn {
       }
     } catch (error) {
       if (active(this.#state.status)) {
+        onFailure?.(error);
         const code = error instanceof StreamFailure ? error.code : signal.aborted ? 'stopped' : 'transport_failed';
         this.#publish({ status: ['stream_closed', 'transport_failed', 'stopped'].includes(code) ? 'interrupted' : 'failed', error: code });
       }

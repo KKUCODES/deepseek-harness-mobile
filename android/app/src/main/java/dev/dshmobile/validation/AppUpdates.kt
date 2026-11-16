@@ -51,7 +51,12 @@ internal class AppUpdates(private val context: Context, private val httpFactory:
         .put("release", candidate?.json() ?: JSONObject.NULL)
     fun observe(listener: () -> Unit): () -> Unit { listeners.add(listener); return { listeners.remove(listener) } }
     private fun publish() { revision++; main.post { for (listener in listeners) listener() } }
-    @Synchronized private fun state(value: String, failure: String? = null) { phase = value; error = failure; publish() }
+    @Synchronized private fun state(value: String, failure: String? = null, cause: Throwable? = null) {
+        phase = value; error = failure; publish()
+        (context.applicationContext as? DshmApplication)?.diagnosticsOrNull()?.native("update", "apk_update_$value",
+            level = if (cause != null || value == "error") "ERROR" else if (failure != null || value == "cancelled") "WARN" else "INFO",
+            code = failure, error = cause)
+    }
     @Synchronized private fun finish(owner: Long, action: () -> Unit) { if (owner == generation) action() }
     private fun save(file: AtomicFile, bytes: ByteArray) {
         val stream = file.startWrite()
@@ -89,7 +94,7 @@ internal class AppUpdates(private val context: Context, private val httpFactory:
                     candidate = found; received = 0
                     state(if (found == null || found.code <= BuildConfig.VERSION_CODE) "current" else "available")
                 }
-            } catch (failure: Exception) { finish(owner) { state("error", failureCode(failure)) } }
+            } catch (failure: Exception) { finish(owner) { state("error", failureCode(failure), failure) } }
             finally { finish(owner) { network = null } }
         }
     }
@@ -118,7 +123,7 @@ internal class AppUpdates(private val context: Context, private val httpFactory:
                     save(record, release.json().toString().toByteArray())
                     state("ready")
                 }
-            } catch (failure: Exception) { finish(owner) { state("error", failureCode(failure)) } }
+            } catch (failure: Exception) { finish(owner) { state("error", failureCode(failure), failure) } }
             finally { temporary.delete(); finish(owner) { network = null } }
         }
     }
@@ -136,7 +141,7 @@ internal class AppUpdates(private val context: Context, private val httpFactory:
             try {
                 state("permission")
                 activity.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")))
-            } catch (_: Exception) { state("ready", "update_installer_unavailable") }
+            } catch (failure: Exception) { state("ready", "update_installer_unavailable", failure) }
             return
         }
         val owner = ++generation; state("verifying")
@@ -151,9 +156,9 @@ internal class AppUpdates(private val context: Context, private val httpFactory:
                         val intent = Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive")
                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION).apply { clipData = ClipData.newRawUri("DSHM update", uri) }
                         state("installing"); activity.startActivity(intent)
-                    } catch (_: Exception) { state("ready", "update_installer_unavailable") }
+                    } catch (failure: Exception) { state("ready", "update_installer_unavailable", failure) }
                 } }
-            } catch (failure: Exception) { finish(owner) { apk.delete(); record.delete(); state("error", failureCode(failure)) } }
+            } catch (failure: Exception) { finish(owner) { apk.delete(); record.delete(); state("error", failureCode(failure), failure) } }
         }
     }
     @Synchronized fun resumed() {

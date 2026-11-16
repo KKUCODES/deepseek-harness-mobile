@@ -7,6 +7,7 @@
   const fail = () => {
     if (state !== 'loading') return;
     state = 'failed';
+    window.__dshmDiagnostics?.record('startup', 'startup_failed', { level: 'ERROR' });
     clearTimeout(timeout);
     cancelAnimationFrame(frame);
     const show = () => {
@@ -35,6 +36,7 @@
         frame = requestAnimationFrame(() => {
           if (state !== 'loading') return;
           state = 'ready';
+          window.__dshmDiagnostics?.record('startup', 'first_paint');
           clearTimeout(timeout);
           window.removeEventListener('error', fail, true);
           window.removeEventListener('unhandledrejection', fail);

@@ -14,6 +14,8 @@ import { RemoteHistoryList } from './RemoteHistoryList.jsx';
 import { RemoteChatFrame } from './RemoteChatFrame.jsx';
 import { useRemoteScrollFollow } from '../use-remote-scroll-follow.mjs';
 import { RemoteDiagnosticEntry } from './RemoteDiagnostics.jsx';
+import { RemoteLiveLog } from './RemoteLiveLog.jsx';
+import { remoteLiveLog } from '../remote-live-log.mjs';
 import { DefaultRemoteHome } from './DefaultRemoteHome.jsx';
 import { RemoteQueue } from './RemoteQueue.jsx';
 import { RemoteFilePreview } from './RemoteFilePreview.jsx';
@@ -137,7 +139,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const childAccess = subagentAccess(state);
   const modelReadOnly = !!childAccess.address;
   const modelSheetTitle = modelReadOnly ? '当前模型' : '选择模型';
-  const sheetTitle = { desktopApps: '在电脑应用中打开', new: '选择工作区', models: modelSheetTitle, menu: 'Remote 选项', attachments: '附件', rename: '重命名聊天', plugins: '电脑插件', pluginSettings: '插件设置', workspaces: '管理工作区', references: '引用文件或聊天', skills: '选择技能', permissions: '会话权限', agentPresets: 'Agent 模式', plan: '计划模式', goal: '当前目标', jobs: '后台任务', schedules: '定时任务', subagents: '子会话', export: '导出会话日志' }[sheet];
+  const sheetTitle = { desktopApps: '在电脑应用中打开', new: '选择工作区', models: modelSheetTitle, menu: 'Remote 选项', attachments: '附件', rename: '重命名聊天', plugins: '电脑插件', pluginSettings: '插件设置', workspaces: '管理工作区', references: '引用文件或聊天', skills: '选择技能', permissions: '会话权限', agentPresets: 'Agent 模式', plan: '计划模式', goal: '当前目标', jobs: '后台任务', schedules: '定时任务', subagents: '子会话', export: '导出会话日志', liveLog: '实时日志' }[sheet];
   const attachments = state.attachments[selected] ?? [];
   const attachmentsPending = attachments.some(item => item.state !== 'ready');
   const canStop = childAccess.canStop && state.session?.running && !(state.drafts[selected] ?? '').trim() && !attachments.length;
@@ -147,7 +149,13 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     const image = event.target === imagePicker.current;
     event.target.value = ''; setSheet(null);
     // 选择器打开后仍绑定原会话，切换页面不会把文件发给另一个会话。
-    if (sessionId) void act(() => Promise.all(files.map(file => model.upload(file, sessionId, { image }))));
+    if (!files.length) return;
+    remoteLiveLog.record('files_received', files.length);
+    if (!sessionId || busy) { remoteLiveLog.record('files_skipped', files.length); return; }
+    void act(() => Promise.all(files.map(async file => {
+      try { await model.upload(file, sessionId, { image }); }
+      catch (error) { remoteLiveLog.record('files_failed', 1); throw error; }
+    })));
   };
   const selection = state.model ? state.model.next ?? state.catalog?.default : null;
   const groups = state.catalog?.groups ?? [];
@@ -342,6 +350,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     </PanelSurface>}</SurfacePresence>
     <SurfacePresence>{sheet && sheet !== 'pluginManager' && sheet !== 'settings' && <Surface phoneTheme title={t(sheet === 'pending' ? '待处理' : sheetTitle)} onClose={() => setSheet(null)}>
       <header><h2>{t(sheet === 'pending' ? '待处理' : sheet === 'settings' ? '电脑设置' : sheetTitle)}</h2><IconButton label={t("关闭窗口")} onClick={() => setSheet(null)}><IconCloseOutline16/></IconButton></header>
+      {sheet === 'liveLog' && <RemoteLiveLog client={model.client}/>}
       {sheet === 'pending' && <>
         {!model.transport.capabilities?.taskPendingNotifications ? <p role="status">{t("当前电脑不支持汇总待处理事项，请在对应聊天中处理请求。")}</p>
           : state.taskNotifications?.status !== 'listening' ? <p role="status">{t(state.taskNotifications?.status === 'error' ? '待处理事项同步失败，请重试。' : connected ? '正在同步待处理事项…' : '电脑连接已断开，恢复连接后将重新同步。')}</p>
@@ -397,7 +406,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         {selected && <Button className="option" onClick={() => setSheet('schedules')}>{t("定时任务")}</Button>}
         {selected && <Button className="option" onClick={() => setSheet('export')}>{t("导出会话日志")}</Button>}
         {selected && model.transport.capabilities?.desktopApps === true && <Button className="option" onClick={() => setSheet('desktopApps')}>{t('在电脑应用中打开')}</Button>}
-        {selected && model.commandActions?.available('feedback') && <Button className="option" disabled={busy} onClick={() => void act(async () => { await model.commandActions.open('feedback'); setSheet(null); })}>{t("会话反馈")}</Button>}
+        {selected && <Button className="option" onClick={() => setSheet('liveLog')}>{t('实时日志')}</Button>}
         {selected ? <><Button className="option" onClick={() => { setTitle(chat?.displayTitle ?? ''); setSheet('rename'); }}>{t("重命名聊天")}</Button>
           <Button className="option" disabled={busy || state.session?.running} onClick={() => void act(async () => { await model.fork(); setSheet(null); })}>{t("在新聊天中分支")}</Button>
           <Button className="option" disabled={busy} onClick={() => void act(async () => { await model.archive(!state.workspaces.archivedSessionIds.includes(selected)); setSheet(null); })}>{t(state.workspaces?.archivedSessionIds.includes(selected) ? '取消归档' : '归档聊天')}</Button></> : <Button className="option" onClick={() => { setArchived(!archived); setSheet(null); }}>{t(archived ? '查看最近聊天' : '查看已归档聊天')}</Button>}

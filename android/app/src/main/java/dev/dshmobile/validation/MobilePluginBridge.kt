@@ -72,7 +72,10 @@ internal class MobilePluginBridge(private val activity: Activity, private val vi
                     else -> throw IllegalArgumentException()
                 }
                 reply.postMessage(JSONObject().put("id", id).put("data", preferences.snapshot()).toString())
-            } catch (_: Exception) { reply.postMessage(JSONObject().put("id", id).put("error", "mobile_plugins_failed").toString()) }
+            } catch (error: Exception) {
+                (activity.application as DshmApplication).appDiagnostics.native("plugin", "plugin_bridge_failed", level = "ERROR", code = "plugin_operation_failed", error = error)
+                reply.postMessage(JSONObject().put("id", id).put("error", "mobile_plugins_failed").toString())
+            }
         }
     }
     fun close() { closed = true; importer.close(); stop?.invoke(); stop = null; preferences.release(owner); plugins.release(owner) }

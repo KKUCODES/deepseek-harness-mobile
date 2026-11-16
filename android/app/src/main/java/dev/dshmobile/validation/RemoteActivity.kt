@@ -22,6 +22,8 @@ class RemoteActivity : Activity() {
     private lateinit var bridge: RemoteBridge
     private lateinit var updates: AppUpdateBridge
     private lateinit var mobilePlugins: MobilePluginBridge
+    private lateinit var diagnostics: AppDiagnosticsBridge
+    private val log get() = (application as DshmApplication).appDiagnostics
     private lateinit var files: RemoteFileChooser
     private var stopWindowAppearance: (() -> Unit)? = null
     private var startup: StartupScreen? = null
@@ -40,8 +42,11 @@ class RemoteActivity : Activity() {
             settings.allowFileAccess = false; settings.allowContentAccess = false
             webViewClient = object : WebViewClient() {
                 override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+                    log.native("startup", "renderer_gone", "remote", if (detail.didCrash()) "ERROR" else "WARN",
+                        if (detail.didCrash()) "renderer_crashed" else "renderer_reclaimed", synchronous = true)
                     android.util.Log.w("DSHMRenderer", if (detail.didCrash()) "Remote renderer crashed" else "Remote renderer reclaimed")
                     rendererGone = true
+                    if (::diagnostics.isInitialized) diagnostics.close()
                     if (::files.isInitialized) files.cancel()
                     if (::updates.isInitialized) updates.close()
                     if (::mobilePlugins.isInitialized) mobilePlugins.close()
@@ -58,10 +63,10 @@ class RemoteActivity : Activity() {
                     if (::bridge.isInitialized) bridge.disconnect()
                 }
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
-                    if (request.isForMainFrame) startup?.fail()
+                    if (request.isForMainFrame) { log.native("startup", "page_load_failed", "remote", "ERROR", "webview_load_failed"); startup?.fail() }
                 }
                 override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
-                    if (request.isForMainFrame) startup?.fail()
+                    if (request.isForMainFrame) { log.native("startup", "page_load_failed", "remote", "ERROR", "http_${response.statusCode}"); startup?.fail() }
                 }
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = !bridge.allowsHtmlNavigation(request)
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse =
@@ -79,18 +84,24 @@ class RemoteActivity : Activity() {
             }
         }
         bridge = RemoteBridge(this, webView) { appearance -> ModeNavigation.ordinary(this, appearance) }; bridge.install()
+        diagnostics = AppDiagnosticsBridge(this, log, webView, StartupScreen.Page.REMOTE).also { it.install() }
         if (intent.getBooleanExtra("dshm.private.restoreReading", false)) bridge.offerReadingRecovery()
         intent.removeExtra("dshm.private.restoreReading")
         updates = AppUpdateBridge(this, webView, RemoteBridge.ORIGIN, "remote.html").also { it.install() }
         mobilePlugins = MobilePluginBridge(this, webView, RemoteBridge.ORIGIN, "remote.html").also { it.install() }
         (application as DshmApplication).notices.accept(intent)
         acceptPairLink(intent)
-        files = RemoteFileChooser(this, bridge::connectionGeneration)
+        files = RemoteFileChooser(this, bridge::connectionGeneration, log = ::logFilePickerEvent)
         if (!MobileWebWindow.install(this, webView)) setContentView(webView)
         stopWindowAppearance = MobileWebWindow.observeAppearance(this)
         startup = StartupScreen(this, webView, StartupScreen.Page.REMOTE) { rendererRecovery.reopen() }
         webView.loadUrl(RemoteBridge.ORIGIN + "/assets/web/remote.html")
     }
+    private fun logFilePickerEvent(event: String, count: Int?) = log.native("remote", event, "remote", when (event) {
+        "picker_failed" -> "ERROR"
+        "picker_expired", "picker_rejected" -> "WARN"
+        else -> "INFO"
+    }, count = count)
     override fun onConfigurationChanged(newConfig: Configuration) {
         // 系统配色变化不能销毁Remote会话、在途操作或未发送草稿。
         theme.applyStyle(R.style.Theme_DSHM, true)
@@ -109,6 +120,7 @@ class RemoteActivity : Activity() {
     override fun onPause() { wasPaused = true; rendererRecovery.onPause(); super.onPause() }
     override fun onDestroy() {
         startup?.close(); stopWindowAppearance?.invoke()
+        diagnostics.close()
         if (!rendererGone) { files.cancel(); updates.close(); mobilePlugins.close(); bridge.close(); webView.destroy() }
         super.onDestroy()
     }

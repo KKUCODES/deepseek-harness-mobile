@@ -164,7 +164,10 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
                     }
                     else -> throw Failure("unsupported_operation")
                 }
-            } catch (error: Exception) { respond(reply, id, error = code(error)) }
+            } catch (error: Exception) {
+                (activity.application as DshmApplication).appDiagnostics.native("ordinary", "ordinary_bridge_failed", "ordinary", "ERROR", "request_failed", error)
+                respond(reply, id, error = code(error))
+            }
         }
     }
 
@@ -188,7 +191,10 @@ class OrdinaryBridge(private val activity: Activity, private val webView: WebVie
         worker.execute {
             var result: JSONObject? = null
             var failure: String? = null
-            try { result = task() } catch (error: Exception) { failure = code(error) }
+            try { result = task() } catch (error: Exception) {
+                failure = code(error)
+                (activity.application as DshmApplication).appDiagnostics.native("ordinary", "ordinary_native_operation_failed", "ordinary", "ERROR", failure, error)
+            }
             activity.runOnUiThread { pending--; respond(reply, id, result, failure) }
         }
     }

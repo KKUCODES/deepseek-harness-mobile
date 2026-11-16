@@ -21,10 +21,11 @@ internal object RemoteFileChooserChecks {
         var generation: Int? = 1
         var notices = 0
         var launches = 0
+        val events = mutableListOf<Pair<String, Int?>>()
         val chooser = RemoteFileChooser(activity, { generation }, { intent, request ->
             check(intent.type == "image/*" && request == RemoteFileChooser.REQUEST)
             launches++
-        }, { notices++ })
+        }, { notices++ }) { event, count -> events.add(event to count) }
         val uri = Uri.parse("content://external.provider/image.png")
         val selected = Intent().setData(uri)
         val results = mutableListOf<List<Uri>?>()
@@ -80,6 +81,7 @@ internal object RemoteFileChooserChecks {
         open()
         finish(Activity.RESULT_OK, clip(uri, other))
         check(results.size == 9 && results.last() == listOf(uri, other) && notices == 3)
+        check(events.takeLast(3) == listOf("picker_open" to null, "picker_clipdata" to 2, "picker_returned" to 2))
 
         open()
         finish(Activity.RESULT_OK, clip(uri, other).setData(uri))
@@ -89,10 +91,12 @@ internal object RemoteFileChooserChecks {
         generation = 4
         finish(Activity.RESULT_OK, clip(uri, other))
         check(results.size == 11 && results.last() == null && notices == 4)
+        check(events.last() == ("picker_expired" to 2))
 
         open()
         finish(Activity.RESULT_CANCELED, clip(uri))
         check(results.size == 12 && results.last() == null && notices == 4)
+        check(events.last() == ("picker_canceled" to null))
 
         open()
         finish(Activity.RESULT_OK, clip(uri, Uri.parse("file:///unsafe.png")).setData(uri))

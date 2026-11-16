@@ -13,7 +13,10 @@ import * as OrdinaryRendering from './ordinary-rendering.jsx';
 import { zh as inputZh, en as inputEn } from '../../deepseek-harness/packages/client/ui-input-trigger/src/client/locales.ts';
 
 
+import { diagnostics as appDiagnostics } from './app-diagnostics.mjs';
+
 export async function startHost(Root, { diagnostics = false } = {}) {
+const boot = appDiagnostics.span('plugin', 'ordinary_plugin');
 try {
 let host;
 const ctx = new Cordis.Context();
@@ -129,6 +132,7 @@ async function setThemeModule(enabled) {
   } else await ordinaryInput.enable(true);
   host = { ctx, settings, ordinaryInput, phonePlugins, appearance, setFixture, setThemeModule, optionalPlugins };
   ctx.uiRenderer.mount(document.getElementById('app'));
+  boot('done');
   // 只暴露验证读数和生命周期操作，不包含凭据或任意执行入口。
   if (diagnostics) window.dshmValidation = {
     snapshot: () => ({ errors: [...errors], counters: { ...document.documentElement.dataset },
@@ -142,6 +146,7 @@ async function setThemeModule(enabled) {
   };
   return host;
 } catch (error) {
+  boot('failed', { code: 'activation_failed', error });
   window.__dshmStartup?.fail();
   document.getElementById('app').textContent = `启动失败：${String(error)}`;
   console.error(error);

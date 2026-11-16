@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { useTranslate } from './locale.jsx';
+import { diagnostics } from '../app-diagnostics.mjs';
 
 /** 渲染失败只撤下出错区域；恢复不执行发送、工具或审批动作。 */
 export class RemoteErrorBoundary extends React.Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   componentDidCatch(error) {
-    // 仅记录分类，不把消息正文、插件参数或凭据放入诊断日志。
-    console.warn('[DSHM render]', error?.name ?? 'Error');
+    diagnostics.record(this.props.logDomain ?? 'remote', 'render_failed', { level: 'ERROR', code: 'render_failed', error });
   }
   componentDidUpdate(previous) {
     if (this.state.failed && previous.resetKey !== this.props.resetKey) this.setState({ failed: false });

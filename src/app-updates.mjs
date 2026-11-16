@@ -101,6 +101,7 @@ export class AppUpdates {
   openLink = url => this.action('openLink', { url });
   async action(operation, data = {}) {
     if (!this.#bridge) return;
+    const finish = ['watch', 'read'].includes(operation) ? null : diagnostics.span('update', 'update_action');
     try {
       if (!['watch', 'read', 'check', 'download', 'cancel', 'install', 'openRelease', 'openLink', 'resources.check', 'resources.download', 'resources.cancel', 'resources.recover', 'resources.restart'].includes(operation)) throw Error('update_bridge_failed');
       if (operation === 'openLink') {
@@ -109,13 +110,16 @@ export class AppUpdates {
         if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password) throw Error('update_bridge_failed');
       } else if (Object.keys(data).length) throw Error('update_bridge_failed');
       const id = crypto.randomUUID();
-      return await new Promise((resolve, reject) => {
+      const result = await new Promise((resolve, reject) => {
         const timer = setTimeout(() => { this.#pending.delete(id); reject(Error('update_bridge_failed')); }, 12000);
         this.#pending.set(id, { resolve, reject, timer });
         try { this.#bridge.postMessage(JSON.stringify({ id, op: `updates.${operation}`, data })); }
         catch { clearTimeout(timer); this.#pending.delete(id); reject(Error('update_bridge_failed')); }
       });
+      finish?.('done');
+      return result;
     } catch (error) {
+      finish?.('failed', { code: 'update_bridge_failed', error });
       this.#state = { ...this.#state, phase: 'error', error: error.message };
       for (const listener of this.#listeners) listener();
     }
@@ -123,3 +127,4 @@ export class AppUpdates {
 }
 let shared;
 export const appUpdates = () => shared ??= new AppUpdates();
+import { diagnostics } from './app-diagnostics.mjs';

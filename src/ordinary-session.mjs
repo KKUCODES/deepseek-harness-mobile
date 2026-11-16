@@ -5,6 +5,7 @@ import { DEFAULT_MODEL, chatPreferences, isModel } from './ordinary-models.mjs';
 import { cleanAttachments } from './ordinary-attachments.mjs';
 import { requestOptions } from './ordinary-options.mjs';
 import { deepseekProvider, providerOf, selectedModel, providerDraft } from './ordinary-providers.mjs';
+import { diagnostics } from './app-diagnostics.mjs';
 
 /** 页面只订阅会话；请求归属在创建时固定，切页与继续输入不会改写正在生成的轮次。 */
 export class OrdinarySession {
@@ -44,13 +45,15 @@ export class OrdinarySession {
     return result;
   }
   async start() {
+    const finish = diagnostics.span('ordinary', 'ordinary_open');
     try {
       await this.#history.open();
       await this.#history.recover();
       await this.#refresh();
       await this.refreshProviders();
       this.#publish({ ready: true });
-    } catch (error) { this.#publish({ ready: true, error: error.code ?? error.message }); }
+      finish('done');
+    } catch (error) { finish('failed', { code: 'history_read_failed', error }); this.#publish({ ready: true, error: error.code ?? error.message }); }
   }
   async #refresh() {
     const page = await this.#history.page();
@@ -193,6 +196,7 @@ export class OrdinarySession {
     return run;
   }
   async #send() {
+    const finish = diagnostics.span('ordinary', 'ordinary_send');
     let owner;
     let turn;
     let unsubscribe;
@@ -214,7 +218,7 @@ export class OrdinarySession {
           });
           if (this.#state.chat?.id === owner) this.#show(await this.#history.get(owner));
         });
-      }).catch(error => { saveError = error; turn.stop(); this.#publish({ error: 'history_write_failed' }); });
+      }).catch(error => { saveError = error; finish.stage('ordinary_history_failed', { level: 'ERROR', code: 'history_write_failed', error }); turn.stop(); this.#publish({ error: 'history_write_failed' }); });
     };
     try {
       const prepared = await this.#serial(async () => {
@@ -252,16 +256,25 @@ export class OrdinarySession {
         if (!['sending', 'streaming'].includes(snapshot.status)) flush();
         else if (!flushTimer) flushTimer = setTimeout(flush, 80);
       });
-      await turn.run(signal => {
+      let requestError;
+      await turn.run(async signal => {
         if (this.#stopRequested) throw new DOMException('Request stopped', 'AbortError');
-        return this.#native.open(prepared, signal);
-      });
+        finish.stage('ordinary_request_accepted');
+        const response = await this.#native.open(prepared, signal);
+        finish.stage('ordinary_response', response.ok ? {} : { level: 'WARN', code: `http_${response.status}` });
+        return response;
+      }, error => { requestError = error; });
       flush();
       await writes;
       if (saveError) throw saveError;
       await this.#refresh();
-      return turn.getSnapshot();
+      const result = turn.getSnapshot();
+      if (result.status === 'completed') finish('done');
+      else if (this.#stopRequested || result.error === 'stopped') finish('cancelled', { code: 'request_aborted' });
+      else finish('failed', { code: result.error ?? 'model_error', error: requestError });
+      return result;
     } catch (error) {
+      finish(this.#stopRequested ? 'cancelled' : 'failed', { code: saveError ? 'history_write_failed' : error.code ?? 'request_failed', error });
       this.#publish({ error: saveError ? 'history_write_failed' : error.code ?? error.message });
       throw error;
     } finally {

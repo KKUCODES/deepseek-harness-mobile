@@ -78,7 +78,8 @@ const forkActionsOnly = process.argv.includes('--fork-actions');
 const backNavigationOnly = process.argv.includes('--back-navigation');
 const bubbleOnly = process.argv.includes('--user-bubble');
 const imagesOnly = process.argv.includes('--rc3-images');
-const rc3Layout = bubbleOnly || imagesOnly;
+const liveLogOnly = process.argv.includes('--live-log');
+const rc3Layout = bubbleOnly || imagesOnly || liveLogOnly;
 const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly || rc3Layout;
 const layoutSdk = rc3Layout ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.2-rc.3', ci: true })
   : backNavigationOnly && !process.argv.includes('--official-alpha2')
@@ -103,7 +104,7 @@ const directory = resolve(root, 'artifacts/tests/remote-plugin-slots');
 await mkdir(directory, { recursive: true });
 await prepareClientEntries();
 await build({ absWorkingDir: root,
-  ...(layoutOnly ? { stdin: { contents: "import {model} from './tests/fixtures/remote-plugin-slots.jsx'; import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css'; import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';" + (builtinPanelsOnly ? "import {builtinPanelFixture} from './tests/fixtures/builtin-panel-layout.jsx'; Object.assign(window.fixture,builtinPanelFixture(model));" : ''), resolveDir: root, loader: 'jsx' } }
+  ...(layoutOnly ? { stdin: { contents: "import {model} from './tests/fixtures/remote-plugin-slots.jsx'; import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css'; import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';" + (builtinPanelsOnly ? "import {builtinPanelFixture} from './tests/fixtures/builtin-panel-layout.jsx'; Object.assign(window.fixture,builtinPanelFixture(model));" : '') + (liveLogOnly ? "import './src/app-diagnostics-entry.mjs'; import {remoteLiveLog} from './src/remote-live-log.mjs'; window.fixture.log = remoteLiveLog.record;" : ''), resolveDir: root, loader: 'jsx' } }
     : { entryPoints: ['tests/fixtures/remote-plugin-slots.jsx'] }),
   outfile: resolve(directory, 'test.js'), bundle: true, format: 'esm', platform: 'browser', jsx: 'automatic', logLevel: 'silent',
   ...(rc3Layout ? { target: ['chrome100'] } : {}),
@@ -164,7 +165,33 @@ try {
   if (rc3Layout) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
     await page.waitForFunction(() => !!window.preview15);
-    if (imagesOnly) report.images = await checkRemoteImages(page, { fallbackOnly: true });
+    if (liveLogOnly) {
+      await page.evaluate(async () => { window.fixture.toolLocale('zh'); await window.fixture.select('one'); });
+      await page.getByRole('button', { name: 'Remote 选项', exact: true }).click();
+      const menu = page.getByRole('dialog', { name: 'Remote 选项', exact: true });
+      assert.equal(await menu.getByRole('button', { name: '会话反馈' }).count(), 0);
+      await menu.getByRole('button', { name: '实时日志', exact: true }).click();
+      const log = page.getByTestId('remote-live-log');
+      await page.evaluate(() => {
+        for (let index = 0; index < 40; index++) window.fixture.log('picker_open');
+        window.fixture.log('picker_expired');
+        window.fixture.log('connection_error', 'network_timeout');
+      });
+      await log.getByText('Remote 连接诊断 · network_timeout', { exact: true }).waitFor();
+      assert.equal(await log.getByText('已打开系统选择器', { exact: true }).count(), 40);
+      await log.evaluate(node => { node.scrollTop = 0; });
+      const jump = page.getByRole('button', { name: '回到最新', exact: true });
+      await jump.waitFor();
+      await page.evaluate(() => window.fixture.log('files_ready', 1));
+      await log.getByText('附件已加入待发送列表 · 1').waitFor();
+      assert.equal(await log.evaluate(node => node.scrollTop), 0);
+      await jump.click();
+      await jump.waitFor({ state: 'hidden' });
+      await page.getByLabel('日志级别').selectOption('WARN');
+      assert.equal(await log.locator('[data-level]').count(), 1);
+      assert.equal(await log.locator('[data-level="WARN"]').count(), 1);
+      report.liveLog = true;
+    } else if (imagesOnly) report.images = await checkRemoteImages(page, { fallbackOnly: true });
     else {
       await page.evaluate(prompt => window.preview15.images.open({ count: 0, prompt }), bubblePrompt);
       await checkUserMessageBubble(page);

@@ -59,6 +59,7 @@ export class PhonePlugins extends MobilePluginChannel {
     if (this.snapshot.busy) throw Error('plugin_busy');
     this.publish({ busy: 'import', error: null });
     try { await this.call('plugins.import', {}, 300000); }
+    catch (error) { diagnostics.record('plugin', 'phone_plugin_operation_failed', { level: 'ERROR', code: 'plugin_operation_failed', error }); throw error; }
     finally { this.publish({ busy: null }); }
   }
   async change(id, action) {
@@ -70,7 +71,7 @@ export class PhonePlugins extends MobilePluginChannel {
       if (entry.external && ['install', 'update'].includes(action)) throw Error('unsupported_plugin');
       await this.call('plugins.change', { entry: pluginDescriptor(entry), action });
     }
-    catch (error) { this.publish({ error: 'plugin_operation_failed' }); throw error; }
+    catch (error) { diagnostics.record('plugin', 'phone_plugin_operation_failed', { level: 'ERROR', code: 'plugin_operation_failed', error }); this.publish({ error: 'plugin_operation_failed' }); throw error; }
     finally { this.publish({ busy: null }); }
   }
   async restore(id) {
@@ -79,6 +80,7 @@ export class PhonePlugins extends MobilePluginChannel {
     if (this.snapshot.busy) throw Error('plugin_busy');
     this.publish({ busy: id, error: null });
     try { await this.call('plugins.restore', { id }); }
+    catch (error) { diagnostics.record('plugin', 'phone_plugin_operation_failed', { level: 'ERROR', code: 'plugin_operation_failed', error }); throw error; }
     finally { this.publish({ busy: null }); }
   }
 }
@@ -115,6 +117,7 @@ export class PhonePluginHost {
     return Promise.all(work);
   }
   async run(entry, job) {
+    const finish = diagnostics.span('plugin', 'phone_plugin');
     const record = this.registry.getSnapshot().record[entry.id], enabled = record.installed && record.enabled;
     job.revision = record.revision;
     try {
@@ -123,7 +126,9 @@ export class PhonePluginHost {
       if (!handler) throw Error('missing');
       await handler(enabled);
       await this.report(entry.id, record.revision, enabled ? 'active' : 'inactive');
+      finish('done');
     } catch (error) {
+      finish('failed', { code: 'activation_failed', error });
       // 激活失败也释放部分注册，默认正文/首页仍由宿主兜底。
       try { await this.handler(entry)?.(false); } catch { /* 后续显式重试重新收敛。 */ }
       await this.report(entry.id, record.revision, 'failed', ['missing', 'incompatible', 'timeout', 'render', 'storage'].includes(error?.message) ? error.message : 'load').catch(() => {});
@@ -148,3 +153,4 @@ export function phonePluginsFor(host) {
   if (!registries.has(host)) registries.set(host, new PhonePlugins({ host }));
   return registries.get(host);
 }
+import { diagnostics } from './app-diagnostics.mjs';

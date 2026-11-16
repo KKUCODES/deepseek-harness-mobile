@@ -43,6 +43,8 @@ internal class StartupScreen(private val activity: Activity, private val webView
     private var generation = 0L
     private val timeout = Runnable { fail() }
     private val pageUpdates get() = (activity.application as DshmApplication).webUpdates
+    private val diagnostics get() = (activity.application as DshmApplication).appDiagnostics
+    private val mode get() = if (page == Page.REMOTE) "remote" else "ordinary"
 
     init {
         cover.isClickable = true
@@ -70,6 +72,10 @@ internal class StartupScreen(private val activity: Activity, private val webView
         error.addView(Button(context).apply {
             text = if (english) "Restore bundled pages" else "恢复内置页面"
             setOnClickListener { pageUpdates.recovery(activity, preparePages = false) }
+        })
+        error.addView(Button(context).apply {
+            text = if (english) "Diagnostics" else "问题诊断"
+            setOnClickListener { diagnostics.showStartupLogs(activity, english) }
         })
         cover.addView(error, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         content.addView(cover, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -104,6 +110,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
             removeSplash = null
         }
         phase = "loading"
+        diagnostics.native("startup", "page_started", mode)
         webView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         cover.animate().cancel()
         cover.alpha = 1f
@@ -135,6 +142,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
                     content.removeView(cover)
                     webView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
                     phase = "ready"
+                    diagnostics.native("startup", "page_ready", mode)
                     pageUpdates.ready(page.entry)
                 }
                 if (!ValueAnimator.areAnimatorsEnabled()) finish.run()
@@ -147,6 +155,7 @@ internal class StartupScreen(private val activity: Activity, private val webView
     fun fail() {
         if (phase != "loading" && phase != "drawing") return
         phase = "failed"
+        diagnostics.native("startup", "page_failed", mode, "ERROR", "webview_startup_failed", synchronous = true)
         pageUpdates.failed()
         cover.removeCallbacks(timeout)
         cover.visibility = View.VISIBLE

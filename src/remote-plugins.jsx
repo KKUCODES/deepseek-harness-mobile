@@ -4,6 +4,7 @@ import { activationManifest, pluginEntries } from './remote-plugin-policy.mjs';
 import { isRemoteHostDisconnect } from './remote-transport.mjs';
 import { remoteModuleRegistration } from './remote-module-registration.mjs';
 import { assertRemoteModuleSystem } from './remote-module-capabilities.mjs';
+import { diagnostics } from './app-diagnostics.mjs';
 
 const modulesId = '@deepseek-ai/dsh-client-modules';
 
@@ -16,6 +17,14 @@ export class RemotePlugins {
   constructor(model) { this.model = model; }
   publish(value) { if (!this.controller.signal.aborted) this.model.publish({ plugins: value }); }
   async prepare() {
+    const finish = diagnostics.span('plugin', 'remote_plugin');
+    try {
+      const result = await this.prepareCore();
+      finish('done');
+      return result;
+    } catch (error) { finish('failed', { code: 'load_failed', error }); throw error; }
+  }
+  async prepareCore() {
     this.publish({ state: 'loading', entries: [] });
     this.initial = this.model.client.request({ method: 'remote.graph' });
     const graph = await this.initial.promise;
@@ -166,6 +175,7 @@ export class RemotePlugins {
     if (window.__DSH_FILE_UPLOAD__ === this.model.transport.uploadHooks) delete window.__DSH_FILE_UPLOAD__;
   }
   async fail(error) {
+    diagnostics.record('plugin', 'remote_plugin_failed', { level: 'ERROR', code: 'activation_failed', error });
     await this.dispose();
     if (!this.model.lifetime.signal.aborted) this.model.publish({ plugins: { state: 'error', entries: [], error: error.message } });
   }
