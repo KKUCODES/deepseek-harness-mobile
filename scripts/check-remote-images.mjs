@@ -1,5 +1,53 @@
 import assert from 'node:assert/strict';
 
+export async function checkRemoteDraftImages(page) {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.evaluate(async () => {
+    window.fixture.toolLocale('zh');
+    await window.preview15.images.open({ count: 1 });
+    const transport = window.preview15.model.transport;
+    transport.capabilities.channels = [...new Set([...(transport.capabilities.channels ?? []), 'prompt'])];
+  });
+  const scope = page.getByTestId('remote-workspace');
+  const original = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1400; canvas.height = 700;
+    canvas.getContext('2d').fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await scope.getByRole('button', { name: '添加附件', exact: true }).click();
+  const [chooser] = await Promise.all([
+    page.waitForEvent('filechooser'), page.getByRole('button', { name: '从相册选择', exact: true }).click(),
+  ]);
+  const names = Array.from({ length: 6 }, (_, index) => `narrow-viewport-wide-image-${index + 1}.png`);
+  await chooser.setFiles(names.map(name => ({ name, mimeType: 'image/png', buffer: Buffer.from(original, 'base64') })));
+  const draft = scope.getByTestId('remote-draft-images');
+  const rail = draft.getByRole('group', { name: '待发送附件' });
+  await page.waitForFunction(count => [...document.querySelectorAll('[data-testid="remote-draft-images"] img')]
+    .filter(image => image.complete && image.naturalWidth === 1400).length === count, names.length);
+  const layout = await rail.evaluate(node => ({
+    scrollable: node.scrollWidth > node.clientWidth,
+    cards: [...node.querySelectorAll('img')].map(image => image.closest('button').getBoundingClientRect()),
+    pageFits: document.documentElement.scrollWidth === document.documentElement.clientWidth,
+  }));
+  assert.equal(layout.scrollable, true);
+  assert.equal(layout.pageFits, true);
+  assert.ok(layout.cards.every((card, index) => card.width === 64 && card.height === 64
+    && (!index || layout.cards[index - 1].right <= card.left)));
+  assert.equal(await draft.locator('[data-remote-image-gallery]').count(), 0);
+  await rail.getByRole('button', { name: names.at(-1), exact: true }).click();
+  const lightbox = page.getByRole('dialog', { name: '原图预览', exact: true });
+  await lightbox.waitFor();
+  assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
+  await lightbox.waitFor({ state: 'detached' });
+  assert.equal(await page.evaluate(() => window.preview15.model.getSnapshot().selected), 'one');
+  for (const name of names.reverse()) await rail.getByRole('button', { name: `移除图片 ${name}`, exact: true }).click();
+  await draft.waitFor({ state: 'detached' });
+  assert.equal(await scope.locator('.conversation [data-remote-image-gallery] img').count(), 2);
+  return { narrowViewport: 320, thumbnail: 64, horizontalRail: true, previewBack: true, remove: true, sentGallery: true };
+}
+
 export async function checkRemoteImages(page, { alpha2 = false, systemBack, fallbackOnly = false } = {}) {
   // 动画驱动器合同已在KKC-118单独定位；这里独立验证图片，不夹带其修复。
   await page.emulateMedia({ reducedMotion: 'reduce' });

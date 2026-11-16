@@ -19,7 +19,8 @@ import { remoteLiveLog } from '../remote-live-log.mjs';
 import { DefaultRemoteHome } from './DefaultRemoteHome.jsx';
 import { RemoteQueue } from './RemoteQueue.jsx';
 import { RemoteFilePreview } from './RemoteFilePreview.jsx';
-import { RemoteImages, RemoteLocalImage } from './RemoteImages.jsx';
+import { RemoteImages } from './RemoteImages.jsx';
+import { hasDraftImage, RemoteDraftImages } from './RemoteDraftImages.jsx';
 import { RemoteChangesPreview } from './RemoteDiff.jsx';
 import { RemoteCommand } from './RemoteCommand.jsx';
 import { RemoteToolDetail } from './RemoteToolDetail.jsx';
@@ -141,6 +142,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const modelSheetTitle = modelReadOnly ? '当前模型' : '选择模型';
   const sheetTitle = { desktopApps: '在电脑应用中打开', new: '选择工作区', models: modelSheetTitle, menu: 'Remote 选项', attachments: '附件', rename: '重命名聊天', plugins: '电脑插件', pluginSettings: '插件设置', workspaces: '管理工作区', references: '引用文件或聊天', skills: '选择技能', permissions: '会话权限', agentPresets: 'Agent 模式', plan: '计划模式', goal: '当前目标', jobs: '后台任务', schedules: '定时任务', subagents: '子会话', export: '导出会话日志', liveLog: '实时日志' }[sheet];
   const attachments = state.attachments[selected] ?? [];
+  const fileCards = attachments.filter(item => !hasDraftImage(item));
   const attachmentsPending = attachments.some(item => item.state !== 'ready');
   const canStop = childAccess.canStop && state.session?.running && !(state.drafts[selected] ?? '').trim() && !attachments.length;
   const pick = input => { pickerSession.current = selected; input.current.click(); };
@@ -322,8 +324,9 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       <RemoteQueue key={selected} state={state} model={model} openAttachment={openAttachment}/>
       {(state.plan?.active || state.plan?.pending) && <div className="remote-agent-mode"><Button aria-label={t("查看计划模式")} onClick={() => setSheet('plan')}>{t(state.plan.pending ? planModeLabel(state.plan) : '计划模式')}</Button></div>}
       {model.goals.available && <RemoteGoalSummary goals={model.goals} onOpen={() => setSheet('goal')}/>}
-      {attachments.length > 0 && <div className="remote-pending-files" aria-label={t("待发送附件")}>{attachments.map(item => <div className="remote-file" key={item.id}>
-        {item.kind === 'image' && <RemoteLocalImage source={item.source}/>}
+      {attachments.length > 0 && <RemoteDraftImages attachments={attachments} busy={busy}
+        onRemove={id => model.removeAttachment(id)} onRetry={id => void act(() => model.prepareAttachment(id))}/>}
+      {fileCards.length > 0 && <div className="remote-pending-files" aria-label={t("待发送附件")}>{fileCards.map(item => <div className="remote-file" key={item.id}>
         <span className="remote-file-info"><strong>{item.name}</strong><small role="status">{item.state === 'uploading' ? '正在准备附件…' : item.state === 'error' ? item.error || '附件准备失败，请重试' : item.state === 'uncertain' ? '发送结果未知，请核对聊天记录后移除' : item.state === 'restored' ? '已恢复本机原件，重新准备后即可发送' : `${item.kind === 'image' ? '待发送图片' : '已上传'} · ${fileSize(item.bytes)}`}</small>
         {['restored', 'error'].includes(item.state) && item.source && <Button disabled={busy} onClick={() => void act(() => model.prepareAttachment(item.id))}>{t("重新准备附件")}</Button>}</span>
         <IconButton label={`${item.state === 'uploading' ? '取消上传' : '移除附件'} ${item.name}`} disabled={busy} onClick={() => model.removeAttachment(item.id)}><IconCloseOutline16/></IconButton>

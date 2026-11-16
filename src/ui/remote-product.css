@@ -80,6 +80,7 @@ button.remote-file { background: transparent; color: inherit; font: inherit; tex
 button.remote-file:hover, button.remote-file:focus-visible { background: var(--dsw-alias-bg-l2); }
 .remote-pending-files { display: flex; gap: 8px; overflow: auto; flex: none; max-height: 120px; padding: 8px 14px 0; }
 .remote-pending-files .remote-file { flex: 0 0 auto; max-width: min(320px, 90%); }
+.remote-draft-images { flex: none; min-width: 0; padding: 8px 4px 4px; }
 .remote-queue { flex: none; max-height: 28dvh; overflow: auto; margin: 0 14px; padding: 10px 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 16px; }
 .remote-queue-row { padding: 8px 0; }
 .remote-queue-row p { margin: 8px 0; white-space: pre-wrap; overflow-wrap: anywhere; }

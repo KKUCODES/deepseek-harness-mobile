@@ -29,7 +29,7 @@ import { checkBuiltinPanelLayout } from './check-builtin-panel-layout.mjs';
 import { checkRemoteRunningStatus } from './check-remote-running-status.mjs';
 import { checkRemoteForkActions } from './check-remote-fork-actions.mjs';
 import { bubblePrompt, checkUserMessageBubble } from './check-user-message-bubble.mjs';
-import { checkRemoteImages } from './check-remote-images.mjs';
+import { checkRemoteDraftImages, checkRemoteImages } from './check-remote-images.mjs';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
 import { createRequire } from 'node:module';
@@ -191,7 +191,10 @@ try {
       assert.equal(await log.locator('[data-level]').count(), 1);
       assert.equal(await log.locator('[data-level="WARN"]').count(), 1);
       report.liveLog = true;
-    } else if (imagesOnly) report.images = await checkRemoteImages(page, { fallbackOnly: true });
+    } else if (imagesOnly) {
+      report.images = await checkRemoteImages(page, { fallbackOnly: true });
+      report.draftImages = await checkRemoteDraftImages(page);
+    }
     else {
       await page.evaluate(prompt => window.preview15.images.open({ count: 0, prompt }), bubblePrompt);
       await checkUserMessageBubble(page);
