@@ -51,13 +51,16 @@ export function supportsDeliverables(capabilities) {
 }
 
 function composed(id, capabilities) {
+  const windowServices = capabilities?.dshVersion === '0.2.2-rc.3' && [
+    '@deepseek-ai/dsh-client-shortcuts', '@deepseek-ai/dsh-client-ui-context-menu', '@deepseek-ai/dsh-client-ui-file-drag',
+  ].includes(id);
   // 新版把同一组设置卡片拆成四个入口；卡片仍由手机注册，避免执行桌面组合。
   const latestSettings = isProfileDshVersion(capabilities?.dshVersion) && [
     '@deepseek-ai/dsh-client-ui-settings',
     '@deepseek-ai/dsh-client-ui-settings-shell', '@deepseek-ai/dsh-client-ui-settings-agent-loop',
     '@deepseek-ai/dsh-client-ui-settings-subagent', '@deepseek-ai/dsh-client-ui-settings-web-search',
   ].includes(id);
-  return mobileComposition.has(id) || latestSettings || id === '@deepseek-ai/dsh-client-ui-deliverables' && supportsDeliverables(capabilities)
+  return mobileComposition.has(id) || windowServices || latestSettings || id === '@deepseek-ai/dsh-client-ui-deliverables' && supportsDeliverables(capabilities)
     || id === '@deepseek-ai/dsh-client-ui-open-in-app' && capabilities?.desktopApps === true;
 }
 

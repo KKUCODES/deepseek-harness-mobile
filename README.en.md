@@ -6,7 +6,7 @@
 
 **DSHM** is a community-developed Android client for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Chat directly with DeepSeek or synchronize DSH conversations from your computer. Away from your desk, you can keep sending messages, viewing execution results, switching models, and handling approvals; the computer runs the tasks.
 
-[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.19/DSHM-0.1.0-preview.19.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
+[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.20/DSHM-0.1.0-preview.20.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
@@ -68,7 +68,7 @@ The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTT
 
 ## Current status
 
-**preview.19** improves Remote image selection and draft previews, creates chats directly from the current workspace, and adds live diagnostics with a recording switch. See the [release notes](./ci/release-notes/0.1.0-preview.19.md) and [diagnostics guide (Chinese)](./docs/integration/diagnostics-current.md).
+**preview.20** fixes blank Remote file previews from the conversation process and shows a message when the preview fails. See the [release notes](./ci/release-notes/0.1.0-preview.20.md) and [diagnostics guide (Chinese)](./docs/integration/diagnostics-current.md).
 
 **preview.16** improves Remote reconnection when the app returns to the foreground, shows cached messages when reopening recent chats, and fixes a draft recovery error. See the [validation scope (Chinese)](./docs/integration/preview16-remote-resume.md), [release notes](./ci/release-notes/0.1.0-preview.16.md) and [build and download guide (Chinese)](./docs/releases.md).
 

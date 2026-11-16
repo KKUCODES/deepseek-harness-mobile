@@ -230,6 +230,8 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-cordis-notice { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; background: var(--dsw-alias-bg-layer-2, #f3f3f3); font-size: 14px; }
 .remote-cordis-notice button { flex: none; }
 .remote-document-tab { height: 100%; min-height: 0; min-width: 0; }
+.remote-document-failure { display: none; padding: 0 16px; }
+.remote-document-tab:has([data-slot-error="sidebar.right.pane.tab"], [data-slot-error="sidebar.right.tab.document"]) > .remote-document-failure { display: block; }
 .remote-native-panel { display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; font-size: 14px; --dsh-content-font-size-secondary: 14px; --dsw-font-markdown-code-block: 14px/1.6 var(--dsw-font-mono, ui-monospace, monospace); }
 .remote-native-panel > :first-child { flex: 1; min-width: 0; min-height: 0; }
 .remote-native-panel.is-flow { display: block; height: auto; overflow: visible; }

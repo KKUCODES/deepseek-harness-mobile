@@ -768,6 +768,7 @@ export const english = Object.freeze({
   "电脑上的当前文件": "Current file on computer",
   "下载最新完整文件": "Download latest complete file",
   "下载完整文件": "Download complete file",
+  "文件预览加载失败。你可以关闭此标签后重试，或下载完整文件。": "The file preview failed to load. Close this tab and try again, or download the complete file.",
   "分享最新完整文件": "Share latest complete file",
   "分享完整文件": "Share complete file",
   "阅读": "Read",

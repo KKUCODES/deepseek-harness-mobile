@@ -80,7 +80,8 @@ const bubbleOnly = process.argv.includes('--user-bubble');
 const imagesOnly = process.argv.includes('--rc3-images');
 const liveLogOnly = process.argv.includes('--live-log');
 const workspaceCreateOnly = process.argv.includes('--workspace-create');
-const rc3Layout = bubbleOnly || imagesOnly || liveLogOnly || workspaceCreateOnly;
+const toolFilePreviewOnly = process.argv.includes('--rc3-tool-file-preview');
+const rc3Layout = bubbleOnly || imagesOnly || liveLogOnly || workspaceCreateOnly || toolFilePreviewOnly;
 const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly || rc3Layout;
 const layoutSdk = rc3Layout ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.2-rc.3', ci: true })
   : backNavigationOnly && !process.argv.includes('--official-alpha2')
@@ -162,11 +163,42 @@ try {
     } else throw new Error(`Unexpected bundle URL: ${url}`);
     await route.fulfill({ status: 200, contentType: 'text/javascript', body });
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : builtinPanelsOnly ? '?documents&builtin' : fileListOnly ? '?documents&files' : fileLayoutOnly || documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly ? '?documents' : ''}`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/${coldDraftOnly ? '?cold-draft' : builtinPanelsOnly ? '?documents&builtin' : fileListOnly ? '?documents&files' : fileLayoutOnly || toolFilePreviewOnly || documentOnly || reviewOnly || deliveryOnly || transferOnly || attachmentOnly ? '?documents' : ''}`);
   if (rc3Layout) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
     await page.waitForFunction(() => !!window.preview15);
-    if (workspaceCreateOnly) report.workspaceCreation = await checkWorkspaceCreation(page);
+    if (toolFilePreviewOnly) {
+      const path = 'tools\\preview.py';
+      await page.evaluate(async path => {
+        window.fixture.toolLocale('zh');
+        await window.fixture.select('two');
+        await window.fixture.enableOriginalTools();
+        await window.fixture.fileLayout(path, 'print("DSHM_FILE_PREVIEW_BODY")', { open: false });
+        window.fixture.toolLayoutCases('two', path);
+      }, path);
+      const history = page.getByRole('region', { name: '聊天内容', exact: true });
+      await history.getByRole('button', { name: /已完成，用时/ }).click();
+      const file = history.getByRole('button', { name: /preview\.py/ }).first();
+      await file.click();
+      const panel = page.getByRole('region', { name: '插件面板', exact: true });
+      await panel.getByRole('button', { name: '下载完整文件', exact: true }).waitFor();
+      await panel.locator('[data-textpreview-body]').getByText(/DSHM_FILE_PREVIEW_BODY/).waitFor();
+      await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
+      await history.waitFor();
+      await page.evaluate(async () => {
+        await window.fixture.failDocumentRenderer();
+        await window.fixture.fileLayout('fixture.preview-fail', 'Renderer failure probe');
+      });
+      await panel.getByRole('alert').getByText(/文件预览加载失败/).waitFor();
+      await panel.getByRole('button', { name: '下载完整文件', exact: true }).waitFor();
+      await panel.getByRole('button', { name: '分享完整文件', exact: true }).waitFor();
+      await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
+      await history.waitFor();
+      const expected = /^(?:Error: DSHM_EXPECTED_DOCUMENT_RENDER_FAILURE|slot entry crashed in 'sidebar\.right\.tab\.document': Error: DSHM_EXPECTED_DOCUMENT_RENDER_FAILURE)(?:\n|$)/;
+      assert.ok(report.errors.some(error => expected.test(error)));
+      report.errors = report.errors.filter(error => !expected.test(error));
+      report.toolFilePreview = { body: true, failureNotice: true, chatAndFileActionsRetained: true };
+    } else if (workspaceCreateOnly) report.workspaceCreation = await checkWorkspaceCreation(page);
     else if (liveLogOnly) {
       await page.evaluate(async () => { window.fixture.toolLocale('zh'); await window.fixture.select('one'); });
       await page.getByRole('button', { name: 'Remote 选项', exact: true }).click();

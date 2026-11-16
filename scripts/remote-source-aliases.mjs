@@ -7,6 +7,9 @@ import { remoteDesktopAppSources } from './remote-desktop-app-sources.mjs';
 export function remoteSourceAliases(root, options = {}) {
   const source = path => resolve(options.upstream ?? resolve(root, '../deepseek-harness'), 'packages', path);
   return {
+    '@dshm/remote-slot-services': options.version === '0.2.2-rc.3'
+      ? resolve(root, 'src/remote-slot-services-rc3.mjs')
+      : resolve(root, 'src/remote-slot-services-legacy.mjs'),
     '@dshm/user-message-bubble': options.version === '0.2.2-rc.3'
       ? source('client/ui-primitives/src/UserMessageBubble.tsx')
       : resolve(root, 'src/ui/LegacyUserMessageBubble.jsx'),

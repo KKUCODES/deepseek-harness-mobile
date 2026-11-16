@@ -43,6 +43,7 @@ import { installRemoteSidebarChat, isRemoteSidebarComposition, remoteSidebarHost
 import { remoteFactoryCaller } from './remote-factory-callers.jsx';
 import { workspaceLabel } from '@upstream/ui-conversation/src/client/skeleton/EmptyHero.tsx';
 import { installRemoteInteractionPlugins } from './remote-interaction-plugins.jsx';
+import { installRemoteSlotServices } from '@dshm/remote-slot-services';
 import { installRemoteCordisApprovals } from './remote-cordis-approvals.mjs';
 import { originalComponent, rememberComponentAdapter } from './remote-component-identity.mjs';
 import { installRemoteGlobalPanels, RemoteGlobalPanels } from './remote-global-panels.jsx';
@@ -435,7 +436,7 @@ export function installRemotePluginSlots(model) {
   model.interfaceHost = interfaceUI.runtime;
   if (!model.sharedInterfaceUI) ctx.effect(() => () => interfaceUI.dispose(), 'DSHM: remote plugin runtime');
   // 可选首页加载期间仍显示默认界面，不阻塞会话和审批服务。
-  const ready = Promise.all([installRemoteInteractionPlugins(model), ...(configForms ? [configForms.await()] : [])]);
+  const ready = Promise.all([installRemoteSlotServices(ctx), installRemoteInteractionPlugins(model), ...(configForms ? [configForms.await()] : [])]);
   return { layout, locale, imageLoader, ready, render: props => slots.renderSlot('root', { model, ...props, rootModel: model }) };
 }
 

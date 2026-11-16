@@ -1,5 +1,13 @@
 # Remote 文件预览与列表排版
 
+## rc.3 从会话过程打开文件
+
+preview.20 补齐 rc.3 文件预览和工具记录共用的官方菜单、快捷键、文件拖放服务。服务随手机端插件宿主启动和卸载，电脑下发的同名入口不重复启动。继续复用官方文件预览和原远程文件读取通道。正文插槽崩溃时，插件面板显示预览失败提示，保留返回聊天、下载和分享入口。
+
+`node scripts/verify-remote-plugin-slots.mjs --rc3-tool-file-preview` 回放 Windows 路径的工具记录，经真实会话过程入口打开 Python 正文，并用故障渲染器验证提示和面板操作。MuMu 使用同一 Web 构建连接官方 DSH `0.2.2-rc.3` 与桌面插件 `0.1.88-latest.0`，点击真实读取记录中的文件名，验证正文、下载与分享入口及返回聊天。截图在本地忽略目录 `artifacts/rc3/remote-tool-file-preview-mumu.png`。[KKC-128](https://linear.app/kkcodes/issue/KKC-128)
+
+## 文件排版记录
+
 - 状态：排版修正、浏览器专项、完整页面回归与独立 MuMu 真实文件验证通过；已随[公开preview.3](../releases.md#已核验范围)提交发布，以下保留本地候选证据。
 - 维护角色：DSHM 手机端维护者。
 - 最近核验：2026-10-15。

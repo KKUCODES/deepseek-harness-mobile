@@ -865,7 +865,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     }
     root.render(<RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={() => {}} onConnection={() => {}}/><ToolPreview/></RemotePluginScope>);
   },
-  fileLayout: async (path, text) => {
+  fileLayout: async (path, text, { open = true } = {}) => {
     if (!model.ctx.get('resources')) await model.ctx.plugin({ ...originalResources, name: 'fixture-file-layout-resources' }).await();
     if (!window.fixture.fileLayoutResources) {
       await model.ctx.plugin({ name: '@fixture/file-layout', inject: ['resources'], apply(ctx) {
@@ -876,9 +876,18 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
       window.fixture.fileLayoutResources = true;
     }
     fileLayoutText = text;
-    model.pluginPanels.openResource(sessionFileAddress('two', path));
+    if (open) model.pluginPanels.openResource(sessionFileAddress('two', path));
   },
   fileLayoutFit: value => model.pluginSlots.layout.setUser('@fixture/attachment-renderer', value),
+  failDocumentRenderer: async () => {
+    const key = '@fixture/document-render-failure';
+    await model.ctx.plugin({ name: key, inject: ['documentPreviews', 'slots'], apply(ctx) {
+      ctx.effect(() => ctx.documentPreviews.register({ id: key, extensions: ['preview-fail'], priority: 'builtin',
+        loading: 'text-pages', title: () => '故障预览' }));
+      ctx.slots.inject('sidebar.right.tab.document', () => ctx.slots.register({ name: 'sidebar.right.tab.document', key },
+        () => { throw new Error('DSHM_EXPECTED_DOCUMENT_RENDER_FAILURE'); }));
+    } }).await();
+  },
   fileList: async () => {
     await window.fixture.fileLayout('warmup.txt', 'DSHM_FILE_LIST_CONTENT');
     await model.ctx.plugin({ ...originalFiles, name: '@deepseek-ai/dsh-client-ui-sidebar-files' }).await();
@@ -1207,7 +1216,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     toolFixtureCursor = start + 8;
   },
   enableOriginalTools: async () => { toolsPlugin = model.ctx.plugin({ ...originalTools, name: '@deepseek-ai/dsh-client-ui-tool' }); await toolsPlugin.await(); },
-  toolLayoutCases: (target = model.snapshot.selected) => {
+  toolLayoutCases: (target = model.snapshot.selected, path = 'approval-reject.txt') => {
     const start = target === model.snapshot.selected ? (model.snapshot.session?.cursor ?? -1) + 1 : 0;
     let offset = 0;
     const emit = (type, data) => channels.get(target)({ type: 'event', event: { seq: start + offset++, time: 1000 + offset * 500, type, data,
@@ -1218,7 +1227,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
       ['layout-short', 'write', 'Error: [sandbox: file access denied under read-only mode]', true],
       ['layout-long', 'write', 'Error: the user rejected escalating this operation to "workspace-write"; it stays denied, so stop and explain instead of working around it', true],
     ]) {
-      emit('tool/call', { turn: 1, step: 1, callId, name, arguments: JSON.stringify({ file_path: 'approval-reject.txt', content: 'layout check' }) });
+      emit('tool/call', { turn: 1, step: 1, callId, name, arguments: JSON.stringify({ file_path: path, content: 'layout check' }) });
       emit('tool/result', { turn: 1, step: 1, message: { id: callId + '-result', role: 'tool', source: { kind: 'tool', callId },
         ...(typeof DSHM_MOBILE_SDK_VERSION === 'string' && DSHM_MOBILE_SDK_VERSION === '0.2.1-alpha.2'
           ? { isError, content: [{ type: 'text', text }] }

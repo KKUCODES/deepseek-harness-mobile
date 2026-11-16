@@ -210,6 +210,9 @@ function MobilePluginPanels(props) {
       <RemoteDocumentActions model={model} file={file}/>
     </React.Fragment>}
     <div ref={content} className={`remote-plugin-panel-content${fillsPanel(active) ? ' is-document' : ''}`}>{records.filter(tab => types.find(type => type.kind === tab.kind)?.id !== FILE_ID).map(tab => <div className={fillsPanel(tab) ? 'remote-document-tab' : undefined} key={tab.id} hidden={tab.id !== active?.id}>
+      {documentActive && tab.id === active.id && <p className="remote-document-failure" role="alert">
+        {t('文件预览加载失败。你可以关闭此标签后重试，或下载完整文件。')}
+      </p>}
       <RemotePanelActive.Provider value={layout.expanded && tab.id === active?.id}>
       <RemotePanelIdentity.Provider value={{ key: JSON.stringify([sessionId, tab.id]), signal: controller.tabDomain.occurrence(sessionId, tab).signal }}>
         <PanelTab {...props} tab={tab} active={layout.expanded && tab.id === active?.id} fallback={<p role="status">{t('此面板的插件暂不可用。')}</p>}/>
