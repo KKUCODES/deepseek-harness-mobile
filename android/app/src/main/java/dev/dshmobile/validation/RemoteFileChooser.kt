@@ -44,16 +44,30 @@ class RemoteFileChooser(
         if (requestCode != REQUEST) return false
         val selection = pending
         pending = null
-        val selected = WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+        val selected = if (resultCode == Activity.RESULT_OK && data != null) selectedUris(data) else null
         val callback = selection?.callback
-        val expired = callback == null || selection?.owner != generation()
-        val safe = !expired && selected != null && selected.size in 1..10 && selected.all {
+        val expired = callback == null || selection.owner != generation()
+        val safe = !expired && !selected.isNullOrEmpty() && selected.all {
             it.scheme == "content" && !it.authority.orEmpty().startsWith(activity.packageName)
         }
         // 切页、断线或重新绑定后，旧选择结果不能进入另一代电脑连接。
-        callback?.onReceiveValue(if (safe) selected else null)
+        callback?.onReceiveValue(if (safe) selected?.toTypedArray() else null)
         if (expired && !selected.isNullOrEmpty()) onSelectionExpired()
         return true
+    }
+
+    private fun selectedUris(data: Intent): Set<Uri>? {
+        // ACTION_OPEN_DOCUMENT can return only ClipData, even when there is no Intent.data.
+        val selected = linkedSetOf<Uri>()
+        data.data?.let { selected.add(it) }
+        val clip = data.clipData
+        if (clip != null) {
+            if (clip.itemCount > MAX_SELECTION) return null
+            for (index in 0 until clip.itemCount) {
+                selected.add(clip.getItemAt(index).uri ?: return null)
+            }
+        }
+        return selected.takeIf { it.size <= MAX_SELECTION }
     }
 
     fun cancel() {
@@ -64,5 +78,8 @@ class RemoteFileChooser(
         callback?.onReceiveValue(null)
     }
 
-    companion object { const val REQUEST = 4103 }
+    companion object {
+        const val REQUEST = 4103
+        private const val MAX_SELECTION = 10
+    }
 }

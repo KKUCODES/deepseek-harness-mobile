@@ -1,6 +1,7 @@
 package dev.dshmobile.validation
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.webkit.WebChromeClient
@@ -8,8 +9,9 @@ import android.webkit.WebChromeClient
 internal object RemoteFileChooserChecks {
     fun run() {
         val activity = object : Activity() { override fun getPackageName() = "dev.dshmobile.validation" }
+        var mode = WebChromeClient.FileChooserParams.MODE_OPEN
         val params = object : WebChromeClient.FileChooserParams() {
-            override fun getMode() = MODE_OPEN
+            override fun getMode() = mode
             override fun getAcceptTypes() = arrayOf("image/*")
             override fun isCaptureEnabled() = false
             override fun getTitle(): CharSequence? = null
@@ -63,5 +65,41 @@ internal object RemoteFileChooserChecks {
         check(results.size == 7 && notices == 2)
         finish(Activity.RESULT_OK, selected)
         check(results.size == 7 && notices == 3)
+
+        mode = WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE
+        val other = Uri.parse("content://external.provider/other.png")
+        fun clip(vararg uris: Uri) = Intent().apply {
+            clipData = ClipData.newRawUri("images", uris.first()).apply {
+                uris.drop(1).forEach { addItem(ClipData.Item(it)) }
+            }
+        }
+        open()
+        finish(Activity.RESULT_OK, clip(uri))
+        check(results.size == 8 && results.last() == listOf(uri) && notices == 3)
+
+        open()
+        finish(Activity.RESULT_OK, clip(uri, other))
+        check(results.size == 9 && results.last() == listOf(uri, other) && notices == 3)
+
+        open()
+        finish(Activity.RESULT_OK, clip(uri, other).setData(uri))
+        check(results.size == 10 && results.last() == listOf(uri, other) && notices == 3)
+
+        open()
+        generation = 4
+        finish(Activity.RESULT_OK, clip(uri, other))
+        check(results.size == 11 && results.last() == null && notices == 4)
+
+        open()
+        finish(Activity.RESULT_CANCELED, clip(uri))
+        check(results.size == 12 && results.last() == null && notices == 4)
+
+        open()
+        finish(Activity.RESULT_OK, clip(uri, Uri.parse("file:///unsafe.png")).setData(uri))
+        check(results.size == 13 && results.last() == null && notices == 4)
+
+        open()
+        finish(Activity.RESULT_OK, clip(*Array(11) { Uri.parse("content://external.provider/$it.png") }))
+        check(results.size == 14 && results.last() == null && notices == 4)
     }
 }
