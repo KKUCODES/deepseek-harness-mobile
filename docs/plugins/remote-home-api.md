@@ -79,7 +79,7 @@ function Connection({ connection: { view, actions, parts, t } }) {
 | `workspace(id)` | 打开当前目录中的工作区 |
 | `session(id)` | 经现有忙碌/连接检查打开当前列表会话 |
 | `query(text) / retrySearch()` | 更新宿主查询或显式重试；宿主继续去抖、取消过期请求 |
-| `newSession()` | 打开现有工作区选择器；实际创建仍由宿主管理 |
+| `newSession()` | 工作区页面直接在该工作区新建会话，Remote 总览打开工作区选择器。创建和导航由宿主管理 |
 | `rememberScroll(top)` | 保存当前导航键的阅读位置；拒绝非有限数字 |
 | `readScroll()` | 挂载时读取最新位置，避免只切换插件而宿主未重画时使用过期投影 |
 

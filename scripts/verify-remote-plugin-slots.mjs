@@ -4,7 +4,7 @@ import { checkModelAccessibilityLabels } from './check-model-accessibility-label
 import { checkWorkspaceErrorLanguage } from './check-workspace-error-language.mjs';
 import { checkBlockedChat } from './check-blocked-chat.mjs';
 import { checkRemoteHeader } from './check-remote-header.mjs';
-import { checkNewChatAvailability } from './check-new-chat-availability.mjs';
+import { checkNewChatAvailability, checkWorkspaceCreation } from './check-new-chat-availability.mjs';
 import { checkReferenceMenu } from './check-reference-menu.mjs';
 import { checkPluginSettingsTabs } from './check-plugin-settings-tabs.mjs';
 import { checkSettingsOnboarding } from './check-settings-onboarding.mjs';
@@ -79,7 +79,8 @@ const backNavigationOnly = process.argv.includes('--back-navigation');
 const bubbleOnly = process.argv.includes('--user-bubble');
 const imagesOnly = process.argv.includes('--rc3-images');
 const liveLogOnly = process.argv.includes('--live-log');
-const rc3Layout = bubbleOnly || imagesOnly || liveLogOnly;
+const workspaceCreateOnly = process.argv.includes('--workspace-create');
+const rc3Layout = bubbleOnly || imagesOnly || liveLogOnly || workspaceCreateOnly;
 const layoutOnly = process.argv.includes('--tool-layout') || fileLayoutOnly || fileListOnly || builtinPanelsOnly || runningOnly || forkActionsOnly || backNavigationOnly || rc3Layout;
 const layoutSdk = rc3Layout ? latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.2-rc.3', ci: true })
   : backNavigationOnly && !process.argv.includes('--official-alpha2')
@@ -104,7 +105,7 @@ const directory = resolve(root, 'artifacts/tests/remote-plugin-slots');
 await mkdir(directory, { recursive: true });
 await prepareClientEntries();
 await build({ absWorkingDir: root,
-  ...(layoutOnly ? { stdin: { contents: "import {model} from './tests/fixtures/remote-plugin-slots.jsx'; import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css'; import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';" + (builtinPanelsOnly ? "import {builtinPanelFixture} from './tests/fixtures/builtin-panel-layout.jsx'; Object.assign(window.fixture,builtinPanelFixture(model));" : '') + (liveLogOnly ? "import './src/app-diagnostics-entry.mjs'; import {remoteLiveLog} from './src/remote-live-log.mjs'; window.fixture.log = remoteLiveLog.record;" : ''), resolveDir: root, loader: 'jsx' } }
+  ...(layoutOnly ? { stdin: { contents: (workspaceCreateOnly ? "import './tests/fixtures/phone-home-catalog.mjs';" : '') + "import {model} from './tests/fixtures/remote-plugin-slots.jsx'; import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css'; import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';" + (builtinPanelsOnly ? "import {builtinPanelFixture} from './tests/fixtures/builtin-panel-layout.jsx'; Object.assign(window.fixture,builtinPanelFixture(model));" : '') + (liveLogOnly ? "import './src/app-diagnostics-entry.mjs'; import {remoteLiveLog} from './src/remote-live-log.mjs'; window.fixture.log = remoteLiveLog.record;" : ''), resolveDir: root, loader: 'jsx' } }
     : { entryPoints: ['tests/fixtures/remote-plugin-slots.jsx'] }),
   outfile: resolve(directory, 'test.js'), bundle: true, format: 'esm', platform: 'browser', jsx: 'automatic', logLevel: 'silent',
   ...(rc3Layout ? { target: ['chrome100'] } : {}),
@@ -165,7 +166,8 @@ try {
   if (rc3Layout) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
     await page.waitForFunction(() => !!window.preview15);
-    if (liveLogOnly) {
+    if (workspaceCreateOnly) report.workspaceCreation = await checkWorkspaceCreation(page);
+    else if (liveLogOnly) {
       await page.evaluate(async () => { window.fixture.toolLocale('zh'); await window.fixture.select('one'); });
       await page.getByRole('button', { name: 'Remote 选项', exact: true }).click();
       const menu = page.getByRole('dialog', { name: 'Remote 选项', exact: true });

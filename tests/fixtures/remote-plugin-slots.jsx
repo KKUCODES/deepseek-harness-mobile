@@ -127,6 +127,7 @@ const transport = {
     if (endpoint === 'sessionReferenceResolver/candidates') return { ok: true, value: [{ sessionId: 'two', displayTitle: '菜单聊天', mention: '@dsh-session:two' }] };
     if (endpoint === 'session/create' && createProbe) {
       createProbe.calls += 1;
+      createProbe.workspace = payload.args.request.workspaceId;
       return new Promise(resolve => { createProbe.finish = () => resolve({ ok: false, error: { code: 'fixture/create', message: '测试创建失败' } }); });
     }
     if (endpoint === 'session/list' && listRefreshGate) await listRefreshGate;
@@ -1083,6 +1084,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
   referenceMenuDraft: () => model.inputBindings.mounted('one').captureDraft(),
   holdCreate: () => { createProbe = { calls: 0 }; },
   createCalls: () => createProbe?.calls ?? 0,
+  createWorkspace: () => createProbe?.workspace,
   failCreate: () => { createProbe.finish(); createProbe = undefined; },
   async beginWorkspaceDraftTest(workspacePrefix = 'draft') {
     workspaceDraftTest = true; savedDraftStore = model.draftStore; savedUploadHooks = transport.uploadHooks;

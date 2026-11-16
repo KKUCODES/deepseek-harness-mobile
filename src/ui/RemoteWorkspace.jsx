@@ -107,6 +107,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   }));
   useEffect(() => () => flowMotion?.clear(), [flowMotion]);
   const historyRequest = useRef(null);
+  const creatingSession = useRef(false);
   const filePicker = useRef(null), imagePicker = useRef(null), pickerSession = useRef(null);
   const editor = useRef(null);
   useEffect(() => {
@@ -174,6 +175,21 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     (!workspace || state.workspaces?.items.find(item => item.workspaceId === workspace)?.sessionIds.includes(item.id)) &&
     (!phrase || item.displayTitle.toLocaleLowerCase().includes(phrase.toLocaleLowerCase()) || snippets.has(item.id)));
   const homeKey = JSON.stringify([workspace, archived, phrase]);
+  const canCreate = () => !busy && !creatingSession.current && model.getSnapshot().connectionState === 'connected';
+  const createSession = workspaceId => {
+    if (!canCreate()) return;
+    creatingSession.current = true;
+    void act(async () => {
+      await model.create(workspaceId);
+      setSheet(null);
+    }).finally(() => { creatingSession.current = false; });
+  };
+  const newSession = () => {
+    if (!canCreate()) return;
+    if (workspace === null) { setSheet('new'); return; }
+    setSheet(null);
+    createSession(workspace);
+  };
   // 只交付首页投影和白名单操作；插件不会拿到 RemoteModel、凭据或任意 RPC 通道。
   const home = { apiVersion: 1, t, locale, view: {
     key: homeKey, scrollTop: homeReading.current.get(homeKey) ?? 0,
@@ -191,7 +207,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     session: id => { if (!model.getSnapshot().selected && model.getSnapshot().connectionState === 'connected'
       && rows.some(item => item.id === id)) void act(() => model.select(id)); },
     query: value => { if (typeof value === 'string') setQuery(value); }, retrySearch: () => retrySearch(value => value + 1),
-    newSession: () => { if (model.getSnapshot().connectionState === 'connected' && !busy) setSheet('new'); },
+    newSession,
     readScroll: () => homeReading.current.get(homeKey) ?? 0,
     rememberScroll: top => {
       if (!Number.isFinite(top)) return;
@@ -379,7 +395,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       {sheet === 'workspaces' && <RemoteWorkspaceManager model={model}/>}
       {sheet === 'export' && <RemoteSessionExport key={selected} model={model} sessionId={selected}/>}
       {sheet === 'desktopApps' && <RemoteDesktopApps key={selected} model={model} sessionId={selected}/>}
-      {sheet === 'new' && state.workspaces?.items.map(item => <Button key={item.workspaceId} className="option" disabled={!connected || busy} onClick={() => void act(async () => { await model.create(item.workspaceId); setSheet(null); })}>{item.title}</Button>)}
+      {sheet === 'new' && state.workspaces?.items.map(item => <Button key={item.workspaceId} className="option" disabled={!connected || busy} onClick={() => createSession(item.workspaceId)}>{item.title}</Button>)}
       {sheet === 'models' && <>
         {modelReadOnly && <p role="status">{t(SUBAGENT_MODEL_READ_ONLY)}</p>}
         {state.catalogStatus === 'loading' && <p role="status">{t("正在读取电脑上的模型…")}</p>}
@@ -391,7 +407,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         {groups.map(group => <section key={group.id}><h3>{group.name}</h3>{group.models.map(item => <Button className="option" key={item.id} disabled={modelReadOnly || busy || state.session?.openState !== 'open' || state.session?.running || state.catalogStatus !== 'ready'} aria-pressed={selection?.provider === group.id && selection?.model === item.id} onClick={() => void act(async () => { await model.chooseModel({ provider: group.id, model: item.id }); setSheet(null); })}>{item.name}{selection?.provider === group.id && selection?.model === item.id && <IconCheckOutline16/>}</Button>)}</section>)}
         {currentModel?.reasoning && <section><h3>{t("思考强度")}</h3>{currentModel.reasoning.efforts.map(effort => <Button key={effort.id} className="option" disabled={modelReadOnly || busy || state.session?.openState !== 'open' || state.session?.running || state.catalogStatus !== 'ready'} aria-pressed={(selection?.reasoningEffort ?? currentModel.reasoning.defaultEffort) === effort.id} onClick={() => void act(async () => { await model.chooseModel({ ...selection, reasoningEffort: effort.id }); setSheet(null); })}>{effort.name}{(selection?.reasoningEffort ?? currentModel.reasoning.defaultEffort) === effort.id && <IconCheckOutline16/>}</Button>)}</section>}
       </>}
-      {sheet === 'menu' && <><Button className="option" onClick={() => { setSheet(null); onConnection(); }}>{t("电脑连接")}</Button><Button className="option" onClick={() => setSheet('plugins')}>{t("电脑插件")}</Button><Button className="option" disabled={!connected || busy} onClick={() => setSheet('new')}>{t("新建聊天")}</Button>
+      {sheet === 'menu' && <><Button className="option" onClick={() => { setSheet(null); onConnection(); }}>{t("电脑连接")}</Button><Button className="option" onClick={() => setSheet('plugins')}>{t("电脑插件")}</Button><Button className="option" disabled={!connected || busy} onClick={newSession}>{t("新建聊天")}</Button>
         <Button className="option" onClick={() => setSheet('workspaces')}>{t("管理工作区")}</Button>
         <Button className="option" onClick={() => { setSettingsTarget(before => ({ id: 'models', revision: before.revision + 1 })); setSheet('settings'); }}>{t("电脑设置")}</Button>
         {/* 选择先发布 sessionId，引用 ready 后才挂载面板；不能只凭 ID 调用原控制器。 */}
