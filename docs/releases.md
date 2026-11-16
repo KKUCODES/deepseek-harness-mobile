@@ -1,16 +1,16 @@
 # APK 构建、签名与下载
 
-**preview.16（versionCode 26）** 优化了 Remote 回前台和重进最近会话的体验，并修复草稿恢复误报。[双语发行说明](../ci/release-notes/0.1.0-preview.16.md) · [本地验证](./integration/preview16-remote-resume.md)
+**preview.19（versionCode 29）** 改善 Remote 图片选择和预览，支持在当前工作区直接新建会话，提供实时诊断日志。[双语发行说明](../ci/release-notes/0.1.0-preview.19.md) · [问题诊断](./integration/diagnostics-current.md)
 
 [返回首页](../README.md) · [使用指南](./usage.md)
 
 ## 下载并安装
 
-Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA256SUMS.txt`、`signature.txt` 与 `compatibility.json`，无需登录 GitHub。[下载 preview.16 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.16/DSHM-0.1.0-preview.16.apk) · [公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.16)
+Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA256SUMS.txt`、`signature.txt`、`compatibility.json` 和 WebView 符号包，无需登录 GitHub。[下载 preview.19 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.19/DSHM-0.1.0-preview.19.apk) · [公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.19)
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前开发预览使用 `dev.dshmobile.validation.officialtest` 包名与原签名证书。请直接覆盖安装来保留本地数据。preview.8 起可在 App 内检查新版，更早的公开版请手动下载 APK。Remote 支持官方 DSH `0.2.0-rc.2`、`0.2.1-alpha.2` 和 `0.2.1-rc.2`，配套电脑插件为 `0.1.87-latest.0`。大响应分块需要中转包含提交 `94183d0`。
+当前开发预览使用 `dev.dshmobile.validation.officialtest` 包名与原签名证书。请直接覆盖安装来保留本地数据。preview.8 起可在 App 内检查新版，更早的公开版请手动下载 APK。Remote 已验收官方 DSH `0.2.2-rc.3`，配套电脑插件为 `0.1.88-latest.0`。大响应分块需要中转包含提交 `94183d0`。
 
 ## 自动构建与发布
 
@@ -19,7 +19,7 @@ Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA
 - 手动选择 `main` → Run workflow 可生成签名包；勾选 `publish_release` 发布公开开发预览。
 - 推送对应 `v<version>` 标签时，版本校验、构建、签名成功后发布预览。
 - 发新版本前同步修改 [ci/release.json](../ci/release.json) 中的版本并递增 `versionCode`，提供 `ci/release-notes/<version>.md` 中英文发行说明，更新两份 README 的直接下载链接。发行作业按固定提交读取该文件；已存在的 Release 不覆盖，重新发版应使用新版本号。
-- 修改工作流的发版提交须先进入 `main`，再发布版本标签。目标提交相对默认分支仍有工作流差异时，GitHub 会要求额外的工作流写权限，原 `GITHUB_TOKEN` 无法取得；此时同步主分支后仅重跑失败的发行作业，复用已有签名产物。[GitHub 发行权限说明](https://docs.github.com/en/rest/releases/releases#create-a-release)
+- 标签触发的发行以已推送的标签为准。若 GitHub 拒绝自动发行，可从同次 Actions 下载并校验已有签名产物，再在原标签发布。[GitHub 发行权限说明](https://docs.github.com/en/rest/releases/releases#create-a-release)
 
 ## 签名凭据
 
@@ -40,7 +40,7 @@ Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA
 
 ## 构建来源与边界
 
-GitHub 托管的 Ubuntu 24.04 + Node.js 24 + JDK 17 + Android SDK 35。只读官方源码固定于 `687f282e8625c6b8d11ff58211a90524be2e4317`；官方 SDK 从本仓库锁文件安装，共享协议来自固定的中转仓库提交。不修改或构建 DSH 本体、SDK 或 Electron。
+GitHub 托管的 Ubuntu 24.04 + Node.js 24 + JDK 17 + Android SDK 35。只读官方源码、SDK 版本及中转协议提交由 [ci/release.json](../ci/release.json) 指定，SDK 按锁文件安装。
 
 Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地入口保持。签名和可安装性核验不代表完整模型、真机或公网功能复验。
 

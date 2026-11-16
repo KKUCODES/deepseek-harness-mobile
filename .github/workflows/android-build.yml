@@ -212,4 +212,8 @@ jobs:
           fi
           gh api "repos/$GH_REPO/contents/ci/release-notes/$APP_VERSION.md?ref=$GITHUB_SHA" --header 'Accept: application/vnd.github.raw+json' > "$RUNNER_TEMP/release-notes.md"
           test -s "$RUNNER_TEMP/release-notes.md"
-          gh release create "$tag" "signed/DSHM-$APP_VERSION.apk" signed/SHA256SUMS.txt signed/compatibility.json signed/signature.txt symbols/DSHM-Web-Symbols-*.zip --target "$GITHUB_SHA" --prerelease --title "DSHM $APP_VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
+          tag_source=(--target "$GITHUB_SHA")
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            tag_source=(--verify-tag)
+          fi
+          gh release create "$tag" "signed/DSHM-$APP_VERSION.apk" signed/SHA256SUMS.txt signed/compatibility.json signed/signature.txt symbols/DSHM-Web-Symbols-*.zip "${tag_source[@]}" --prerelease --title "DSHM $APP_VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
