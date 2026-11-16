@@ -61,4 +61,5 @@
     <string name="key_remove">移除 Key</string>
     <string name="key_invalid">请输入有效 Key（不含空白）</string>
     <string name="key_save_failed">保存失败，请重试；原 Key 不会显示在页面。</string>
+    <string name="remote_file_selection_expired">电脑连接已变化，请重新选择附件。</string>
 </resources>

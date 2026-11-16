@@ -61,4 +61,5 @@
     <string name="notice_reconnect">Reconnect</string>
     <string name="notice_system_settings">System notification settings</string>
     <string name="notice_system_allow">Allow system notifications</string>
+    <string name="remote_file_selection_expired">The computer connection changed. Please select your attachments again.</string>
 </resources>

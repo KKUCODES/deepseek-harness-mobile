@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-export async function checkRemoteImages(page, { alpha2 = false, systemBack } = {}) {
+export async function checkRemoteImages(page, { alpha2 = false, systemBack, fallbackOnly = false } = {}) {
   // 动画驱动器合同已在KKC-118单独定位；这里独立验证图片，不夹带其修复。
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.evaluate(() => { window.fixture.toolLocale('zh'); });
@@ -60,6 +60,7 @@ export async function checkRemoteImages(page, { alpha2 = false, systemBack } = {
   await page.evaluate(() => window.preview15.images.renderFailure(false));
   await retryAll(recovery);
   await imageReady(2); report.renderFailureRetry = true;
+  if (fallbackOnly) return report;
   const slot = alpha2 ? 'conversation.message.images' : 'conversation.chat.user.images';
   await page.evaluate(slot => window.preview15.images.plugin(slot), slot);
   await scope.locator(`[data-image-slot="${slot}"]`).first().waitFor();

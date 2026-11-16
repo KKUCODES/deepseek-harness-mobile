@@ -7,6 +7,13 @@ import { RemotePluginImageUrls } from '../remote-images.mjs';
 import { useLocale } from './locale.jsx';
 
 const Images = createContext(null);
+const noImageMenu = () => ({});
+const unavailableImage = async () => { throw new Error('remote_image_unavailable'); };
+// The mobile fallback has a lightbox but no desktop file-drop destination.
+const noFileDrag = {
+  async prepare() { return { start: () => false, release() {} }; },
+  reportFailure() {},
+};
 
 export function RemoteImages({ model, sessionId, paused, children }) {
   const cache = useMemo(() => new RemotePluginImageUrls(model, sessionId), [model, sessionId]);
@@ -46,10 +53,11 @@ function useImageLabels(labels) {
 
 /** 原画廊负责缩略图、分组、加载重试和原图窗口；手机只接授权读取和原字典。 */
 export function RemoteImageGallery({ images, loadImage, align = 'start', compact, thumbnail, labels }) {
-  const scope = useContext(Images), load = loadImage ?? scope?.load, resolved = useImageLabels(labels);
+  const scope = useContext(Images), load = loadImage ?? scope?.load ?? unavailableImage, resolved = useImageLabels(labels);
   return <RemoteImageBoundary resetKey={JSON.stringify(images)} captureImageErrors onRetry={failedUrl => {
     if (failedUrl) for (const image of images) if (image.attachment) load?.forget?.(image.attachment, failedUrl);
-  }}><ImageGallery images={images} load={load} align={align} compact={compact} thumbnail={thumbnail} labels={resolved}/></RemoteImageBoundary>;
+  }}><ImageGallery images={images} load={load} align={align} compact={compact} thumbnail={thumbnail} labels={resolved}
+    fileDrag={noFileDrag} getTriggerProps={noImageMenu}/></RemoteImageBoundary>;
 }
 
 export function RemoteInlineImage({ image, label }) {

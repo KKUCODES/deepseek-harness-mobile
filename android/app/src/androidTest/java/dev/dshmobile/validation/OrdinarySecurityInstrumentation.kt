@@ -27,8 +27,10 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
     private var diagnosticsOnly = false
     private var mobilePluginsOnly = false
     private var webUpdatesOnly = false
+    private var remoteFilesOnly = false
     private var webUpdateLive: String? = null
     override fun onCreate(arguments: Bundle?) {
+        remoteFilesOnly = arguments?.getString("remoteFilesOnly") == "true"
         mobilePluginsOnly = arguments?.getString("mobilePluginsOnly") == "true"
         diagnosticsOnly = arguments?.getString("diagnosticsOnly") == "true"
         linksOnly = arguments?.getString("linksOnly") == "true"
@@ -43,6 +45,21 @@ class OrdinarySecurityInstrumentation : Instrumentation() {
         super.onCreate(arguments); noticeEpochSession = arguments?.getString("noticeEpochSession"); notificationsOnly = arguments?.getString("notificationsOnly") == "true"; appearanceOnly = arguments?.getString("appearanceOnly") == "true"; computerKeyOnly = arguments?.getString("computerKeyOnly") == "true"; resourcesOnly = arguments?.getString("resourcesOnly") == "true"; saveOnly = arguments?.getString("saveOnly") == "true"; saveWriteOnly = arguments?.getString("saveWriteOnly") == "true"; saveDeathOnly = arguments?.getString("saveDeathOnly") == "true"; shareDeathOnly = arguments?.getString("shareDeathOnly") == "true"; shareOnly = arguments?.getString("shareOnly") == "true"; start()
     }
     override fun onStart() {
+        if (remoteFilesOnly) {
+            val result = Bundle()
+            try {
+                var failure: Exception? = null
+                runOnMainSync { try { RemoteFileChooserChecks.run() } catch (error: Exception) { failure = error } }
+                failure?.let { throw it }
+                result.putString("result", "PASS: current selection, expired selection, cancellation and callback isolation")
+                finish(Activity.RESULT_OK, result)
+            } catch (error: Exception) {
+                result.putString("result", "FAIL: Remote file chooser")
+                result.putString("location", error.stackTrace.take(3).joinToString())
+                finish(Activity.RESULT_CANCELED, result)
+            }
+            return
+        }
         if (mobilePluginsOnly) {
             val result = Bundle()
             try { MobilePluginPreferenceChecks.run(targetContext); result.putString("result", "PASS: unified install/uninstall/enable/disable, migration, groups, host leases, persistence and validation"); finish(Activity.RESULT_OK, result) }

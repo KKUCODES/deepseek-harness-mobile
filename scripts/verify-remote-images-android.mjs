@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { transform } from 'esbuild';
 import { _android } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -9,21 +10,24 @@ import { androidAppWebView } from './android-app-webview.mjs';
 
 // 同一正式页面与回归入口，在独立调试UID的WebView运行；不改正式配对或聊天。
 const alpha2 = process.argv.includes('--alpha2');
-const sdk = alpha2 ? '0.2.1-alpha.2' : '0.2.1-rc.2';
+const rc3 = process.argv.includes('--rc3');
+const sdk = rc3 ? '0.2.2-rc.3' : alpha2 ? '0.2.1-alpha.2' : '0.2.1-rc.2';
 const reasoning = process.argv.includes('--reasoning'), aside = process.argv.includes('--aside-history');
 const kind = reasoning ? `reasoning${aside ? '-aside' : ''}` : 'images';
-const directory = `artifacts/tests/preview15-history/${sdk}-candidate-${kind}`;
+const directory = rc3 ? 'artifacts/tests/remote-plugin-slots' : `artifacts/tests/preview15-history/${sdk}-candidate-${kind}`;
+const applicationId = rc3 ? 'dev.dshmobile.validation.rc3test' : 'dev.dshmobile.validation.rc21test';
+const serial = process.env.DSHM_ANDROID_SERIAL ?? 'emulator-5554';
 const adb = 'C:/Users/KKirin/AppData/Local/Android/Sdk/platform-tools/adb.exe';
-const run = (...args) => execFileSync(adb, ['-s', 'emulator-5554', ...args], { encoding: 'utf8', windowsHide: true });
+const run = (...args) => execFileSync(adb, ['-s', serial, ...args], { encoding: 'utf8', windowsHide: true });
 // 新进程隔离Cordis/平台全局，避免重复注入与上一次测试的异步初始化相互污染。
-run('shell', 'am', 'force-stop', 'dev.dshmobile.validation.rc21test');
-run('shell', 'am', 'start', '-n', 'dev.dshmobile.validation.rc21test/dev.dshmobile.validation.ValidationActivity');
+run('shell', 'am', 'force-stop', applicationId);
+run('shell', 'am', 'start', '-n', `${applicationId}/dev.dshmobile.validation.ValidationActivity`);
 await new Promise(resolve => setTimeout(resolve, 1000));
-const device = (await _android.devices({ omitDriverInstall: true })).find(device => device.serial() === 'emulator-5554');
+const device = (await _android.devices({ omitDriverInstall: true })).find(device => device.serial() === serial);
 assert.ok(device); device.setDefaultTimeout(15000);
 const report = { sdk, source: 'Actual RemoteWorkspace and Session in MuMu isolated WebView; synthetic protocol', errors: [] };
 try {
-  let page = await (await androidAppWebView(device, 'dev.dshmobile.validation.rc21test')).page();
+  let page = await (await androidAppWebView(device, applicationId)).page();
   page.setDefaultTimeout(20000);
   if (!page.url().startsWith('https://remote.dshm.invalid/')) {
     await page.getByRole('button', { name: '打开侧边抽屉', exact: true }).click();
@@ -42,15 +46,19 @@ try {
   const css = (await readFile(`${directory}/test.css`, 'utf8')).replace(/url\(["']?(?:\.\/)?(JetBrainsMono[^)"']+)["']?\)/g,
     `url("${origin}/assets/web/$1")`);
   await page.addStyleTag({ content: css });
+  if (rc3) for (const path of ['src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) {
+    await page.addStyleTag({ content: await readFile(path, 'utf8') });
+  }
   console.log('native:styles');
   // Remote页禁止inline module；使用其明确允许的Function执行隔离打包产物，不放宽CSP。
-  const code = (await readFile(`${directory}/test.js`, 'utf8')).replaceAll('import.meta', '({url:location.href,env:{MODE:"production"}})');
+  const bundled = await readFile(`${directory}/test.js`, 'utf8');
+  const { code } = await transform(bundled, { define: { 'import.meta.url': JSON.stringify(page.url()), 'import.meta.env': '{"MODE":"production"}' } });
   await page.evaluate(code => Function(`return (async()=>{${code}\n})()`)(), code);
   console.log('native:script');
   await page.waitForFunction(() => !!window.preview15?.images);
   if (reasoning) report.reasoning = await checkRemoteReasoning(page, { aside });
   else if (process.argv.includes('--navigation')) report.navigation = await checkRemoteBackNavigation(page, { systemBack: () => run('shell', 'input', 'keyevent', '4') });
-  else report.images = await checkRemoteImages(page, { alpha2, systemBack: () => run('shell', 'input', 'keyevent', '4') });
+  else report.images = await checkRemoteImages(page, { alpha2, fallbackOnly: rc3, systemBack: () => run('shell', 'input', 'keyevent', '4') });
   report.actualRemoteActivity = true;
   if (!reasoning) report.actualRemoteActivityBack = true;
   assert.deepEqual(report.errors, []);
