@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconCheckOutline16, IconChevronLeftOutline14, IconChevronDownOutline14, IconCloseOutline16, IconEllipsisOutline16, IconFolderClose16, IconNewChatOutline16, IconSearchOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Surface, IconButton } from './Surface.jsx';
@@ -20,6 +20,7 @@ import { DefaultRemoteHome } from './DefaultRemoteHome.jsx';
 import { RemoteQueue } from './RemoteQueue.jsx';
 import { RemoteFilePreview } from './RemoteFilePreview.jsx';
 import { RemoteImages } from './RemoteImages.jsx';
+import { RemoteMarkdownImages } from '../remote-markdown-images.mjs';
 import { hasDraftImage, RemoteDraftImages } from './RemoteDraftImages.jsx';
 import { RemoteChangesPreview } from './RemoteDiff.jsx';
 import { RemoteCommand } from './RemoteCommand.jsx';
@@ -231,7 +232,13 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   } }, [selected, model]);
   const openCommand = useCallback((nodeId, callId) => setCommand({ sessionId: selected, nodeId, callId }), [selected]);
   const forkTurn = useCallback(nodeId => void act(() => model.forkTurn(nodeId, selected)), [act, model, selected]);
-  const renderContent = useCallback((text, streaming, options) => <ChatMarkdown text={text} streaming={streaming} onOpenFile={openFile} fileMentions={options?.fileMentions}/>, [openFile]);
+  // 正文图片沿用当前会话的文件授权读取；切换会话或离开页面时撤销已发布的本地URL。
+  const markdownCwd = state.list?.byId[selected]?.cwd;
+  const markdownImages = useMemo(() => selected
+    ? new RemoteMarkdownImages(model, selected, { cwd: markdownCwd })
+    : null, [model, selected, markdownCwd]);
+  useEffect(() => () => markdownImages?.dispose(), [markdownImages]);
+  const renderContent = useCallback((text, streaming, options) => <ChatMarkdown text={text} streaming={streaming} onOpenFile={openFile} fileMentions={options?.fileMentions} images={markdownImages}/>, [openFile, markdownImages]);
   useEffect(() => {
     const controller = new AbortController();
     setSearch(null);

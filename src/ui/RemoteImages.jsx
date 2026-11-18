@@ -6,6 +6,7 @@ import galleryCss from '@upstream/ui-attachment/src/MessageImage.module.css';
 import { RemotePluginImageUrls } from '../remote-images.mjs';
 import { useLocale } from './locale.jsx';
 import { diagnostics } from '../app-diagnostics.mjs';
+import { installRemoteImageZoom } from '../remote-image-zoom.mjs';
 
 const Images = createContext(null);
 const noImageMenu = () => ({});
@@ -19,6 +20,8 @@ const noFileDrag = {
 export function RemoteImages({ model, sessionId, paused, children }) {
   const cache = useMemo(() => new RemotePluginImageUrls(model, sessionId), [model, sessionId]);
   useEffect(() => () => cache.dispose(), [cache]);
+  // 原图库的预览层没有缩放；接入手机手势后仍使用原关闭与返回合同。
+  useEffect(() => installRemoteImageZoom(), []);
   const value = useMemo(() => ({ load: paused ? undefined : cache.load, model }), [cache, model, paused]);
   return <Images.Provider value={value}>{children}</Images.Provider>;
 }

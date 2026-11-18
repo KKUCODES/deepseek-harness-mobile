@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+2026-11-19：[Remote 正文 Markdown 图片与预览缩放](../integration/remote-markdown-images-current.md)。原聊天缺少 `fileImages`/`pathImages`，模型正文的本地图片只显示替代文字；现按会话文件授权预取字节并发布 blob URL，原图预览支持捏合缩放且按布局尺寸重新栅格化，外链图片仍禁用。本地实现，未推送、未发行。
+
 2026-11-13：[preview.16 Remote 回前台恢复与最近会话](../integration/preview16-remote-resume.md)。基于公开 .15 的独立分支，双 SDK 回归、原签名 APK 与 MuMu 实际验证范围见专题。
 
 2026-10-27：[连接前通用界面宿主与默认回退](../integration/remote-connection-plugin-current.md)。两个公开页面槽共享本地模块，连接前加载，停用/卸载/失败均回退；SDK/作者文档、580项Node、双SDK矩阵与MuMu真实管理/原配对/原聊天通过，最终原签名code25保留插件停用，未发行。[KKC-123](https://linear.app/kkcodes/issue/KKC-123)。
