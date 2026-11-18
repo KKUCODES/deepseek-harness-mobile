@@ -8,6 +8,10 @@
 .remote-app .messages > .remote-history-list { margin: 0; flex: none; }
 .remote-history-group { display: flex; flex-direction: column; padding-bottom: 12px; box-sizing: border-box; }
 .remote-history-group > [data-slot="dshm.chat.node"] { display: contents; }
+/* 整组折叠后没有可见记录时不再保留分组间距；否则长回合的过程分组会在正文前堆出大片空白。 */
+.remote-history-group:not(:has(> [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty))) {
+  padding-bottom: 0;
+}
 .remote-history-group > [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty)
   ~ [data-chat-flow-key]:not([hidden]):not(:empty) { margin-top: var(--dsh-chat-flow-gap, 6px); }
 .remote-render-recovery { padding: 16px; font-size: 14px; line-height: 1.6; }

@@ -7,6 +7,7 @@ import { IconBranchOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx
 import { remoteToolRow, remoteToolCancellation, remoteToolVisibleContent } from '../remote-tool-row.mjs';
 import { attachmentFile } from '../remote-attachments.mjs';
 import { inlineImage } from '../remote-images.mjs';
+import { assistantHasVisibleContent, visibleAssistantBlock } from '../remote-assistant-blocks.mjs';
 import { RemoteLocalImage } from './RemoteImages.jsx';
 import { diffCardModel } from '@upstream/ui-tool/src/client/tool/models/diff-card-model.ts';
 import { RemoteToolDiff } from './RemoteDiff.jsx';
@@ -95,17 +96,18 @@ function RemoteAssistantMessage({ node, turnProcess, reasoningProps, renderConte
   const reveal = React.useCallback(() => turnProcess?.setOpen(true), [turnProcess?.setOpen]);
   const blocks = data.blocks ?? [], active = data.status === 'running', interrupted = data.status === 'interrupted';
   // 工具头由独立节点显示；其余块遵循原投影顺序，不能把图片和文字各自合并。
-  if (!active && !interrupted && blocks.every(block => block.kind === 'tool-call')) return null;
+  if (!active && !interrupted && !assistantHasVisibleContent(blocks)) return null;
   const body = [];
   for (let index = 0; index < blocks.length; index++) {
     const block = blocks[index], key = index;
+    if (!visibleAssistantBlock(block)) continue;
     if (block.kind === 'text') body.push(<React.Fragment key={key}>{renderContent(block.text, active, contentOptions)}</React.Fragment>);
-    else if (block.kind === 'reasoning' && block.text.trim() !== '') body.push(<RemoteReasoning key={key} text={block.text} active={active && index === blocks.length - 1} hidden={Boolean(reasoningHidden)} reveal={reveal} renderContent={renderContent} reasoningProps={reasoningProps}/>);
+    else if (block.kind === 'reasoning') body.push(<RemoteReasoning key={key} text={block.text} active={active && index === blocks.length - 1} hidden={Boolean(reasoningHidden)} reveal={reveal} renderContent={renderContent} reasoningProps={reasoningProps}/>);
     else if (block.kind === 'image') {
       const images = [{ type: 'image', attachment: block.attachment }];
       while (blocks[index + 1]?.kind === 'image') images.push({ type: 'image', attachment: blocks[++index].attachment });
       body.push(<RemoteFiles key={key} content={images} openAttachment={openAttachment}/>);
-    } else if (block.kind !== 'tool-call') body.push(<JsonBlock key={key} label={t('扩展内容')} payload={block.block} truncatedLabel={total => t('内容较长，仅显示部分（共 {total} 个字符）。', { total })}/>);
+    } else if (block.kind !== 'tool-call') body.push(<JsonBlock key={key} label={t('扩展内容')} payload={block.block ?? block} truncatedLabel={total => t('内容较长，仅显示部分（共 {total} 个字符）。', { total })}/>);
   }
   return <AssistantMessage body={body.length ? body : undefined} active={active} error={interrupted ? t('已停止') : null} renderContent={renderContent}/>;
 }
