@@ -130,7 +130,8 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-plugin-layout button { padding:8px 12px; border:1px solid var(--border-color, #ddd); border-radius:20px; background:transparent; color:inherit; }
 .remote-permissions .remote-permission-option, .remote-agent-presets .remote-permission-option { height:auto; min-height:48px; padding:12px 14px; gap:12px; white-space:normal; }
 .remote-agent-mode { flex:none; padding:0 16px 6px; }
-.remote-header-extensions { flex:none; min-width:0; max-height:25dvh; overflow:auto; }
+/* 会话头部操作（如后台任务入口）出现或消失时要占住固定一行，否则聊天区会整体位移。 */
+.remote-header-extensions { flex:none; min-width:0; min-height:28px; max-height:25dvh; overflow:auto; }
 .remote-heading { flex:1; min-width:0; max-height:100%; overflow:auto; text-align:center; }
 .remote-heading-content { display:flex; align-items:center; justify-content:center; min-width:0; gap:4px; }
 .remote-heading-content > strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
