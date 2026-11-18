@@ -12,8 +12,11 @@
 .remote-history-group:not(:has(> [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty))) {
   padding-bottom: 0;
 }
-.remote-history-group > [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty)
-  ~ [data-chat-flow-key]:not([hidden]):not(:empty) { margin-top: var(--dsh-chat-flow-gap, 6px); }
+/* 节点各自放在 display:contents 的槽里，同一槽内没有兄弟节点；按相邻槽补回过程/回答的行距。 */
+.remote-history-group > [data-slot="dshm.chat.node"]:has(> [data-chat-flow-key]:not([hidden]):not(:empty))
+  ~ [data-slot="dshm.chat.node"] > [data-chat-flow-key]:not([hidden]):not(:empty) {
+  margin-top: var(--dsh-chat-flow-gap, 6px);
+}
 .remote-render-recovery { padding: 16px; font-size: 14px; line-height: 1.6; }
 .remote-render-recovery p { margin: 0 0 8px; }
 .remote-app .messages { font-size: var(--dsh-content-font-size, 14px); gap: 0; }
