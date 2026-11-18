@@ -57,6 +57,8 @@ h1 { margin: 0; font-size: 25px; font-weight: 500; letter-spacing: -.5px; }
 dialog { color: inherit; border: 0; padding: 0; background: var(--dsw-alias-bg-layer-1, white); }
 dialog::backdrop { background: rgb(15 17 21 / 24%); animation: backdrop-enter 260ms cubic-bezier(.22, 1, .36, 1) both; }
 [data-motion-presence="closed"] { pointer-events: none; }
+/* 退场动画已结束但还没卸载时直接移出渲染树；撤销动画会让元素回到基准不透明度并重新上屏。 */
+[data-motion-presence="closed"][data-motion-state="idle"] { display: none; }
 dialog[data-motion-presence="closed"] { z-index: 3; }
 .surface-exit-backdrop { position: fixed; inset: 0; z-index: 2; pointer-events: none; background: rgb(15 17 21 / 24%); animation: backdrop-exit 170ms ease-out both; }
 .surface-exit-backdrop[hidden] { display: none; }
