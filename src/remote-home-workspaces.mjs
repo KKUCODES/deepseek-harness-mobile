@@ -9,7 +9,7 @@ export const WORKSPACE_CHAT_ORPHAN_TITLE = '其他会话';
 
 /** 首页工作区会话偏好的默认值：开关关闭且全部收起 */
 export function defaultWorkspaceChatPreferences() {
-  return { enabled: false, expanded: {}, active: [], unread: [], seen: [] };
+  return { enabled: false, expanded: {}, active: [], unread: [] };
 }
 
 /**
@@ -25,12 +25,13 @@ export function normalizeWorkspaceChatPreferences(value) {
       if (isWorkspaceChatGroupId(id) && normalized !== 'collapsed') expanded[id] = normalized;
     }
   }
+  const legacyStatus = value !== null && typeof value === 'object' && Object.hasOwn(value, 'seen');
   return {
     enabled: value?.enabled === true,
     expanded,
-    active: normalizeSessionIds(value?.active),
-    unread: normalizeSessionIds(value?.unread),
-    seen: normalizeSessionIds(value?.seen),
+    // 旧版用 seen 判定完成提示，升级时清空一次跟踪结果，避免保留误报的未读点。
+    active: legacyStatus ? [] : normalizeSessionIds(value?.active),
+    unread: legacyStatus ? [] : normalizeSessionIds(value?.unread),
   };
 }
 
@@ -179,36 +180,31 @@ export function formatRelativeChatTime(updatedAt, now, t) {
 }
 
 /**
- * 推进会话状态：运行中的会话记入 active，运行结束且未打开过的会话记入 unread
+ * 推进会话状态：运行中的会话记入 active，运行结束时未停留在该会话的记入 unread
  * @param previous 当前首页偏好
  * @param sessions 本次观察到的会话运行状态
+ * @param openId 当前正停留的会话标识；为 null 表示首页
  * @returns 更新后的偏好；没有变化时返回原对象
  */
-export function advanceSessionStatus(previous, sessions) {
+export function advanceSessionStatus(previous, sessions, openId = null) {
   const active = new Set(previous.active ?? []);
   const unread = new Set(previous.unread ?? []);
-  const seen = new Set(previous.seen ?? []);
   let changed = false;
   for (const session of sessions) {
     if (session.running === true) {
-      if (!active.has(session.id)) {
-        active.add(session.id);
-        if (unread.delete(session.id)) changed = true;
-        if (seen.delete(session.id)) changed = true;
-        changed = true;
-      }
+      if (!active.has(session.id)) { active.add(session.id); changed = true; }
+      if (unread.delete(session.id)) changed = true;
     } else if (active.has(session.id)) {
       active.delete(session.id);
-      if (seen.delete(session.id)) { /* 运行中已经打开过，结束后不再提示。 */ }
-      else if (!unread.has(session.id)) unread.add(session.id);
+      if (session.id !== openId && !unread.has(session.id)) unread.add(session.id);
       changed = true;
     }
   }
-  return changed ? { ...previous, active: [...active], unread: [...unread], seen: [...seen] } : previous;
+  return changed ? { ...previous, active: [...active], unread: [...unread] } : previous;
 }
 
 /**
- * 记录一次会话打开：清除未读提示；运行中的会话不再在完成时提示
+ * 记录一次会话打开：清除未读提示；运行中的会话保持 active 以便结束时可判断
  * @param previous 当前首页偏好
  * @param id 会话标识
  * @param running 打开时会话是否仍在运行
@@ -217,13 +213,9 @@ export function advanceSessionStatus(previous, sessions) {
 export function openSessionStatus(previous, id, running) {
   const active = new Set(previous.active ?? []);
   const unread = new Set(previous.unread ?? []);
-  const seen = new Set(previous.seen ?? []);
   let changed = unread.delete(id);
-  if (running === true) {
-    if (!active.has(id)) { active.add(id); changed = true; }
-    if (!seen.has(id)) { seen.add(id); changed = true; }
-  } else if (seen.delete(id)) changed = true;
-  return changed ? { ...previous, active: [...active], unread: [...unread], seen: [...seen] } : previous;
+  if (running === true && !active.has(id)) { active.add(id); changed = true; }
+  return changed ? { ...previous, active: [...active], unread: [...unread] } : previous;
 }
 
 /**

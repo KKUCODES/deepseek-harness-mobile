@@ -100,6 +100,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [command, setCommand] = useState(() => model.commandResume?.target ?? null);
   const [jobOutput, setJobOutput] = useState(() => model.jobOutputResume?.target ?? null);
   const { selected, selectionRevision, cachedHistory, cachedReadingResume } = state;
+  const selectedRunning = selected ? state.list?.byId[selected]?.running === true : false;
   useEffect(() => {
     if (!homePreferences.enabled || selected || workspace) return;
     setNow(Date.now());
@@ -114,7 +115,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       const next = openSessionStatus(previous, selected, target.running === true);
       return next === previous ? previous : next;
     });
-  }, [selected, state.ready]);
+  }, [selected, state.ready, selectedRunning]);
   const readingResume = cachedReadingResume ?? (model.readingResume?.selected === selected ? model.readingResume : null);
   const { scroll, bottom, attachScroll, onScroll, followBottom, followingTail, returnToBottom } = useRemoteScrollFollow(`${selected}:${selectionRevision}`, readingResume);
   const rememberReading = useCallback(anchor => model.sessionView?.rememberReading(selected, selectionRevision, anchor),
@@ -204,10 +205,10 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   useEffect(() => {
     if (!grouped) return;
     setHomePreferences(previous => {
-      const next = advanceSessionStatus(previous, statusSessions);
+      const next = advanceSessionStatus(previous, statusSessions, selected ?? null);
       return next === previous ? previous : next;
     });
-  }, [grouped, statusSignature]);
+  }, [grouped, statusSignature, selected]);
   const groupedChats = grouped
     ? phrase ? searchWorkspaceChats({ workspaces: workspaceChatWorkspaces, sessions: homeSessions })
       : groupWorkspaceChats({ workspaces: workspaceChatWorkspaces, sessions: homeSessions, expanded: homePreferences.expanded })

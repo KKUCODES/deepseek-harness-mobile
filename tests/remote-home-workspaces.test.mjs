@@ -15,24 +15,26 @@ const workspaces = [
 const sessions = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'orphan'].map(id => ({ id, title: id }));
 
 test('偏好默认关闭且全部收起，非法存储内容回退默认值', () => {
-  assert.deepEqual(defaultWorkspaceChatPreferences(), { enabled: false, expanded: {}, active: [], unread: [], seen: [] });
-  assert.deepEqual(normalizeWorkspaceChatPreferences(undefined), { enabled: false, expanded: {}, active: [], unread: [], seen: [] });
-  assert.deepEqual(normalizeWorkspaceChatPreferences({ enabled: 'yes', expanded: [] }), { enabled: false, expanded: {}, active: [], unread: [], seen: [] });
+  assert.deepEqual(defaultWorkspaceChatPreferences(), { enabled: false, expanded: {}, active: [], unread: [] });
+  assert.deepEqual(normalizeWorkspaceChatPreferences(undefined), { enabled: false, expanded: {}, active: [], unread: [] });
+  assert.deepEqual(normalizeWorkspaceChatPreferences({ enabled: 'yes', expanded: [] }), { enabled: false, expanded: {}, active: [], unread: [] });
   assert.deepEqual(normalizeWorkspaceChatPreferences({ enabled: true, expanded: { work: 'all', empty: 'collapsed', site: 'preview', bad: 1 },
-    active: ['a', 'a', '', 2], unread: ['b'], seen: ['c'] }),
-  { enabled: true, expanded: { work: 'all', site: 'preview' }, active: ['a'], unread: ['b'], seen: ['c'] });
+    active: ['a', 'a', '', 2], unread: ['b'] }),
+  { enabled: true, expanded: { work: 'all', site: 'preview' }, active: ['a'], unread: ['b'] });
+  assert.deepEqual(normalizeWorkspaceChatPreferences({ enabled: true, expanded: {}, active: ['a'], unread: ['b'], seen: ['c'] }),
+    { enabled: true, expanded: {}, active: [], unread: [] });
 });
 
 test('偏好读写使用固定键并在损坏时返回默认值', () => {
   const values = new Map();
   const storage = { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
   assert.equal(readWorkspaceChatPreferences(storage).enabled, false);
-  assert.equal(writeWorkspaceChatPreferences(storage, { enabled: true, expanded: { work: 'all' }, active: ['a'], unread: ['b'], seen: [] }), true);
-  assert.deepEqual(JSON.parse(values.get(WORKSPACE_CHAT_STORAGE_KEY)), { enabled: true, expanded: { work: 'all' }, active: ['a'], unread: ['b'], seen: [] });
-  assert.deepEqual(readWorkspaceChatPreferences(storage), { enabled: true, expanded: { work: 'all' }, active: ['a'], unread: ['b'], seen: [] });
+  assert.equal(writeWorkspaceChatPreferences(storage, { enabled: true, expanded: { work: 'all' }, active: ['a'], unread: ['b'] }), true);
+  assert.deepEqual(JSON.parse(values.get(WORKSPACE_CHAT_STORAGE_KEY)), { enabled: true, expanded: { work: 'all' }, active: ['a'], unread: ['b'] });
+  assert.deepEqual(readWorkspaceChatPreferences(storage), { enabled: true, expanded: { work: 'all' }, active: ['a'], unread: ['b'] });
   values.set(WORKSPACE_CHAT_STORAGE_KEY, '{bad json');
-  assert.deepEqual(readWorkspaceChatPreferences(storage), { enabled: false, expanded: {}, active: [], unread: [], seen: [] });
-  assert.equal(writeWorkspaceChatPreferences({ setItem() { throw Error('quota'); } }, { enabled: true, expanded: {}, active: [], unread: [], seen: [] }), false);
+  assert.deepEqual(readWorkspaceChatPreferences(storage), { enabled: false, expanded: {}, active: [], unread: [] });
+  assert.equal(writeWorkspaceChatPreferences({ setItem() { throw Error('quota'); } }, { enabled: true, expanded: {}, active: [], unread: [] }), false);
 });
 
 test('按工作区顺序分组，组内保持会话顺序，未归属会话放在最后的其他会话组', () => {
@@ -95,28 +97,27 @@ test('相对时间按刚刚、秒、分钟、小时、天、月、年分档', ()
   assert.equal(formatRelativeChatTime(undefined, now, t), null);
 });
 
-test('完成提示只覆盖运行结束且未打开过的会话', () => {
+test('完成提示只覆盖运行结束且未停留在该会话的会话', () => {
   const initial = defaultWorkspaceChatPreferences();
-  let state = advanceSessionStatus(initial, [{ id: 'a', running: true }]);
-  assert.deepEqual(state.active, ['a']);
-  assert.deepEqual(state.unread, []);
-  state = advanceSessionStatus(state, [{ id: 'a', running: false }]);
-  assert.deepEqual(state.active, []);
-  assert.deepEqual(state.unread, ['a']);
-  state = openSessionStatus(state, 'a', false);
-  assert.deepEqual(state.unread, []);
+  let away = advanceSessionStatus(initial, [{ id: 'a', running: true }]);
+  assert.deepEqual(away.active, ['a']);
+  assert.deepEqual(away.unread, []);
+  away = advanceSessionStatus(away, [{ id: 'a', running: false }], null);
+  assert.deepEqual(away.active, []);
+  assert.deepEqual(away.unread, ['a']);
+  away = openSessionStatus(away, 'a', false);
+  assert.deepEqual(away.unread, []);
 
-  let opened = advanceSessionStatus(initial, [{ id: 'b', running: true }]);
-  opened = openSessionStatus(opened, 'b', true);
-  assert.deepEqual(opened.seen, ['b']);
-  opened = advanceSessionStatus(opened, [{ id: 'b', running: false }]);
-  assert.deepEqual(opened.unread, []);
-  assert.deepEqual(opened.seen, []);
+  let inside = advanceSessionStatus(initial, [{ id: 'b', running: true }]);
+  inside = openSessionStatus(inside, 'b', true);
+  inside = advanceSessionStatus(inside, [{ id: 'b', running: false }], 'b');
+  assert.deepEqual(inside.active, []);
+  assert.deepEqual(inside.unread, []);
 
-  let again = advanceSessionStatus(opened, [{ id: 'b', running: true }]);
-  assert.deepEqual(again.seen, []);
-  again = advanceSessionStatus(again, [{ id: 'b', running: false }]);
-  assert.deepEqual(again.unread, ['b']);
+  let left = advanceSessionStatus(initial, [{ id: 'c', running: true }]);
+  left = openSessionStatus(left, 'c', true);
+  left = advanceSessionStatus(left, [{ id: 'c', running: false }], null);
+  assert.deepEqual(left.unread, ['c']);
 });
 
 test('展开状态在收起、默认展示和全部展示之间切换', () => {
