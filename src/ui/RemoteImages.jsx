@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { ImageGallery } from '@upstream/ui-attachment/src/MessageImage.tsx';
 import { messageImageLabels } from '@upstream/ui-attachment/src/client/labels.ts';
 import { zh, en } from '@upstream/ui-conversation/src/client/locales.ts';
 import galleryCss from '@upstream/ui-attachment/src/MessageImage.module.css';
@@ -7,6 +6,7 @@ import { RemotePluginImageUrls } from '../remote-images.mjs';
 import { useLocale } from './locale.jsx';
 import { diagnostics } from '../app-diagnostics.mjs';
 import { installRemoteImageZoom } from '../remote-image-zoom.mjs';
+import { RemoteMessageGallery } from './RemoteMessageImage.jsx';
 
 const Images = createContext(null);
 const noImageMenu = () => ({});
@@ -55,12 +55,12 @@ function useImageLabels(labels) {
     .replace(/\{(\w+)\}/g, (_, name) => values[name] ?? '')), [dictionary, labels]);
 }
 
-/** 原画廊负责缩略图、分组、加载重试和原图窗口；手机只接授权读取和原字典。 */
+/** 保留原画廊的缩略图、分组、原图窗口和加载重试；失败分支换成手机端紧凑态，文件仍走授权读取。 */
 export function RemoteImageGallery({ images, loadImage, align = 'start', compact, thumbnail, labels }) {
   const scope = useContext(Images), load = loadImage ?? scope?.load ?? unavailableImage, resolved = useImageLabels(labels);
   return <RemoteImageBoundary resetKey={JSON.stringify(images)} captureImageErrors onRetry={failedUrl => {
     if (failedUrl) for (const image of images) if (image.attachment) load?.forget?.(image.attachment, failedUrl);
-  }}><ImageGallery images={images} load={load} align={align} compact={compact} thumbnail={thumbnail} labels={resolved}
+  }}><RemoteMessageGallery images={images} load={load} align={align} compact={compact} thumbnail={thumbnail} labels={resolved}
     fileDrag={noFileDrag} getTriggerProps={noImageMenu}/></RemoteImageBoundary>;
 }
 

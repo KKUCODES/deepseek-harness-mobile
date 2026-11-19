@@ -43,6 +43,70 @@
 .remote-turn-error-raw { margin-top: 6px; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 1.6; }
 .remote-turn-error-raw summary { cursor: pointer; min-height: 40px; line-height: 40px; }
 .remote-turn-error-raw pre { margin: 4px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--dsw-alias-bg-layer-3, var(--dshm-subtle)); color: var(--dsw-alias-label-secondary); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow-y: auto; font: 12px/1.6 var(--dsw-font-mono, ui-monospace, monospace); user-select: text; }
+/* 图片失败行：正文与工具卡共用；失败原因默认折叠，展开后给路径和错误码。 */
+.remote-image-failure { display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 8px; margin: 10px 0 16px; min-width: 0; font-size: var(--dsh-content-font-size, 14px); line-height: calc(22px + var(--dsh-content-font-delta, 0px)); }
+.remote-image-failure-dot { width: 8px; height: 8px; margin-top: 10px; border-radius: 50%; background: var(--dsw-alias-state-error-primary, #b34b40); }
+.remote-image-failure-body { min-width: 0; }
+.remote-image-failure-line { display: flex; align-items: flex-start; gap: 8px; }
+.remote-image-failure-copy { flex: 0 1 auto; min-width: 0; max-width: calc(100% - 96px); padding: 3px 0; overflow-wrap: anywhere; }
+.remote-image-failure-line[data-retry="false"] .remote-image-failure-copy { max-width: 100%; }
+.remote-image-failure-title { color: var(--dsw-alias-state-error-primary, #b34b40); font-weight: 600; }
+.remote-image-failure-sep { margin: 0 6px; color: var(--dsw-alias-label-tertiary); }
+.remote-image-failure-alt { color: var(--dsw-alias-label-tertiary); font-style: italic; }
+.remote-image-failure-retry { flex: none; height: 28px; padding: 0 4px; border: 0; border-radius: 6px; background: none; color: var(--dsw-alias-link); font: inherit; font-size: 11px; line-height: 16px; font-weight: 500; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+.remote-image-failure-retry svg { width: 12px; height: 12px; }
+.remote-image-failure-retry:disabled { color: var(--dsw-alias-label-tertiary); cursor: default; }
+.remote-image-failure-spinner { width: 12px; height: 12px; border: 1.5px solid var(--dsw-alias-border-l3, rgba(0, 0, 0, .16)); border-top-color: var(--dsw-alias-label-tertiary); border-radius: 50%; animation: dshm-image-failure-spin .8s linear infinite; }
+@keyframes dshm-image-failure-spin { to { transform: rotate(360deg); } }
+.remote-image-failure-details { margin-top: 2px; }
+.remote-image-failure-details > summary { list-style: none; display: flex; align-items: center; gap: 5px; width: fit-content; height: 32px; padding-right: 8px; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 16px; cursor: pointer; }
+.remote-image-failure-details > summary::-webkit-details-marker { display: none; }
+.remote-image-failure-details > summary::before { content: ""; width: 0; height: 0; margin-right: 1px; border-left: 4px solid currentColor; border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent; transition: transform .16s ease; }
+.remote-image-failure-details[open] > summary::before { transform: rotate(90deg); }
+.remote-image-failure-reason { margin: 2px 0 4px; padding: 8px 10px; border-radius: 8px; background: var(--dshm-subtle, #f7f8fa); }
+.remote-image-failure-reason p { margin: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
+.remote-image-failure-meta { display: flex; gap: 6px; margin-top: 5px; align-items: baseline; }
+.remote-image-failure-meta > span { flex: none; font-size: 10px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
+.remote-image-failure-meta code { font: 11px/16px var(--dsw-font-mono, ui-monospace, monospace); color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; user-select: text; }
+.remote-image-failure[data-layout="panel"] { max-width: 560px; margin: 20px auto; padding: 16px 16px 8px; border: .5px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dshm-subtle, #f7f8fa); }
+/* 附件失败：多图 64px 紧凑格、单图 240px 失败卡与原因小卡。 */
+.remote-attachment-failure-tile { width: 64px; height: 64px; flex: none; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(236, 19, 19, .16); border-radius: 8px; background: rgba(236, 19, 19, .055); color: var(--dsw-alias-state-error-primary, #b34b40); }
+.remote-attachment-tile-open { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 3px 2px 1px; border: 0; background: none; color: inherit; font-family: inherit; cursor: pointer; }
+.remote-attachment-tile-open svg { width: 16px; height: 16px; }
+.remote-attachment-tile-open span { font-size: 9.5px; line-height: 12px; font-weight: 500; white-space: nowrap; }
+.remote-attachment-spinner { width: 16px; height: 16px; border: 1.5px solid var(--dsw-alias-border-l3, rgba(0, 0, 0, .16)); border-top-color: var(--dsw-alias-label-tertiary); border-radius: 50%; animation: dshm-image-failure-spin .8s linear infinite; }
+.remote-attachment-tile-retry { flex: none; height: 20px; padding: 0; border: 0; border-top: .5px solid rgba(236, 19, 19, .14); background: rgba(255, 255, 255, .55); color: var(--dsw-alias-state-error-primary, #b34b40); font-family: inherit; font-size: 10px; line-height: 20px; font-weight: 500; cursor: pointer; }
+body[data-ds-dark-theme] .remote-attachment-spinner { width: 16px; height: 16px; border: 1.5px solid var(--dsw-alias-border-l3, rgba(0, 0, 0, .16)); border-top-color: var(--dsw-alias-label-tertiary); border-radius: 50%; animation: dshm-image-failure-spin .8s linear infinite; }
+.remote-attachment-tile-retry { background: rgba(255, 255, 255, .06); border-top-color: rgba(242, 90, 90, .22); }
+.remote-attachment-failure-card { width: 240px; max-width: 100%; padding: 12px; border: 1px solid rgba(236, 19, 19, .16); border-radius: 10px; background: rgba(236, 19, 19, .045); }
+.remote-attachment-card-main { display: flex; align-items: flex-start; gap: 8px; }
+.remote-attachment-card-icon { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--dsw-alias-state-error-primary, #b34b40); }
+.remote-attachment-card-icon svg { width: 100%; height: 100%; }
+.remote-attachment-card-copy { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.remote-attachment-card-copy strong { font-size: 13px; line-height: 18px; font-weight: 600; color: var(--dsw-alias-state-error-primary, #b34b40); }
+.remote-attachment-card-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-tertiary); font-style: italic; }
+.remote-attachment-card-actions { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding-top: 9px; border-top: .5px solid rgba(236, 19, 19, .14); }
+.remote-attachment-card-actions button { padding: 0; border: 0; background: none; font-family: inherit; font-size: 11px; line-height: 16px; font-weight: 500; cursor: pointer; }
+.remote-attachment-card-retry { display: inline-flex; align-items: center; gap: 3px; color: var(--dsw-alias-link); }
+.remote-attachment-card-retry svg { width: 12px; height: 12px; }
+.remote-attachment-card-reason { margin-left: auto; color: var(--dsw-alias-label-tertiary); }
+.remote-attachment-failure-sheet .sheet-handle { width: 32px; height: 4px; margin: 0 auto 8px; border-radius: 2px; background: var(--dsw-alias-border-l3, rgba(0, 0, 0, .16)); }
+.remote-attachment-failure-sheet header { margin-bottom: 12px; }
+.remote-attachment-failure-sheet header h2 { margin: 0; font-size: 17px; line-height: 24px; font-weight: 600; }
+.remote-attachment-sheet-file { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: .5px solid var(--dsw-alias-border-l2); }
+.remote-attachment-sheet-thumb { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border: 1px solid rgba(236, 19, 19, .16); border-radius: 8px; background: rgba(236, 19, 19, .055); color: var(--dsw-alias-state-error-primary, #b34b40); }
+.remote-attachment-sheet-thumb svg { width: 18px; height: 18px; }
+.remote-attachment-sheet-file strong { display: block; font-size: 13px; line-height: 19px; font-weight: 500; overflow-wrap: anywhere; }
+.remote-attachment-sheet-file span { display: block; font-size: 11px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
+.remote-attachment-sheet-reason { margin: 12px 0 0; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-secondary); }
+.remote-attachment-sheet-meta { display: flex; gap: 6px; margin-top: 6px; align-items: baseline; }
+.remote-attachment-sheet-meta > span { flex: none; font-size: 10px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
+.remote-attachment-sheet-meta code { font: 11px/16px var(--dsw-font-mono, ui-monospace, monospace); color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; user-select: text; }
+.remote-attachment-sheet-actions { display: grid; gap: 4px; margin-top: 16px; }
+.remote-attachment-sheet-primary { height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 22px; background: var(--dsw-alias-button-primary-fill, #0f1115); color: var(--dsw-alias-label-primary-foreground, #fff); font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.remote-attachment-sheet-primary svg { width: 14px; height: 14px; }
+.remote-attachment-sheet-close { height: 36px; border: 0; background: none; color: var(--dsw-alias-label-secondary); font-family: inherit; font-size: 13px; cursor: pointer; }
+.remote-attachment-tile-open:focus-visible, .remote-attachment-tile-retry:focus-visible, .remote-attachment-card-retry:focus-visible, .remote-attachment-card-reason:focus-visible, .remote-attachment-sheet-primary:focus-visible, .remote-attachment-sheet-close:focus-visible { outline: var(--dsw-focus-ring-width, 2px) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: 2px; }
 .remote-tool-entry { display: flex; align-items: flex-start; min-width: 0; gap: 4px; }
 .remote-tool-entry > :first-child { flex: 1; min-width: 0; }
 .remote-tool-inspect { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: -2px -4px 0 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer; }

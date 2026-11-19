@@ -89,7 +89,8 @@ export async function checkRemoteImages(page, { alpha2 = false, systemBack, fall
   report.lightboxBackPriority = true;
   await page.evaluate(() => window.preview15.images.open()); await imageReady(2); report.reopen = true;
   await page.evaluate(() => { window.preview15.images.failure(true); return window.preview15.images.open(); });
-  const failed = scope.getByRole('button', { name: '图片加载失败，点击重试', exact: true });
+  // 附件读取失败改为手机端失败卡，重试按钮文字是“重新加载”。
+  const failed = scope.getByRole('button', { name: '重新加载', exact: true });
   await failed.first().waitFor();
   assert.equal(await scope.getByText('IMAGE_ANSWER_TEXT', { exact: true }).count(), 1);
   await page.evaluate(() => window.preview15.images.failure(false));

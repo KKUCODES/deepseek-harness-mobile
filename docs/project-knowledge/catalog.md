@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+2026-11-20：[Remote 图片失败态与重试](../integration/remote-markdown-images-current.md)。正文失败图片改为红色标题、重新加载和可折叠原因（原因、路径、错误码）；附件失败用 64px 紧凑格/240px 卡加底部原因小卡；五类原因中读取失败与缓存已满可重试。本地实现，未推送、未发行。
+
 2026-11-19：[Remote 正文 Markdown 图片与预览缩放](../integration/remote-markdown-images-current.md)。原聊天缺少 `fileImages`/`pathImages`，模型正文的本地图片只显示替代文字；现按会话文件授权预取字节并发布 blob URL，原图预览支持捏合缩放且按布局尺寸重新栅格化，外链图片仍禁用。本地实现，未推送、未发行。
 
 2026-11-13：[preview.16 Remote 回前台恢复与最近会话](../integration/preview16-remote-resume.md)。基于公开 .15 的独立分支，双 SDK 回归、原签名 APK 与 MuMu 实际验证范围见专题。
