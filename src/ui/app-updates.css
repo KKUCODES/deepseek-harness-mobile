@@ -1,4 +1,4 @@
-.sheet.app-update-sheet { max-width: 480px; padding: 20px 24px 0; max-height: 86dvh; overflow-y: auto; background: var(--dsw-alias-bg-layer-1, Canvas); color: var(--dsw-alias-label-primary, CanvasText); }
+.sheet.app-update-sheet { max-width: 480px; padding: 20px var(--dshm-gutter) 0; max-height: 86dvh; overflow-y: auto; background: var(--dsw-alias-bg-layer-1, Canvas); color: var(--dsw-alias-label-primary, CanvasText); }
 .app-update-sheet > header { margin-bottom: 12px; }
 .app-update-content { display: flex; flex-direction: column; min-width: 0; font-size: 14px; line-height: 1.5; }
 .app-update-content p, .app-update-content h3 { margin: 0; overflow-wrap: anywhere; }
@@ -29,7 +29,7 @@
 .app-update-more dd { margin: 0; text-align: end; overflow-wrap: anywhere; }
 .app-update-tools { display: grid; justify-items: start; padding-bottom: 12px; gap: 4px; }
 .app-update-tools button { min-height: 44px; max-width: 100%; white-space: normal; }
-.app-update-footer { position: sticky; bottom: 0; display: grid; gap: 8px; margin-inline: -24px; padding: 14px 24px max(20px, env(safe-area-inset-bottom)); background: var(--dsw-alias-bg-layer-1, Canvas); border-top: 1px solid var(--dsw-alias-border-l3, #8883); z-index: 1; }
+.app-update-footer { position: sticky; bottom: 0; display: grid; gap: 8px; margin-inline: calc(-1 * var(--dshm-gutter)); padding: 14px var(--dshm-gutter) max(20px, env(safe-area-inset-bottom)); background: var(--dsw-alias-bg-layer-1, Canvas); border-top: 1px solid var(--dsw-alias-border-l3, #8883); z-index: 1; }
 .app-update-footer:empty { display: none; }
 .app-update-footer .app-update-primary { width: 100%; min-height: 48px; font-size: 15px; border-radius: 14px; white-space: normal; }
 .app-update-notice { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 64px); left: 16px; right: 16px; z-index: 30; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--dsw-alias-border-l3, #8883); background: var(--dsw-alias-bg-layer-1, Canvas); color: var(--dsw-alias-label-primary, CanvasText); box-shadow: 0 4px 18px #0002; }

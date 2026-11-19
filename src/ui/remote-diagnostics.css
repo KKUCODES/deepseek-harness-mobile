@@ -4,7 +4,7 @@ body[data-ds-dark-theme] .dshm-diagnostic-link { color: #93a6ff; }
 .remote-offline-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .remote-offline-main > span { flex: 1; min-width: 0; }
 .remote-offline-main > .dshm-diagnostic-link { flex: none; white-space: nowrap; }
-.remote-diagnostic-sheet.sheet { display: flex; flex-direction: column; gap: 12px; width: min(100%, 528px); max-height: calc(100dvh - 24px); margin: auto auto 0; padding: 12px 24px max(16px, env(safe-area-inset-bottom)); border: 0; border-radius: 24px 24px 0 0; background: var(--dshm-bg); color: var(--dshm-text); overflow: hidden; box-sizing: border-box; }
+.remote-diagnostic-sheet.sheet { display: flex; flex-direction: column; gap: 12px; width: min(100%, 528px); max-height: calc(100dvh - 24px); margin: auto auto 0; padding: 12px var(--dshm-gutter) max(16px, env(safe-area-inset-bottom)); border: 0; border-radius: 24px 24px 0 0; background: var(--dshm-bg); color: var(--dshm-text); overflow: hidden; box-sizing: border-box; }
 .remote-diagnostic-handle { width: 32px; height: 4px; min-height: 4px; align-self: center; border-radius: 4px; background: var(--dshm-border); }
 .remote-diagnostic-sheet > header { display: flex; align-items: center; gap: 12px; flex: none; margin: 0; }
 .remote-diagnostic-sheet h2 { flex: 1; min-width: 0; font-size: 22px; line-height: 32px; margin: 0; }
@@ -23,7 +23,7 @@ body[data-ds-dark-theme] .dshm-diagnostic-link { color: #93a6ff; }
 .remote-diagnostic-stack { box-sizing: border-box; margin: 0; min-height: 72px; max-height: min(28dvh, 220px); padding: 12px; border-radius: 12px; background: var(--dshm-subtle); white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; overscroll-behavior: contain; font: 14px/22px ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--dshm-text); }
 .remote-diagnostic-sheet > footer { display: flex; flex-direction: column; gap: 8px; flex: none; }
 .remote-diagnostic-records { display: flex; flex-direction: column; gap: 8px; }
-.remote-diagnostic-records button { display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 12px 8px; border: 0; background: transparent; text-align: left; color: var(--dshm-text); }
+.remote-diagnostic-records button { display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 12px 0; border: 0; background: transparent; text-align: left; color: var(--dshm-text); }
 .remote-diagnostic-records button > span:first-child { flex: 1; min-width: 0; }
 .remote-diagnostic-records strong { display: block; font-size: 16px; line-height: 24px; font-weight: 500; }
 .remote-diagnostic-records small { display: block; font-size: 14px; line-height: 22px; color: var(--dshm-secondary); overflow-wrap: anywhere; }
