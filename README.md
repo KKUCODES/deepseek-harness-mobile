@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.20/DSHM-0.1.0-preview.20.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.21/DSHM-0.1.0-preview.21.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -68,7 +68,7 @@ flowchart LR
 
 ## 当前状态
 
-**preview.20** 修复 Remote 从会话过程点开文件时预览空白的问题，并在预览异常时给出提示。[发行说明](./ci/release-notes/0.1.0-preview.20.md) · [问题诊断](./docs/integration/diagnostics-current.md)
+**preview.21** 修复 Remote 历史分页定位竞争、末页位置偏移和发送状态漏判；用户反馈的偶发场景仍待复验。[发行说明](./ci/release-notes/0.1.0-preview.21.md) · [问题诊断](./docs/integration/diagnostics-current.md)
 
 **preview.16** 优化了 Remote 回到前台时的连接恢复，以及重进最近会话时的加载体验，并修复草稿恢复误报。[当前范围与验证](./docs/integration/preview16-remote-resume.md) · [发行说明](./ci/release-notes/0.1.0-preview.16.md) · [构建与下载](./docs/releases.md)
 

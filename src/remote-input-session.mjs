@@ -3,6 +3,9 @@ import { $composerLayout } from '../../deepseek-harness/packages/client/ui-conve
 import { imagePromptPart } from './remote-image-input.mjs';
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
 
+// 与原提交状态机的 frozen 阶段一致；旧版没有 sending 时仍沿用原阶段。
+export const remoteInputFrozen = phase => ['adjudicating', 'submitting', 'sending'].includes(phase);
+
 /** 原编辑器/提交状态机与手机草稿、附件之间的会话绑定。 */
 export class RemoteInputSession {
   constructor(model, reference, binding = reference.binding, view = model) {
@@ -149,7 +152,7 @@ export class RemoteInputSession {
     }
   }
   submit(mode = 'queue') {
-    if (!this.current() || this.pending || this.restoreFailed || this.model.composerBlocks?.storeFor(this.sessionId).getSnapshot() || this.canSubmit?.() === false) return;
+    if (!this.current() || this.pending || remoteInputFrozen(this.shell.snapshot.phase) || this.restoreFailed || this.model.composerBlocks?.storeFor(this.sessionId).getSnapshot() || this.canSubmit?.() === false) return;
     const snapshot = this.shell.snapshot;
     if (!snapshot.draft.trim() && !snapshot.attachmentIds.length) return;
     this.pending = { starting: true, draft: this.captureDraft(), waitSink: snapshot.phase !== 'claimed', noticeSeq: this.shell.notices.getSnapshot()?.seq ?? 0 };
@@ -160,7 +163,7 @@ export class RemoteInputSession {
   settle() {
     const pending = this.pending;
     if (!pending || !this.active) return;
-    const locked = ['adjudicating', 'submitting'].includes(this.shell.snapshot.phase);
+    const locked = remoteInputFrozen(this.shell.snapshot.phase);
     if (locked) pending.wasLocked = true;
     if (pending.starting || locked) return;
     const noticed = (this.shell.notices.getSnapshot()?.seq ?? 0) > pending.noticeSeq;

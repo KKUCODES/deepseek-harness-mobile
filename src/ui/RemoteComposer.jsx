@@ -4,6 +4,7 @@ import { ComposerContentEditable } from '../../../deepseek-harness/packages/clie
 import { DecoratorPortals } from '../../../deepseek-harness/packages/client/ui-conversation/src/client/input/editor/DecoratorPortals.tsx';
 import { registerComposerKeymap } from '../../../deepseek-harness/packages/client/ui-conversation/src/client/input/editor/keymap.ts';
 import { MobileComposer } from './MobileComposer.jsx';
+import { remoteInputFrozen } from '../remote-input-session.mjs';
 import { useTranslate } from './locale.jsx';
 import { RemoteComposerBar, RemoteComposerRight, useRemoteConversationLayout } from '../remote-plugin-slots.jsx';
 
@@ -77,7 +78,7 @@ export function RemoteComposer({ model, view = model, attachments, onAdmissionCh
     });
     return () => { compositionWatch(); mobileEnter(); keyboard(); };
   }, [input, model, shell, blockStore]);
-  const locked = requiresWorkspace || admitting || model.draftTransfers.has(input.sessionId) || model.agentPresets.pendingSessions.has(input.sessionId) || ['adjudicating', 'submitting'].includes(snapshot.phase);
+  const locked = requiresWorkspace || admitting || model.draftTransfers.has(input.sessionId) || model.agentPresets.pendingSessions.has(input.sessionId) || remoteInputFrozen(snapshot.phase);
   return <>
     {block && <p role="status">{block.reason}</p>}
     {notice && <p role={notice.level === 'error' ? 'alert' : 'status'}>{t(inputErrors[notice.text] ?? notice.text)}</p>}

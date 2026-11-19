@@ -1,12 +1,12 @@
 # APK 构建、签名与下载
 
-**preview.20（versionCode 30）** 修复 Remote 从会话过程打开文件时的预览空白，补上预览失败提示。[双语发行说明](../ci/release-notes/0.1.0-preview.20.md) · [问题诊断](./integration/diagnostics-current.md)
+**preview.21（versionCode 31）** 修复 Remote 历史定位竞争、末页位置偏移和发送状态漏判。用户反馈的偶发现场仍待复验，不宣称已全部根治。[双语发行说明](../ci/release-notes/0.1.0-preview.21.md) · [验证范围](./integration/remote-reading-send-recovery-current.md)
 
 [返回首页](../README.md) · [使用指南](./usage.md)
 
 ## 下载并安装
 
-Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA256SUMS.txt`、`signature.txt`、`compatibility.json` 和 WebView 符号包，无需登录 GitHub。[下载 preview.20 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.20/DSHM-0.1.0-preview.20.apk) · [公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.20)
+Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA256SUMS.txt`、`signature.txt`、`compatibility.json` 和 WebView 符号包，无需登录 GitHub。[下载 preview.21 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.21/DSHM-0.1.0-preview.21.apk) · [公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.21)
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 

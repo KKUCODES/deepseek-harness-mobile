@@ -50,8 +50,12 @@ export function RemoteHistoryList({ conversation, cached, container, history, re
   useLayoutEffect(() => {
     const host = scrollElement();
     if (!host) return;
+    // 最后一页会移除加载按钮。先用新列表起点重算虚拟位置，再恢复锚点；
+    // 不能先采样已经偏移的 DOM，否则会把按钮高度的变化记成读者滚动。
+    const actualMargin = element.current.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
+    if (Math.abs(actualMargin - margin) > 0.5) { setMargin(actualMargin); return; }
     const before = previous.current;
-    let correction;
+    let correction, correcting = false;
     if (!restored.current && resume?.selected === sessionKey && groups.length) {
       restored.current = true;
       const index = groups.findIndex(group => resume.nodeKey
@@ -68,22 +72,28 @@ export function RemoteHistoryList({ conversation, cached, container, history, re
         following.current = true;
       }
     }
-    if (before && (before.key !== groups[0]?.id || before.cacheMode !== cacheMode) && !following.current) {
+    if (before && (before.key !== groups[0]?.id || before.cacheMode !== cacheMode || before.margin !== margin) && !following.current) {
       const index = groups.findIndex(group => group.id === before.anchor);
       if (index >= 0) {
         const offset = virtual.getMeasurements()[index]?.start;
         if (offset !== undefined) host.scrollTop = offset + before.offset;
+        correcting = true;
         correction = requestAnimationFrame(() => {
           const node = [...(element.current?.querySelectorAll('[data-history-group]') ?? [])].find(node => node.dataset.historyGroup === before.anchor);
           if (node && Number.isFinite(before.pixelOffset)) host.scrollTop += node.getBoundingClientRect().top - host.getBoundingClientRect().top - before.pixelOffset;
+          correcting = false;
+          capture();
         });
       }
     }
     const capture = () => {
+      if (correcting) return;
+      const currentMargin = element.current.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
+      if (Math.abs(currentMargin - margin) > 0.5) return;
       const items = virtual.getVirtualItems();
       const item = items.find(item => item.end > host.scrollTop);
       const node = [...(element.current?.querySelectorAll('[data-history-group]') ?? [])].find(node => node.dataset.historyGroup === item?.key);
-      previous.current = { key: groups[0]?.id, cacheMode, anchor: item?.key, offset: host.scrollTop - (item?.start ?? 0),
+      previous.current = { key: groups[0]?.id, cacheMode, margin, anchor: item?.key, offset: host.scrollTop - (item?.start ?? 0),
         pixelOffset: node ? node.getBoundingClientRect().top - host.getBoundingClientRect().top : undefined };
       history?.setAnchor(following.current ? undefined : groups[item?.index]?.seq);
       const group = groups[item?.index];
@@ -95,7 +105,7 @@ export function RemoteHistoryList({ conversation, cached, container, history, re
     };
     capture(); host.addEventListener('scroll', capture, { passive: true });
     return () => { cancelAnimationFrame(correction); host.removeEventListener('scroll', capture); };
-  }, [groups, history, virtual, following, container, cacheMode, cached, resume, onReading, reading, sessionKey, target]);
+  }, [groups, history, virtual, following, container, cacheMode, cached, resume, onReading, reading, sessionKey, target, margin]);
   useLayoutEffect(() => { element.current.inert = cacheMode; }, [cacheMode]);
   return <div ref={element} className="remote-history-list" data-history-count={groups.length} data-cached-history={cached ? '' : undefined}
     style={{ height: virtual.getTotalSize(), position: 'relative', width: '100%', overflowAnchor: 'none' }}>
