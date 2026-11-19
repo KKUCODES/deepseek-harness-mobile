@@ -9,8 +9,12 @@ export function DefaultRemoteHome({ home }) {
   const { view, actions, t, locale } = home, scroll = useRef(null);
   useLayoutEffect(() => { if (scroll.current) scroll.current.scrollTop = actions.readScroll(); }, [view.key]);
   const connected = view.connection === 'connected';
+  // 开启「工作区展开显示会话」后，连接状态收进标题行，给列表让出顶部空间。
+  const compactConnection = view.grouped === true;
+  const connectionLabel = connected ? '已连接电脑' : view.connection === 'connecting' ? '正在连接电脑…' : '电脑连接已断开';
   const phrase = view.query.trim();
   const grouped = view.grouped === true && !view.workspace;
+  const groupedHeading = phrase ? '搜索结果' : view.archived ? '已归档' : null;
   const workspaceGroups = view.workspaceGroups ?? [];
   /** 渲染首页会话行；分组视图与平铺最近列表共用。 */
   const sessionRow = (item, relative = false) => {
@@ -23,11 +27,18 @@ export function DefaultRemoteHome({ home }) {
     </button>;
   };
   return <div className="remote-home-surface" data-testid="remote-home-default">
-    <header className="topbar remote-topbar"><IconButton label={t('返回')} disabled={view.busy} onClick={actions.back}><IconChevronLeftOutline14/></IconButton><div className="remote-heading"><strong>{view.title}</strong></div><IconButton label={t('Remote 选项')} onClick={actions.menu}><IconEllipsisOutline16/></IconButton></header>
-    <button className="connection-strip" onClick={actions.connection}><span className={`connection-dot${connected ? ' online' : ''}`}/><strong role="status">{t(connected ? '已连接电脑' : view.connection === 'connecting' ? '正在连接电脑…' : '电脑连接已断开')}</strong></button>
-    <section className="remote-scroll remote-home" ref={scroll} onScroll={event => actions.rememberScroll(event.currentTarget.scrollTop)}>
+    <header className="topbar remote-topbar"><IconButton label={t('返回')} disabled={view.busy} onClick={actions.back}><IconChevronLeftOutline14/></IconButton><div className="remote-heading"><div className="remote-home-heading">
+      {compactConnection
+        ? <button type="button" className="remote-home-connection" aria-label={t(connectionLabel)} onClick={actions.connection}>
+          <span aria-hidden="true" className={`connection-dot${connected ? ' online' : ''}`}/>
+          <strong>{view.title}</strong>
+        </button>
+        : <strong>{view.title}</strong>}
+    </div></div><IconButton label={t('Remote 选项')} onClick={actions.menu}><IconEllipsisOutline16/></IconButton></header>
+    {!compactConnection && <button className="connection-strip" onClick={actions.connection}><span className={`connection-dot${connected ? ' online' : ''}`}/><strong role="status">{t(connectionLabel)}</strong></button>}
+    <section className={`remote-scroll remote-home${grouped && !groupedHeading ? ' remote-home-headingless' : ''}`} ref={scroll} onScroll={event => actions.rememberScroll(event.currentTarget.scrollTop)}>
       {grouped ? <>
-        <h2>{t(phrase ? '搜索结果' : view.archived ? '已归档' : '项目')}</h2>
+        {groupedHeading && <h2>{t(groupedHeading)}</h2>}
         {!view.ready && <p role="status">{t('正在读取电脑会话…')}</p>}
         {view.ready && phrase && view.searching && <p role="status" className="muted">{t('正在搜索聊天内容…')}</p>}
         {view.searchError && <div className="remote-search-error" role="alert"><p>{t(view.searchError)}</p><Button onClick={actions.retrySearch}>{t('重新搜索')}</Button></div>}

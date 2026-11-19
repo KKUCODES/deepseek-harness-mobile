@@ -48,7 +48,7 @@ export async function measureRemoteAndroid(page, onProgress = () => {}) {
     ({ identifier } = await cdp.send('Page.addScriptToEvaluateOnNewDocument', { source: probe }));
     for (let index = 0; index < 3; index++) {
       await page.reload();
-      await page.getByText('已连接电脑', { exact: true }).waitFor({ timeout: 30000 });
+      await page.locator('.connection-dot.online').waitFor({ timeout: 30000 });
       await page.getByText(title, { exact: true }).waitFor();
       const listReadyMs = await page.evaluate(() => performance.now());
       // 两秒观察窗用于收集首屏后插件布局，不把它称为标准 TBT。

@@ -63,6 +63,8 @@
 .remote-runtime-content { position: relative; flex: 1; min-height: 0; min-width: 0; overflow: clip; }
 .device-card code { overflow-wrap: anywhere; font-size: 12px; user-select: all; }
 .remote-home { padding: 0 var(--dshm-gutter) 20px; }
+/* 分组首页去掉“项目”标题后，列表直接贴着顶栏，补一点上边距。 */
+.remote-home.remote-home-headingless { padding-top: 12px; }
 .remote-workspace-manager { display: flex; flex-direction: column; gap: 12px; }
 .remote-workspace-manager h3, .remote-workspace-confirm { overflow-wrap: anywhere; }
 .remote-workspace-confirm { display: flex; align-items: start; gap: 8px; }
@@ -176,6 +178,11 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-heading { flex:1; min-width:0; max-height:100%; overflow:auto; text-align:center; }
 .remote-heading-content { display:flex; align-items:center; justify-content:center; min-width:0; gap:4px; }
 .remote-heading-content > strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* 开启工作区展开后，连接状态点与标题收进同一入口，点击任意位置进入电脑连接页。 */
+.remote-home-heading { display:inline-flex; align-items:center; justify-content:center; max-width:100%; min-width:0; vertical-align:middle; }
+.remote-home-heading > strong { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.remote-home-connection { display:inline-flex; align-items:center; justify-content:center; gap:8px; max-width:100%; min-width:0; margin:0; padding:9px 0; border:0; border-radius:0; background:transparent; color:inherit; font:inherit; cursor:pointer; }
+.remote-home-connection > strong { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .remote-subagent-lineage { display:inline-flex; align-items:center; flex:none; }
 .remote-header-ancestors { display:flex; flex:none; align-items:center; gap:8px; min-width:0; max-height:20dvh; overflow:auto; padding:0 var(--dshm-gutter) 8px; }
 .remote-header-ancestor { flex:0 0 auto; max-width:100%; min-width:0; }
