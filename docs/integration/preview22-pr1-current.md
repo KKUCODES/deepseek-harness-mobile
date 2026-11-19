@@ -1,6 +1,6 @@
 # preview.22：接入 PR #1 与兼容修复
 
-- 状态：本地验收完成，已获授权进入发行流程；维护：DSHM 手机端维护者；核验：2026-11-20。发行结果以[构建与下载](../releases.md#已核验范围)为准。
+- 状态：preview.22/code32已公开，Actions44578968831构建、lint、原签名与发行成功，公开附件及MuMu覆盖安装已核验；维护：DSHM 手机端维护者；核验：2026-11-20。发行详情见[构建与下载](../releases.md#已核验范围)。
 - 任务：[KKC-132](https://linear.app/kkcodes/issue/KKC-132)；历史审查：[PR #1 对照](./pr1-rc3-review-2026-11-19.md)。
 - 来源：[PR #1](https://github.com/KKUCODES/deepseek-harness-mobile/pull/1)、下列源码、回归脚本和本机验收证据。
 
@@ -9,6 +9,8 @@
 `feature/preview22-pr1` 从 rc.3 分支 `e08cdbc` 创建，包含 preview.21 的 `7567430`。保留贡献者 `c5fa95c` 原提交，本地合并提交为 `30ecfc0`；没有把 PR 的 preview.20 整树替换当前代码。旧插件适配分支未纳入，不修改 DSH、桌面插件或中转。
 
 版本元数据为 preview.22/code32，配套插件仍为0.1.88。本轮仅回归当前官方 DSH 0.2.2-rc.3；旧版本尽量维持代码兼容，不准备旧运行环境。本地接入保留PR原提交，不单独执行GitHub默认分支合并；本地阶段与后续云端发行分别验收。[发行任务KKC-133](https://linear.app/kkcodes/issue/KKC-133)。
+
+修复提交`0e6a349`及发行文档提交`f5fc3b4`已沿独立分支推送，标签`v0.1.0-preview.22`固定`f5fc3b4097a1fc3e8dbdda643e3004ad5d2ba1af`；没有推进main或原rc.3分支。
 
 ## 三个兼容缺口
 
