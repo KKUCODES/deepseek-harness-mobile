@@ -44,3 +44,45 @@ test('缓存按完整会话地址隔离，并可按会话删除或清空', () =>
   cache.clear();
   assert.equal(cache.take('one'), undefined);
 });
+
+function toolSnapshot(target, args) {
+  const root = {
+    kind: 'tool-result', callId: 'call-1', name: 'read', isError: false,
+    args, call: { name: 'read', argsRaw: '{"file_path":"C:\\\\work\\\\a.txt"}' },
+    callTime: 1, time: 2, content: [], subCalls: [],
+  };
+  const node = { key: 'tool-1', kind: 'tool-call', anchorSeq: 1, data: { root } };
+  return { selected: target, selectedTarget: target, conversation: { order: ['tool-1'], nodes: new Map([['tool-1', node]]) },
+    session: { openState: 'open', pendingSubmissions: [] } };
+}
+
+test('缓存的工具参数恢复为可读取的只读视图，工具行不再因缺少方法抛错', () => {
+  const cache = new RemoteRecentChats();
+  cache.remember(toolSnapshot('tools', { object: { file_path: 'C:\\work\\a.txt' }, chunks: [], sealed: true }), null);
+  const args = cache.take('tools').groups[0].nodes[0].data.root.args;
+  assert.equal(args.isSealed, true);
+  assert.equal(args.invalid, false);
+  assert.equal(args.closed(), true);
+  assert.deepEqual(args.keys(), ['file_path']);
+  assert.equal(args.has('file_path'), true);
+  assert.equal(args.has('missing'), false);
+  assert.equal(args.complete('file_path'), true);
+  assert.equal(args.complete('missing'), false);
+  assert.equal(args.text('file_path'), 'C:\\work\\a.txt');
+  assert.equal(args.text('missing'), undefined);
+  assert.equal(args.textPrefix('file_path', 2), 'C:');
+  assert.equal(args.stringLength('file_path'), 13);
+  assert.equal(args.stringExceeds('file_path', 3), true);
+  assert.equal(args.value('file_path'), undefined);
+  assert.equal(args.refresh(), false);
+  assert.throws(() => args.append('{}'));
+});
+
+test('缓存里由流式片段拼出的参数与已解析对象读法一致', () => {
+  const cache = new RemoteRecentChats();
+  cache.remember(toolSnapshot('stream', { chunks: ['{"file_', 'path":"b.txt"}'], sealed: true }), null);
+  const args = cache.take('stream').groups[0].nodes[0].data.root.args;
+  assert.equal(args.complete('file_path'), true);
+  assert.equal(args.text('file_path'), 'b.txt');
+  assert.equal(args.value('file_path'), undefined);
+});

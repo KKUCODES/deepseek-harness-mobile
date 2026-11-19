@@ -2,7 +2,7 @@
 .settings-app.settings-dark { --settings-bg: #1b1c1f; --settings-text: #ededf0; --settings-muted: #a8abb4; --settings-line: #37383e; --settings-surface: #27282c; --dsw-alias-label-primary: #ededf0; --dsw-alias-label-primary-foreground: #151619; --dsw-alias-button-primary-fill: #ededf0; --dsw-alias-button-primary-hover: #d2d3d8; --dsw-alias-interactive-bg-hover: #35363c; --dsw-alias-interactive-bg-active: #43444a; --dsw-alias-border-l3: #55565f; color-scheme: dark; }
 .settings-app .topbar > strong { font-size: 17px; font-weight: 550; text-align: center; }
 .settings-dark .topbar .icon-button { background: var(--settings-surface); color: var(--settings-text); }
-.settings-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 8px 20px max(24px, env(safe-area-inset-bottom)); }
+.settings-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 8px var(--dshm-gutter) max(24px, env(safe-area-inset-bottom)); }
 .settings-group-title { font-size: 13px; font-weight: 500; color: var(--settings-muted); margin: 26px 0 10px; }
 .settings-group { border: 1px solid var(--settings-line); border-radius: 16px; overflow: hidden; }
 .settings-row { display: flex; align-items: center; gap: 12px; min-height: 58px; width: 100%; padding: 13px 14px; background: var(--settings-bg); border: 0; text-align: left; color: var(--settings-text); font: inherit; cursor: pointer; }

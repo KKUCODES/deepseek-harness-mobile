@@ -1,6 +1,6 @@
 {
   "name": "@dshm/remote-home-design",
-  "version": "0.4.0",
+  "version": "0.7.1",
   "description": "为 Remote 提供独立连接页和首页，配对、聊天和连接状态由 DSHM 保持。",
   "type": "module",
   "exports": "./index.jsx",

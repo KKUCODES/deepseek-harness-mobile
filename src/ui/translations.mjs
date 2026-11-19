@@ -1563,7 +1563,25 @@ export const english = Object.freeze({
   "加载电脑插件": "Load desktop plugins",
   "加载普通聊天界面": "Load API chat interface",
   "手机插件运行状态变更": "Change mobile plugin runtime state",
-  "提交更新操作": "Submit update action"
+  "提交更新操作": "Submit update action",
+  "打开图片": "Open image",
+  "正在加载图片…": "Loading image…",
+  "图片加载失败": "Image failed to load",
+  "原图预览": "Image preview",
+  "关闭原图预览": "Close image preview",
+  "工作区展开显示会话": "Show chats under workspaces",
+  "展开其余 {count} 个会话": "Show {count} more chats",
+  "收起其余 {count} 个会话": "Show fewer chats",
+  "这个工作区还没有会话。": "No chats in this workspace yet.",
+  "其他会话": "Other chats",
+  "管理 Remote 首页的显示方式。": "Manage how the Remote home is displayed.",
+  "刚刚": "Just now",
+  "{count} 秒": "{count}s",
+  "{count} 分钟": "{count}m",
+  "{count} 小时": "{count}h",
+  "{count} 天": "{count}d",
+  "{count} 个月": "{count}mo",
+  "{count} 年": "{count}y"
 });
 
 export function translate(locale, text, values = {}) {

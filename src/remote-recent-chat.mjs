@@ -5,6 +5,60 @@ const MAX_AGE = 10 * 60 * 1000;
 const keyOf = target => JSON.stringify(typeof target === 'string' ? target
   : [target.parentSessionId, target.childSessionId, target.mode]);
 
+/** 从缓存的字段恢复参数来源；有已解析对象用对象，否则拼接原文再解析。 */
+function argumentFields(value) {
+  if (value === null || typeof value !== 'object') return { fields: {}, invalid: true };
+  if (value.object !== null && typeof value.object === 'object' && !Array.isArray(value.object)) {
+    return { fields: value.object, invalid: false };
+  }
+  if (!Array.isArray(value.chunks)) return { fields: {}, invalid: true };
+  try {
+    const parsed = JSON.parse(value.chunks.join(''));
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? { fields: parsed, invalid: false } : { fields: {}, invalid: true };
+  } catch { return { fields: {}, invalid: true }; }
+}
+
+/** 缓存只剩参数的普通字段；按原只读视图的方法集交付，工具行才能继续读取参数。 */
+function argumentView(value) {
+  if (value !== null && typeof value === 'object' && typeof value.complete === 'function') return value;
+  const { fields, invalid } = argumentFields(value);
+  const read = key => Object.hasOwn(fields, key) ? fields[key] : undefined;
+  const text = key => { const field = read(key); return typeof field === 'string' ? field : undefined; };
+  return {
+    isSealed: true,
+    invalid,
+    closed: () => true,
+    keys: () => Object.keys(fields),
+    has: key => Object.hasOwn(fields, key),
+    complete: key => Object.hasOwn(fields, key),
+    text,
+    textPrefix: (key, maxLength) => text(key)?.slice(0, Math.max(1, Math.floor(maxLength))),
+    stringLength: key => text(key)?.length,
+    stringExceeds: (key, maxLength) => (text(key)?.length ?? 0) > Math.max(0, Math.floor(maxLength)),
+    value: key => { const field = read(key); return typeof field === 'string' ? undefined : field; },
+    refresh: () => false,
+    append() { throw new Error('PartialArguments: cannot append to a sealed view'); },
+    settle: next => argumentView({ chunks: [next] }),
+  };
+}
+
+/** 工具调用的参数视图与子调用随缓存退化为普通字段；读回时恢复成可读取的只读视图。 */
+function restoreTool(tool) {
+  if (tool === null || typeof tool !== 'object') return;
+  tool.args = argumentView(tool.args);
+  for (const child of tool.subCalls ?? []) restoreTool(child);
+}
+
+function restoreGroups(groups) {
+  for (const group of groups) {
+    for (const node of group.nodes ?? []) {
+      if (node?.kind === 'tool-call') restoreTool(node.data?.root);
+    }
+  }
+  return groups;
+}
+
 /** 只复制正文投影，离开后不持有 Session 引用、实时订阅或插件作用域。 */
 export class RemoteRecentChats {
   entries = new Map();
@@ -15,7 +69,7 @@ export class RemoteRecentChats {
   take(target) {
     const key = keyOf(target), entry = this.entries.get(key);
     this.entries.delete(key);
-    if (entry && Date.now() - entry.at < MAX_AGE) return entry;
+    if (entry && Date.now() - entry.at < MAX_AGE) return { ...entry, groups: restoreGroups(entry.groups) };
   }
   remember({ selected, selectedTarget, session, conversation }, anchor) {
     const key = keyOf(selectedTarget);

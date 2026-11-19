@@ -1,12 +1,13 @@
 .app[hidden] { display: none; }
 .remote-app { min-width: 0; }
-.remote-topbar { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 12px; height: 70px; padding: 12px 14px; }
+/* 44px 按钮内是 14px 图标，横向内缩扣掉居中偏移，使返回与更多图标盒与页面基准对齐。 */
+.remote-topbar { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 12px; height: 70px; padding: 12px calc(var(--dshm-gutter) - 15px); }
 .remote-topbar > .icon-button { background: var(--dsw-alias-bg-layer-1, white); box-shadow: 0 2px 16px rgb(0 0 0 / 3%); }
 .remote-topbar > .icon-button:last-child svg { transform: rotate(90deg); }
 .remote-heading { min-width: 0; text-align: center; }
 .remote-heading strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 20px; font-weight: 600; }
 .remote-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.connect-page { padding: 44px 26px 28px; display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
+.connect-page { padding: 44px var(--dshm-gutter) 28px; display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
 .connection-symbol { width: 62px; height: 62px; display: grid; place-items: center; border-radius: 18px; background: var(--dsw-alias-interactive-bg-hover); margin-bottom: 10px; }
 .connect-page h1 { font-size: 23px; line-height: 1.4; }
 .connect-page p { margin: 0; line-height: 1.8; color: var(--dsw-alias-label-secondary); }
