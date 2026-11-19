@@ -1,6 +1,6 @@
 # Remote 历史定位与发送状态修复
 
-状态：rc.3 分支修复候选，用户已授权进入 preview.21/code31 发布流程；发行验收见[KKC-130](https://linear.app/kkcodes/issue/KKC-130)。维护角色：DSHM 手机端维护者。最近核验：2026-11-19。现场复验任务：[KKC-129](https://linear.app/kkcodes/issue/KKC-129)。
+状态：已随 preview.21/code31 公开，源码提交 `7567430`；[Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/44546317320)构建、签名与发布成功，5 个附件匿名下载、摘要及 APK 原证书/身份复核通过。发行验收见[KKC-130](https://linear.app/kkcodes/issue/KKC-130)。维护角色：DSHM 手机端维护者。最近核验：2026-11-19。用户偶发现场仍待复验：[KKC-129](https://linear.app/kkcodes/issue/KKC-129)。
 
 用户确认问题发生在 preview.20 Remote，手指向下滑动查看更早消息；另有切到其他 App 再回来后无法发送的偶发反馈，按钮颜色未知。
 

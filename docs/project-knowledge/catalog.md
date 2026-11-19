@@ -1,6 +1,6 @@
 # 手机端知识总目录
 
-2026-11-19：[Remote 历史定位与发送状态修复](../integration/remote-reading-send-recovery-current.md)。rc.3 候选统一列表锚点、补齐 sending 冻结阶段；连续历史/主旁栏/等待期滚动与 MuMu 前后台发送已验。用户偶发现场仍待复验，[KKC-129](https://linear.app/kkcodes/issue/KKC-129)；preview.21/code31 发行状态见[KKC-130](https://linear.app/kkcodes/issue/KKC-130)。
+2026-11-19：[Remote 历史定位与发送状态修复](../integration/remote-reading-send-recovery-current.md)。preview.21/code31 已公开；rc.3 统一列表锚点、补齐 sending 冻结阶段，连续历史/主旁栏/等待期滚动与 MuMu 前后台发送已验。Actions、匿名下载与原签名核验通过，[发行KKC-130](https://linear.app/kkcodes/issue/KKC-130)。用户偶发现场仍待复验，[KKC-129](https://linear.app/kkcodes/issue/KKC-129)。
 
 2026-11-13：[preview.16 Remote 回前台恢复与最近会话](../integration/preview16-remote-resume.md)。基于公开 .15 的独立分支，双 SDK 回归、原签名 APK 与 MuMu 实际验证范围见专题。
 
