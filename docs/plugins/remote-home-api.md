@@ -1,6 +1,6 @@
 # Remote 首页界面插件 API v1
 
-状态：首页接口已公开，连接页扩展为preview.15本地候选，尚未发行；维护：DSHM 手机端维护者；核验日期：2026-10-27。来源：[本地页面宿主](../../src/remote-interface-host.jsx)、[加载器](../../src/mobile-interface-plugins.mjs)、[首页投影](../../src/ui/RemoteWorkspace.jsx)、[独立样例](../../packages/remote-home-design/index.jsx)。从[开发指南](./development.md)开始，连接页见[当前验收](../integration/remote-connection-plugin-current.md)，预装与外部安装分别见原专题。
+状态：首页接口已公开，连接页扩展为preview.15本地候选，尚未发行；维护：DSHM 手机端维护者；核验日期：2026-11-19。来源：[本地页面宿主](../../src/remote-interface-host.jsx)、[加载器](../../src/mobile-interface-plugins.mjs)、[首页投影](../../src/ui/RemoteWorkspace.jsx)、[独立样例](../../packages/remote-home-design/index.jsx)。从[开发指南](./development.md)开始，连接页见[当前验收](../integration/remote-connection-plugin-current.md)，预装与外部安装分别见原专题。
 
 ## 加载和声明
 
@@ -69,6 +69,9 @@ function Connection({ connection: { view, actions, parts, t } }) {
 | `ready / busy / connection` | 真实数据、操作和连接状态；断线不卸载界面插件 |
 | `workspaces` | `{ id, title }[]`，电脑当前工作区的只读展示投影 |
 | `sessions` | `{ id, title, running, updatedAt, snippet? }[]`，经过权限与过滤后的现有会话列表 |
+| `grouped` | 可选；为真时宿主已开启「工作区展开显示会话」本地偏好，插件应改用 `workspaceGroups` 渲染折叠视图 |
+| `workspaceGroups` | 可选；`{ id, title, kind, total, mode, expanded, hiddenCount, sessions }[]`。`kind` 为 `workspace` 或 `orphan`（未归属工作区的其他会话）；`mode` 为 `collapsed`、`preview`、`all` 或搜索时的 `search`；`sessions` 是当前应渲染的会话，结构与 `sessions` 相同；`hiddenCount` 是默认展示条数之外的数量 |
+| `now` | 可选；宿主提供的当前时间毫秒值，分组视图停留时约每 30 秒更新，用于渲染相对时间；旧宿主缺省时插件回退本机时间 |
 | `searching / searchError / hasMore` | 宿主统一搜索状态；错误为可翻译提示，重试仍由宿主执行 |
 
 | actions 方法 | 行为 |
@@ -82,6 +85,11 @@ function Connection({ connection: { view, actions, parts, t } }) {
 | `newSession()` | 工作区页面直接在该工作区新建会话，Remote 总览打开工作区选择器。创建和导航由宿主管理 |
 | `rememberScroll(top)` | 保存当前导航键的阅读位置；拒绝非有限数字 |
 | `readScroll()` | 挂载时读取最新位置，避免只切换插件而宿主未重画时使用过期投影 |
+| `toggleWorkspace(id)` | 切换工作区分组的展开状态：收起与默认展示之间切换；仅 `grouped` 且非搜索时有效 |
+| `expandWorkspace(id)` | 把默认展示切换为全部展示；仅 `grouped` 且非搜索时有效 |
+| `collapseWorkspace(id)` | 把全部展示切换回默认展示；仅 `grouped` 且非搜索时有效 |
+
+首页折叠由宿主「Remote 选项」底部「设置」入口里的「工作区展开显示会话」开关控制，默认关闭；开关和展开状态由手机本地保存，默认首页与界面插件共享。默认展示条数固定为 5，超过时由插件按 `mode` 和 `hiddenCount` 渲染「展开其余 N 个会话」/「收起其余 N 个会话」。搜索时 `workspaceGroups` 只包含有命中的分组，`mode` 为 `search` 且 `sessions` 为全部命中，不再套用默认条数；没有命中的分组不出现。`workspaceGroups[].sessions` 的每项还带 `unread`：宿主判定为运行结束且未打开过的会话；插件据此显示完成绿点，已经打开过或未被跟踪过运行状态的会话不加提示。`grouped` 是可选的向后兼容字段：旧插件忽略它时仍按原「项目 + 最近会话」布局工作，新插件在旧宿主上缺少该字段时继续渲染原布局；`grouped` 为真时旧插件仍会读到平铺的 `sessions`。
 
 `view` 是投影，插件应视作只读；禁止直接修改、缓存后重放操作，或推断未公开的私有字段。长久状态应由宿主契约或插件自己的持久化管理；任意组件私有 Hook 状态不保证跨停用/启用保留。
 

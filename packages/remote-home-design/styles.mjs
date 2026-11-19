@@ -20,6 +20,10 @@ export const styles = `
 .dshm-home-plugin .dhp-computer p { margin:16px 0 0; font-size:14px; line-height:22px; color:var(--dhp-secondary); }
 .dshm-home-plugin .dhp-row { display:flex; align-items:center; gap:12px; width:100%; min-height:76px; padding:16px; border:0; border-radius:12px; background:transparent; text-align:left; }
 .dshm-home-plugin .dhp-row:hover:not(:disabled),.dshm-home-plugin .dhp-row:active:not(:disabled) { background:var(--dhp-soft); }
+.dshm-home-plugin .dhp-row > .dhp-status { flex:none; display:grid; place-items:center; width:24px; height:24px; }
+.dshm-home-plugin .dhp-status .dhp-pulse { width:14px; height:14px; border:1.5px solid #9a9ca4; border-radius:50%; corner-shape:round; animation:dhp-session-pulse 1.2s ease-in-out infinite; }
+.dshm-home-plugin .dhp-status .dhp-dot { width:7px; height:7px; border-radius:50%; corner-shape:round; background:#68a774; }
+@keyframes dhp-session-pulse { 0%, 100% { opacity:.35; transform:scale(.86); } 50% { opacity:1; transform:scale(1); } }
 .dshm-home-plugin .dhp-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:4px; overflow-wrap:anywhere; }
 .dshm-home-plugin .dhp-copy>span { font-size:16px; line-height:24px; }
 .dshm-home-plugin .dhp-copy small { font-size:14px; line-height:22px; color:var(--dhp-secondary); }
@@ -30,4 +34,16 @@ export const styles = `
 .dshm-home-plugin .dhp-footer input { width:100%; min-width:0; height:48px; padding:0; border:0; background:transparent; }
 .dshm-home-plugin .dhp-footer input::placeholder { color:var(--dhp-secondary); opacity:1; }
 .dshm-home-plugin .dhp-skeleton i { display:block; height:44px; border-radius:12px; background:var(--dhp-soft); margin:16px 0; }
+.dshm-home-plugin .dhp-group { display:flex; flex-direction:column; }
+.dshm-home-plugin .dhp-group-row { min-height:76px; }
+.dshm-home-plugin .dhp-toggle { display:flex; flex:none; color:var(--dhp-secondary); transition:transform 160ms ease; }
+.dshm-home-plugin .dhp-group.is-expanded .dhp-toggle { transform:rotate(90deg); }
+.dshm-home-plugin .dhp-group-heading { display:flex; align-items:center; gap:12px; min-height:52px; padding:12px 16px; color:var(--dhp-secondary); }
+.dshm-home-plugin .dhp-group-heading span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dshm-home-plugin .dhp-group-heading small { flex:none; }
+.dshm-home-plugin .dhp-group-sessions { display:flex; flex-direction:column; }
+.dshm-home-plugin .dhp-group-sessions .dhp-row { min-height:64px; }
+.dshm-home-plugin .dhp-group-empty { margin:0 16px 12px 36px; font-size:14px; line-height:22px; color:var(--dhp-secondary); }
+.dshm-home-plugin .dhp-more { display:block; width:100%; min-height:44px; padding:8px 16px 8px 36px; border:0; background:transparent; color:var(--dhp-secondary); font:inherit; font-size:14px; text-align:left; }
+@media (prefers-reduced-motion: reduce) { .dshm-home-plugin .dhp-toggle { transition:none; } .dshm-home-plugin .dhp-pulse { animation:none; opacity:1; transform:none; } }
 `;

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
+import { WORKSPACE_CHAT_STORAGE_KEY } from '../src/remote-home-workspaces.mjs';
 
 /** 正式 RemoteWorkspace + 原会话模型回放，列表入口没有替换成展示组件。 */
 export async function checkRemoteHomeDesign(page, output) {
@@ -39,5 +40,35 @@ export async function checkRemoteHomeDesign(page, output) {
   await page.getByRole('dialog', { name: '选择工作区', exact: true }).waitFor();
   assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
   await page.getByRole('dialog', { name: '选择工作区', exact: true }).waitFor({ state: 'hidden' });
-  return { actualWorkspace: true, themes: ['light', 'dark'], widths: [390, 320], projectAndSessionEntry: true, search: true, newChatPicker: true, systemBack: true };
+  await main.getByRole('button', { name: 'Remote 选项', exact: true }).click();
+  await page.getByRole('button', { name: '设置', exact: true }).click();
+  const groupedSwitch = page.getByRole('switch', { name: '工作区展开显示会话', exact: true });
+  await groupedSwitch.waitFor();
+  assert.equal(await groupedSwitch.getAttribute('aria-checked'), 'false');
+  await groupedSwitch.click();
+  assert.equal(await groupedSwitch.getAttribute('aria-checked'), 'true');
+  assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
+  const project = main.locator('[data-remote-home-workspace="back-test"]');
+  await project.waitFor();
+  assert.equal(await main.locator('.dhp-group-sessions').count(), 0);
+  await project.click();
+  await main.locator('.dhp-group-sessions [data-remote-home-session]').filter({ hasText: 'one' }).waitFor();
+  assert.equal(await main.locator('.dhp-group-sessions [data-remote-home-session]').count(), 1);
+  assert.equal(await main.locator('.dhp-group-sessions .dhp-status').count(), 1);
+  await project.click();
+  assert.equal(await main.locator('.dhp-group-sessions').count(), 0);
+  await main.getByRole('textbox', { name: '搜索远程聊天', exact: true }).fill('one');
+  await main.getByRole('heading', { name: '搜索结果', exact: true }).waitFor();
+  assert.equal(await main.locator('.dhp-group-heading').count(), 1);
+  assert.equal(await main.locator('[data-remote-home-session]').filter({ hasText: 'one' }).count(), 1);
+  await main.getByRole('textbox', { name: '搜索远程聊天', exact: true }).fill('');
+  await main.getByRole('button', { name: 'Remote 选项', exact: true }).click();
+  await page.getByRole('button', { name: '设置', exact: true }).click();
+  const restoreSwitch = page.getByRole('switch', { name: '工作区展开显示会话', exact: true });
+  assert.equal(await restoreSwitch.getAttribute('aria-checked'), 'true');
+  await restoreSwitch.click();
+  assert.equal(await restoreSwitch.getAttribute('aria-checked'), 'false');
+  assert.equal(await page.evaluate(() => window.dshmHandleBack()), true);
+  await page.evaluate(key => localStorage.removeItem(key), WORKSPACE_CHAT_STORAGE_KEY);
+  return { actualWorkspace: true, themes: ['light', 'dark'], widths: [390, 320], projectAndSessionEntry: true, search: true, newChatPicker: true, systemBack: true, workspaceChats: true };
 }

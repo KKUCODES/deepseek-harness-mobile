@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
+import { Switch } from '@upstream/ui-primitives/src/Switch.tsx';
 import { IconCheckOutline16, IconChevronLeftOutline14, IconChevronDownOutline14, IconCloseOutline16, IconEllipsisOutline16, IconFolderClose16, IconNewChatOutline16, IconSearchOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Surface, IconButton } from './Surface.jsx';
 import { useLocale, useTranslate } from './locale.jsx';
@@ -58,6 +59,7 @@ import { RemoteMainConversationBody, RemoteMainConversationFrame } from '../remo
 import { SurfacePresence, useSceneMotion, RemoteFlowMotion } from './motion.jsx';
 import { createChatFlowMotion } from '@dshm/chat-presentation';
 import { dismissRemotePortalModal } from '../remote-modals.mjs';
+import { advanceSessionStatus, collapseWorkspaceChatMode, expandWorkspaceChatMode, formatRelativeChatTime, groupWorkspaceChats, openSessionStatus, readWorkspaceChatPreferences, searchWorkspaceChats, toggleWorkspaceChatMode, visibleWorkspaceChats, writeWorkspaceChatPreferences } from '../remote-home-workspaces.mjs';
 
 export function RemoteWorkspace({ model, onBack, onConnection, embedded = false, renderConversation }) {
   const t = useTranslate();
@@ -68,6 +70,8 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const visibleState = useSyncExternalStore(visibleModel.subscribeView, visibleModel.getSnapshot);
   const composerActive = embedded ? focused === model : !focused;
   const [workspace, setWorkspace] = useState(() => model.workspaceResume?.workspace ?? null), [sheet, setSheet] = useState(null), [query, setQuery] = useState(() => model.workspaceResume?.query ?? '');
+  const [homePreferences, setHomePreferences] = useState(() => readWorkspaceChatPreferences(globalThis.localStorage));
+  const [now, setNow] = useState(() => Date.now());
   const [search, setSearch] = useState(null), [searchAttempt, retrySearch] = useState(0);
   const [settingsTarget, setSettingsTarget] = useState({ id: 'models', revision: 0 });
   const [notice, setNotice] = useState(''), [actionBusy, setBusy] = useState(false);
@@ -85,6 +89,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     return () => { active = false; window.removeEventListener('dshm-notification-status', refresh); };
   }, [model, embedded]);
   const [archived, setArchived] = useState(() => model.workspaceResume?.archived ?? false), [title, setTitle] = useState('');
+  useEffect(() => { writeWorkspaceChatPreferences(globalThis.localStorage, homePreferences); }, [homePreferences]);
   useEffect(() => {
     model.workspaceResume = undefined;
     const capture = () => ({ workspace, archived, query });
@@ -95,6 +100,21 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [command, setCommand] = useState(() => model.commandResume?.target ?? null);
   const [jobOutput, setJobOutput] = useState(() => model.jobOutputResume?.target ?? null);
   const { selected, selectionRevision, cachedHistory, cachedReadingResume } = state;
+  useEffect(() => {
+    if (!homePreferences.enabled || selected || workspace) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(timer);
+  }, [homePreferences.enabled, selected, workspace]);
+  useEffect(() => {
+    if (!selected) return;
+    const target = state.list?.byId[selected];
+    if (!target) return;
+    setHomePreferences(previous => {
+      const next = openSessionStatus(previous, selected, target.running === true);
+      return next === previous ? previous : next;
+    });
+  }, [selected, state.ready]);
   const readingResume = cachedReadingResume ?? (model.readingResume?.selected === selected ? model.readingResume : null);
   const { scroll, bottom, attachScroll, onScroll, followBottom, followingTail, returnToBottom } = useRemoteScrollFollow(`${selected}:${selectionRevision}`, readingResume);
   const rememberReading = useCallback(anchor => model.sessionView?.rememberReading(selected, selectionRevision, anchor),
@@ -142,7 +162,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const childAccess = subagentAccess(state);
   const modelReadOnly = !!childAccess.address;
   const modelSheetTitle = modelReadOnly ? '当前模型' : '选择模型';
-  const sheetTitle = { desktopApps: '在电脑应用中打开', new: '选择工作区', models: modelSheetTitle, menu: 'Remote 选项', attachments: '附件', rename: '重命名聊天', plugins: '电脑插件', pluginSettings: '插件设置', workspaces: '管理工作区', references: '引用文件或聊天', skills: '选择技能', permissions: '会话权限', agentPresets: 'Agent 模式', plan: '计划模式', goal: '当前目标', jobs: '后台任务', schedules: '定时任务', subagents: '子会话', export: '导出会话日志', liveLog: '实时日志' }[sheet];
+  const sheetTitle = { desktopApps: '在电脑应用中打开', new: '选择工作区', models: modelSheetTitle, menu: 'Remote 选项', homeSettings: '设置', attachments: '附件', rename: '重命名聊天', plugins: '电脑插件', pluginSettings: '插件设置', workspaces: '管理工作区', references: '引用文件或聊天', skills: '选择技能', permissions: '会话权限', agentPresets: 'Agent 模式', plan: '计划模式', goal: '当前目标', jobs: '后台任务', schedules: '定时任务', subagents: '子会话', export: '导出会话日志', liveLog: '实时日志' }[sheet];
   const attachments = state.attachments[selected] ?? [];
   const fileCards = attachments.filter(item => !hasDraftImage(item));
   const attachmentsPending = attachments.some(item => item.state !== 'ready');
@@ -175,7 +195,37 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     !item.blank && !!state.workspaces?.archivedSessionIds.includes(item.id) === archived &&
     (!workspace || state.workspaces?.items.find(item => item.workspaceId === workspace)?.sessionIds.includes(item.id)) &&
     (!phrase || item.displayTitle.toLocaleLowerCase().includes(phrase.toLocaleLowerCase()) || snippets.has(item.id)));
-  const homeKey = JSON.stringify([workspace, archived, phrase]);
+  const unreadSessions = new Set(homePreferences.unread ?? []);
+  const homeSessions = rows.map(item => ({ id: item.id, title: item.displayTitle, running: item.running, updatedAt: item.updatedAt, snippet: snippets.get(item.id), unread: unreadSessions.has(item.id) }));
+  const workspaceChatWorkspaces = (state.workspaces?.items ?? []).map(item => ({ id: item.workspaceId, title: item.title, sessionIds: item.sessionIds }));
+  const grouped = homePreferences.enabled;
+  const statusSessions = (state.list?.ids ?? []).map(id => state.list.byId[id]).filter(item => !item.blank).map(item => ({ id: item.id, running: item.running === true }));
+  const statusSignature = statusSessions.map(item => `${item.id}:${item.running ? 1 : 0}`).join('|');
+  useEffect(() => {
+    if (!grouped) return;
+    setHomePreferences(previous => {
+      const next = advanceSessionStatus(previous, statusSessions);
+      return next === previous ? previous : next;
+    });
+  }, [grouped, statusSignature]);
+  const groupedChats = grouped
+    ? phrase ? searchWorkspaceChats({ workspaces: workspaceChatWorkspaces, sessions: homeSessions })
+      : groupWorkspaceChats({ workspaces: workspaceChatWorkspaces, sessions: homeSessions, expanded: homePreferences.expanded })
+    : [];
+  const workspaceChatGroups = (grouped && (phrase || archived) ? groupedChats.filter(group => group.sessions.length > 0) : groupedChats).map(group => {
+    const mode = phrase ? 'search' : group.mode;
+    return { id: group.id, title: group.title, kind: group.kind, total: group.total, mode,
+      expanded: mode !== 'collapsed', hiddenCount: mode === 'preview' || mode === 'all' ? group.hiddenCount : 0,
+      sessions: mode === 'search' ? group.sessions : visibleWorkspaceChats(group) };
+  });
+  /** 更新单个工作区分组的展开状态；收起时移除记录，其余状态写入本地偏好。 */
+  const updateWorkspaceExpanded = (id, update) => setHomePreferences(previous => {
+    const next = update(previous.expanded[id]);
+    const expanded = { ...previous.expanded };
+    if (next === 'collapsed') delete expanded[id]; else expanded[id] = next;
+    return { ...previous, expanded };
+  });
+  const homeKey = JSON.stringify([workspace, archived, phrase, grouped]);
   const canCreate = () => !busy && !creatingSession.current && model.getSnapshot().connectionState === 'connected';
   const createSession = workspaceId => {
     if (!canCreate()) return;
@@ -195,9 +245,10 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const home = { apiVersion: 1, t, locale, view: {
     key: homeKey, scrollTop: homeReading.current.get(homeKey) ?? 0,
     title: workspace ? state.workspaces.items.find(item => item.workspaceId === workspace)?.title ?? 'Remote' : 'Remote',
-    workspace, query, archived, ready: !!state.ready, busy, connection: state.connectionState,
-    workspaces: (state.workspaces?.items ?? []).map(item => ({ id: item.workspaceId, title: item.title })),
-    sessions: rows.map(item => ({ id: item.id, title: item.displayTitle, running: item.running, updatedAt: item.updatedAt, snippet: snippets.get(item.id) })),
+    workspace, query, archived, ready: !!state.ready, busy, connection: state.connectionState, now,
+    workspaces: workspaceChatWorkspaces.map(item => ({ id: item.id, title: item.title })),
+    grouped, workspaceGroups: workspaceChatGroups,
+    sessions: homeSessions,
     searching, searchError: currentSearch?.error ? currentSearch.error === 'disabled'
       ? '电脑尚未开启聊天内容搜索，当前仅搜索标题。' : '聊天内容搜索失败，当前仅显示标题匹配。请检查电脑连接后重试。' : null,
     hasMore: !!currentSearch?.hasMore,
@@ -207,6 +258,18 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     workspace: id => { if (state.workspaces?.items.some(item => item.workspaceId === id)) setWorkspace(id); },
     session: id => { if (!model.getSnapshot().selected && model.getSnapshot().connectionState === 'connected'
       && rows.some(item => item.id === id)) void act(() => model.select(id)); },
+    toggleWorkspace: id => {
+      if (!grouped || phrase || !workspaceChatGroups.some(group => group.id === id)) return;
+      updateWorkspaceExpanded(id, toggleWorkspaceChatMode);
+    },
+    expandWorkspace: id => {
+      if (!grouped || phrase || !workspaceChatGroups.some(group => group.id === id)) return;
+      updateWorkspaceExpanded(id, expandWorkspaceChatMode);
+    },
+    collapseWorkspace: id => {
+      if (!grouped || phrase || !workspaceChatGroups.some(group => group.id === id)) return;
+      updateWorkspaceExpanded(id, collapseWorkspaceChatMode);
+    },
     query: value => { if (typeof value === 'string') setQuery(value); }, retrySearch: () => retrySearch(value => value + 1),
     newSession,
     readScroll: () => homeReading.current.get(homeKey) ?? 0,
@@ -439,7 +502,12 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
         {selected ? <><Button className="option" onClick={() => { setTitle(chat?.displayTitle ?? ''); setSheet('rename'); }}>{t("重命名聊天")}</Button>
           <Button className="option" disabled={busy || state.session?.running} onClick={() => void act(async () => { await model.fork(); setSheet(null); })}>{t("在新聊天中分支")}</Button>
           <Button className="option" disabled={busy} onClick={() => void act(async () => { await model.archive(!state.workspaces.archivedSessionIds.includes(selected)); setSheet(null); })}>{t(state.workspaces?.archivedSessionIds.includes(selected) ? '取消归档' : '归档聊天')}</Button></> : <Button className="option" onClick={() => { setArchived(!archived); setSheet(null); }}>{t(archived ? '查看最近聊天' : '查看已归档聊天')}</Button>}
-        <Button className="option" onClick={() => void act(() => model.sessions.refresh())}>{t("刷新会话")}</Button></>}
+        <Button className="option" onClick={() => void act(() => model.sessions.refresh())}>{t("刷新会话")}</Button>
+        <Button className="option" onClick={() => setSheet('homeSettings')}>{t("设置")}</Button></>}
+      {sheet === 'homeSettings' && <div className="remote-home-settings">
+        <p>{t('管理 Remote 首页的显示方式。')}</p>
+        <label className="remote-menu-switch"><span>{t('工作区展开显示会话')}</span><Switch label={t('工作区展开显示会话')} checked={grouped} onChange={value => setHomePreferences(previous => ({ ...previous, enabled: value }))}/></label>
+      </div>}
       {sheet === 'rename' && <><input className="sheet-editor" aria-label={t("聊天名称")} value={title} onChange={event => setTitle(event.target.value)}/><Button variant="primary" disabled={busy || !title.trim()} onClick={() => void act(async () => { await model.rename(title); setSheet(null); })}>{t("保存名称")}</Button></>}
       {sheet === 'attachments' && <><Button className="option" onClick={() => pick(imagePicker)}>{t("从相册选择")}</Button>{!childAccess.address && <Button className="option" onClick={() => pick(filePicker)}>{t("选择文件")}</Button>}{!childAccess.address && Object.values(referenceSources(model)).some(Boolean) && <Button className="option" onClick={() => setSheet('references')}>{t('引用文件或聊天')}</Button>}{model.skills.available && <Button className="option" onClick={() => setSheet('skills')}>{t("选择技能")}</Button>}</>}
     </Surface>}</SurfacePresence>
