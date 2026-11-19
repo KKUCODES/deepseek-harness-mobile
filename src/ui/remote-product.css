@@ -129,6 +129,10 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-plugin-layout { display:flex; gap:12px; flex-wrap:wrap; padding:8px 0 16px; }
 .remote-plugin-layout button { padding:8px 12px; border:1px solid var(--border-color, #ddd); border-radius:20px; background:transparent; color:inherit; }
 .remote-permissions .remote-permission-option, .remote-agent-presets .remote-permission-option { height:auto; min-height:48px; padding:12px 14px; gap:12px; white-space:normal; }
+/* 模式入口与会话头部操作共用标题下的一行，插件入口靠右，标题到模式的距离由这一行决定。 */
+.remote-mode-row { flex:none; display:flex; align-items:center; gap:8px; min-width:0; padding:0 var(--dshm-gutter); }
+.remote-mode-row > .remote-agent-mode { padding:0; }
+.remote-mode-row > .remote-header-extensions { flex:1; min-width:0; padding:0; text-align:right; }
 /* 模式入口是有内边距的按钮，向左抵消这段内边距，使文字左缘与正文基准对齐，触摸范围不变。 */
 .remote-agent-mode { flex:none; padding:0 var(--dshm-gutter) 6px; }
 .remote-agent-mode > button { margin-inline-start: -14px; }

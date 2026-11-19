@@ -288,7 +288,7 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     <header className="topbar remote-topbar"><IconButton label={t("返回")} disabled={busy} onClick={() => selected ? void act(() => model.back()) : workspace ? setWorkspace(null) : onBack()}><IconChevronLeftOutline14/></IconButton>
       <div className="remote-heading">{selected ? <RemoteHeaderTitle model={model} title={chat?.displayTitle ?? '聊天'}/> : <strong>{workspace ? state.workspaces.items.find(item => item.workspaceId === workspace)?.title : 'Remote'}</strong>}</div>
       <IconButton label={t("Remote 选项")} disabled={busy} onClick={() => setSheet('menu')}><IconEllipsisOutline16/></IconButton></header>
-    {selected && <><RemoteHeaderAncestors model={model}/><RemoteHeaderExtensions/></>}
+    {selected && <RemoteHeaderAncestors model={model}/>}
   </>;
   const status = <>
     {(notice || state.error) && <div className="remote-error" role="alert">{t(responseFailures[notice || state.error] ?? (notice || state.error))}<RemoteDiagnosticEntry failure={notice || state.error}/></div>}
@@ -312,7 +312,10 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
       {Object.hasOwn(state.drafts, selected) && <Button onClick={() => model.writeDraft(selected, state.drafts[selected], state.draftEditors?.[selected])}>{t("重试保存草稿")}</Button>}</div>}
     {state.attachmentDraftErrors?.[selected] && <div className="remote-error" role="alert"><p>{t(state.attachmentDraftErrors[selected])}</p>
       <Button onClick={() => void model.saveAttachmentDrafts(selected)}>{t("重试保存附件")}</Button></div>}
-    {selected && <RemoteActivePreset><RemoteAgentPresetLabel model={model} onOpen={() => setSheet('agentPresets')}/></RemoteActivePreset>}
+    {selected && <div className="remote-mode-row">
+      <RemoteActivePreset><RemoteAgentPresetLabel model={model} onOpen={() => setSheet('agentPresets')}/></RemoteActivePreset>
+      <RemoteHeaderExtensions/>
+    </div>}
     {selected && childAccess.address && <div className="remote-agent-mode"><Button disabled={busy} onClick={() => void act(() => model.back())}>{t("返回父会话")}</Button><span>{childAccess.address.mode === 'one-shot' ? '一次性子任务' : '子会话'}</span></div>}
   </>;
   const header = <>{navigation}{status}</>;
