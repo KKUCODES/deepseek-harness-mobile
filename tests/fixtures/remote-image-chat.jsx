@@ -35,13 +35,14 @@ export function imageChatFixture(model, transport, channels, history) {
     })();
     return { id: `image-fixture-${reads}`, promise, cancel() { if (!cancelled) { cancelled = true; cancels++; } } };
   };
-  const records = (count, asFile = false, prompt = 'IMAGE_USER_TEXT') => [
+  let markdownReads = [], markdownFailure = false;
+  const records = (count, asFile = false, prompt = 'IMAGE_USER_TEXT', answer = 'IMAGE_ANSWER_TEXT') => [
     { type: 'turn/start', data: { turn: 1 } },
     { type: 'step/start', data: { turn: 1, step: 1 } },
     { type: 'user/message', surfaceOp: 'append', data: { id: 'image-user', role: 'user', source: { kind: 'user' },
       content: [{ type: 'text', text: prompt }, ...Array.from({ length: count }, () => ({ type: asFile ? 'file' : 'image', attachment }))] } },
     { type: 'assistant/message', surfaceOp: 'append', data: { turn: 1, step: 1, stream: [], message: { id: 'image-answer', role: 'assistant',
-      source: { kind: 'model', provider: 'fixture', model: 'fixture' }, content: [{ type: 'text', text: 'IMAGE_ANSWER_TEXT' }, ...(count ? [{ type: 'image', attachment }] : [])] } } },
+      source: { kind: 'model', provider: 'fixture', model: 'fixture' }, content: [{ type: 'text', text: answer }, ...(count ? [{ type: 'image', attachment }] : [])] } } },
     { type: 'step/end', data: { turn: 1, step: 1 } },
     { type: 'turn/end', data: { turn: 1, reason: { kind: 'completed' } } },
   ].map((event, seq) => ({ ...event, seq, time: seq + 1 }));
@@ -51,6 +52,18 @@ export function imageChatFixture(model, transport, channels, history) {
     renderFailure(value) { crashGallery = value; },
     state: () => ({ reads, cancels, errors, sequence }),
     bytes: () => Uint8Array.from(raw, character => character.charCodeAt(0)),
+    markdownFailure(value) { markdownFailure = value; },
+    markdownReads: () => markdownReads,
+    async markdown(answer, { child = false } = {}) {
+      markdownReads = [];
+      model.files.bytes = async (session, path) => {
+        markdownReads.push({ session, path });
+        if (markdownFailure) throw Error('offline');
+        return Uint8Array.from(raw, character => character.charCodeAt(0));
+      };
+      if (child) await this.prepareChild(answer);
+      else await this.open({ count: 0, answer });
+    },
     async originalPlugin() { await model.ctx.plugin({ ...attachmentPlugin, name: '@deepseek-ai/dsh-client-ui-attachment' }).await(); },
     tool() {
       const events = [
@@ -64,19 +77,19 @@ export function imageChatFixture(model, transport, channels, history) {
       ];
       events.forEach((event, index) => channels.get('one')({ type: 'event', event: { ...event, seq: index + 6, time: index + 10 } }));
     },
-    async prepareChild() {
+    async prepareChild(answer) {
       active = true;
       await model.select(null);
-      const events = records(1);
+      const events = records(answer === undefined ? 1 : 0, false, undefined, answer);
       history.active = true; history.sessionId = 'child-chat';
       history.snapshot = () => ({ cursor: events.at(-1).seq, hasMore: false, records: events.map(event => ({ type: 'event', event })) });
       await model.select('one');
     },
-    async open({ count = 1, live = false, asFile = false, prompt } = {}) {
+    async open({ count = 1, live = false, asFile = false, prompt, answer } = {}) {
       active = true;
       transport.capabilities.channels = [...new Set([...(transport.capabilities.channels ?? []), 'attachment'])];
       await model.select(null);
-      const events = records(count, asFile, prompt);
+      const events = records(count, asFile, prompt, answer);
       history.active = true; history.sessionId = 'one';
       history.snapshot = () => ({ cursor: live ? -1 : events.at(-1).seq, hasMore: false,
         records: live ? [] : events.map(event => ({ type: 'event', event })) });

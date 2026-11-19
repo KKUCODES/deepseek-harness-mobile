@@ -1,4 +1,5 @@
 import { historyGroups } from './remote-history.mjs';
+import * as sourceValues from '../../deepseek-harness/packages/util/values/src/index.ts';
 
 const MAX_CHATS = 3, MAX_GROUPS = 24, MAX_BYTES = 512 * 1024;
 const MAX_AGE = 10 * 60 * 1000;
@@ -22,6 +23,13 @@ function argumentFields(value) {
 /** 缓存只剩参数的普通字段；按原只读视图的方法集交付，工具行才能继续读取参数。 */
 function argumentView(value) {
   if (value !== null && typeof value === 'object' && typeof value.complete === 'function') return value;
+  // 当前 SDK 直接恢复原参数视图，保留未闭合 JSON 中已经完整的字段。
+  // 旧 SDK 没有 PartialArguments 时才沿用旧缓存的只读字段适配。
+  const PartialArguments = Reflect.get(sourceValues, 'PartialArguments');
+  if (PartialArguments) {
+    if (value?.object !== null && typeof value?.object === 'object' && !Array.isArray(value.object)) return PartialArguments.fromObject(value.object);
+    return PartialArguments.fromText(Array.isArray(value?.chunks) ? value.chunks.join('') : '');
+  }
   const { fields, invalid } = argumentFields(value);
   const read = key => Object.hasOwn(fields, key) ? fields[key] : undefined;
   const text = key => { const field = read(key); return typeof field === 'string' ? field : undefined; };

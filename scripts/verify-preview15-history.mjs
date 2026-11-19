@@ -22,6 +22,8 @@ import {checkRemoteReasoning} from './check-remote-reasoning.mjs';
 import {checkRecentRemoteChat} from './check-recent-remote-chat.mjs';
 import {checkRemoteReadingDuringPage,checkRemoteOlderScrolling} from './check-remote-reading-race.mjs';
 import {checkRemoteSendingState} from './check-remote-sending-state.mjs';
+import {checkRemoteMarkdownImages} from './check-remote-markdown-images.mjs';
+import {checkRemoteHomeDesign} from './check-remote-home-design.mjs';
 
 const root=resolve(import.meta.dirname,'..'),baseline=process.argv.includes('--baseline');
 const aside=process.argv.includes('--aside-history');
@@ -31,7 +33,7 @@ const require=createRequire(import.meta.url);
 const sdk=latestMobileBuild(root,{officialOnly:true,...(process.argv.includes('--rc3')?{officialVersion:'0.2.2-rc.3',ci:true}:{officialVersion:process.argv.includes('--alpha2')?'0.2.1-alpha.2':'0.2.1-rc.2'})});
 const output=resolve(root,`artifacts/tests/preview15-history/${sdk.version}-${baseline?'baseline':'candidate'}-${mode}`);
 await mkdir(output,{recursive:true});
-const contents=`import {installRemotePlatform} from './src/remote-platform.mjs'; import installRemoteUrl from './src/remote-url-platform.cjs';
+const contents=`${process.argv.includes('--home-design') ? "import './tests/fixtures/phone-home-catalog.mjs';" : ''}import {installRemotePlatform} from './src/remote-platform.mjs'; import installRemoteUrl from './src/remote-url-platform.cjs';
 installRemotePlatform(); installRemoteUrl(); await import('./tests/fixtures/remote-plugin-slots.jsx');
 import '@upstream/ui-theme/src/styles/base.css'; import '@upstream/ui-theme/src/styles/design-platform.css';
 import '@upstream/ui-theme/src/styles/gradient-shadow-text.css'; import '@upstream/ui-theme/src/styles/corner-shape.css';
@@ -61,7 +63,12 @@ const settle=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()
 const state=()=>page.evaluate(()=>window.preview15.state());
 try{
   await page.goto(`http://127.0.0.1:${server.address().port}/${mode.startsWith('table')?`?documents&builtin${aside?'&sidebar':''}`:['links','code-block'].includes(mode)?'?documents&builtin':mode==='sidebar'?'?sidebar':''}`);await page.waitForFunction(()=>!!window.preview15);
-  if(mode==='sending-state'){
+  if(process.argv.includes('--home-design')){
+    await page.evaluate(()=>window.preview15.model.interfacePlugins.select('@dshm/remote-home-design'));
+    report.home=await checkRemoteHomeDesign(page,output);assert.deepEqual(report.errors,[]);
+  }else if(process.argv.includes('--markdown-images')){
+    report.markdownImages=await checkRemoteMarkdownImages(page,{aside});assert.deepEqual(report.errors,[]);
+  }else if(mode==='sending-state'){
     report.sendingState=await checkRemoteSendingState(page); assert.deepEqual(report.errors,[]);
   }else if(mode==='recent-chat'){
     report.recentChat=await checkRecentRemoteChat(page); assert.deepEqual(report.errors,[]);
@@ -119,9 +126,14 @@ try{
       await older.dispatchEvent('click');await settle();
       assert.equal((await state()).calls,before.calls+1,'同一页读取中不重复请求');
     }
-    const anchor=!baseline?await chat.locator('[data-history-group]').first().evaluate(el=>({key:el.dataset.historyGroup,top:el.getBoundingClientRect().top})):null;
+    const anchor=!baseline?await chat.evaluate(host=>{
+      const top=host.getBoundingClientRect().top;
+      const node=[...host.querySelectorAll('[data-history-group]')].find(node=>node.getBoundingClientRect().bottom>top);
+      return {key:node.dataset.historyGroup,top:node.getBoundingClientRect().top};
+    }):null;
     await page.evaluate(()=>window.preview15.history.release());
     await page.waitForFunction(records=>window.preview15.state().records>records,before.records);await settle();
+    if(!baseline)await chat.locator('[data-history-positioning]').waitFor({state:'detached'});
     const after=await state();
     assert.equal(after.calls,before.calls+1);assert.ok(after.first<before.first);
     assert.ok(after.records>before.records,'已加载的记录保持连续，不从尾部删除');

@@ -1,4 +1,5 @@
 export const english = Object.freeze({
+  "重试加载图片": "Retry loading images",
   "恢复安装": "Restore installation",
   "确认恢复安装": "Restore plugin",
   "App 提供预装版本 {version}，支持从文件独立更新。": "Version {version} is included with the app. File updates are supported.",

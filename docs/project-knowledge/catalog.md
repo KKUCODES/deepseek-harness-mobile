@@ -1,5 +1,7 @@
 # 手机端知识总目录
 
+2026-11-20：[preview.22 接入 PR #1 与兼容修复](../integration/preview22-pr1-current.md)。独立分支保留.21，补齐官方图片语法、失败恢复和缓存参数视图，确认并修正末页虚拟锚点丢失。616项Node、当前rc.3主旁栏与MuMu回放、原签名覆盖及真实电脑连接通过。仅本地候选，未推送发布。[KKC-132](https://linear.app/kkcodes/issue/KKC-132)。
+
 2026-11-19：[PR #1 对比当前 rc.3 / preview.21 的只读审查](../integration/pr1-rc3-review-2026-11-19.md)。实际新增35文件，图片路径/重试和缓存参数语义有缺口；.21核心代码不冲突，最早页用例在原分支和组合构建均不稳定。未合并、未改产品代码。[KKC-131](https://linear.app/kkcodes/issue/KKC-131)。
 
 2026-11-19：[Remote 历史定位与发送状态修复](../integration/remote-reading-send-recovery-current.md)。preview.21/code31 已公开；rc.3 统一列表锚点、补齐 sending 冻结阶段，连续历史/主旁栏/等待期滚动与 MuMu 前后台发送已验。Actions、匿名下载与原签名核验通过，[发行KKC-130](https://linear.app/kkcodes/issue/KKC-130)。用户偶发现场仍待复验，[KKC-129](https://linear.app/kkcodes/issue/KKC-129)。

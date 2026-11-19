@@ -68,6 +68,8 @@ flowchart LR
 
 ## 当前状态
 
+**preview.22 本地候选**在 preview.21 基础上接入社区 PR #1，并补齐图片、缓存参数及最早页定位的兼容修复。已安装 MuMu 验证，尚未发布；公开下载仍为 preview.21。[范围与验收](./docs/integration/preview22-pr1-current.md)
+
 **preview.21** 修复 Remote 历史分页定位竞争、末页位置偏移和发送状态漏判；用户反馈的偶发场景仍待复验。[发行说明](./ci/release-notes/0.1.0-preview.21.md) · [问题诊断](./docs/integration/diagnostics-current.md)
 
 **preview.16** 优化了 Remote 回到前台时的连接恢复，以及重进最近会话时的加载体验，并修复草稿恢复误报。[当前范围与验证](./docs/integration/preview16-remote-resume.md) · [发行说明](./ci/release-notes/0.1.0-preview.16.md) · [构建与下载](./docs/releases.md)

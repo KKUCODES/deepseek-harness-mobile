@@ -1,4 +1,12 @@
 /** Public owner props for the experimental DSHM Remote home API v1. */
+export interface RemoteHomeSession {
+  id: string; title: string; running: boolean; updatedAt: number; snippet?: string; unread?: boolean;
+}
+export interface RemoteWorkspaceChatGroup {
+  id: string; title: string; kind: 'workspace' | 'orphan'; total: number;
+  mode: 'collapsed' | 'preview' | 'all' | 'search'; expanded: boolean; hiddenCount: number;
+  sessions: ReadonlyArray<RemoteHomeSession>;
+}
 export interface RemoteHome {
   readonly apiVersion: 1;
   readonly locale: string;
@@ -7,13 +15,16 @@ export interface RemoteHome {
     key: string; scrollTop: number; title: string; workspace: string | null; query: string; archived: boolean;
     ready: boolean; busy: boolean; connection: string;
     workspaces: ReadonlyArray<{id: string; title: string}>;
-    sessions: ReadonlyArray<{id: string; title: string; running: boolean; updatedAt: number; snippet?: string}>;
+    sessions: ReadonlyArray<RemoteHomeSession>;
+    /** Optional additions; older API v1 hosts keep the flat home layout. */
+    now?: number; grouped?: boolean; workspaceGroups?: ReadonlyArray<RemoteWorkspaceChatGroup>;
     searching: boolean; searchError: string | null; hasMore: boolean;
   };
   readonly actions: {
     back(): void; menu(): void; connection(): void; workspace(id: string): void; session(id: string): void;
     query(text: string): void; retrySearch(): void; newSession(): void;
     rememberScroll(top: number): void; readScroll(): number;
+    toggleWorkspace?(id: string): void; expandWorkspace?(id: string): void; collapseWorkspace?(id: string): void;
   };
 }
 export interface HomeProps { home: RemoteHome }

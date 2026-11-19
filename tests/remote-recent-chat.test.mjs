@@ -1,6 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RemoteRecentChats } from '../src/remote-recent-chat.mjs';
+import { build } from 'esbuild';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
+import { latestMobileBuild } from '../scripts/latest-mobile-build.mjs';
+
+const root = resolve(import.meta.dirname, '..');
+const sdk = latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.2-rc.3', ci: true });
+const outfile = resolve(root, 'artifacts/tests/recent-chat-rc3.cjs');
+await build({ absWorkingDir: root, entryPoints: ['src/remote-recent-chat.mjs'], outfile, bundle: true, platform: 'node', format: 'cjs',
+  plugins: [sdk.resolver], alias: sdk.alias, nodePaths: [resolve(sdk.runtime, 'node_modules'), resolve(root, 'node_modules')], logLevel: 'silent' });
+const Rc3RecentChats = createRequire(import.meta.url)(outfile).RemoteRecentChats;
 
 function snapshot(target, count = 1, text = '回复') {
   const selected = typeof target === 'string' ? target : target.childSessionId;
@@ -55,6 +66,19 @@ function toolSnapshot(target, args) {
   return { selected: target, selectedTarget: target, conversation: { order: ['tool-1'], nodes: new Map([['tool-1', node]]) },
     session: { openState: 'open', pendingSubmissions: [] } };
 }
+
+test('rc.3缓存用原PartialArguments恢复流式参数与子调用，不丢弃已完成字段', () => {
+  const cache = new Rc3RecentChats();
+  const source = toolSnapshot('partial', { chunks: ['{"file_path":"a.txt","extra":"streaming'], sealed: false });
+  source.conversation.nodes.get('tool-1').data.root.subCalls.push({ args: { object: { count: 7 }, chunks: [], sealed: true } });
+  cache.remember(source, null);
+  const tool = cache.take('partial').groups[0].nodes[0].data.root;
+  assert.equal(tool.args.text('file_path'), 'a.txt');
+  assert.equal(tool.args.text('extra'), 'streaming');
+  assert.equal(tool.args.invalid, false);
+  assert.equal(tool.args.isSealed, true);
+  assert.equal(tool.subCalls[0].args.value('count'), 7);
+});
 
 test('缓存的工具参数恢复为可读取的只读视图，工具行不再因缺少方法抛错', () => {
   const cache = new RemoteRecentChats();

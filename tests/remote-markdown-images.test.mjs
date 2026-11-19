@@ -1,10 +1,62 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FAILED_IMAGE_URL, RemoteMarkdownImages, markdownImageDestinations } from '../src/remote-markdown-images.mjs';
+import { build } from 'esbuild';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
+import { latestMobileBuild } from '../scripts/latest-mobile-build.mjs';
+
+const root = resolve(import.meta.dirname, '..');
+const sdk = latestMobileBuild(root, { officialOnly: true, officialVersion: '0.2.2-rc.3', ci: true });
+const outfile = resolve(root, 'artifacts/tests/markdown-images.cjs');
+await build({ absWorkingDir: root, entryPoints: ['src/remote-markdown-images.mjs'], outfile, bundle: true, platform: 'node', format: 'cjs',
+  plugins: [sdk.resolver], alias: sdk.alias, nodePaths: [resolve(sdk.runtime, 'node_modules'), resolve(root, 'node_modules')],
+  loader: { '.module.css': 'empty', '.css': 'empty', '.svg': 'dataurl' }, logLevel: 'silent' });
+const { FAILED_IMAGE_URL, RemoteMarkdownImages, markdownImageDestinations } = createRequire(import.meta.url)(outfile);
 
 const image = () => new Uint8Array([137, 80, 78, 71]);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 const flush = async () => { for (let index = 0; index < 8; index++) await tick(); };
+
+test('正文图片复用官方空格、Windows路径与编码文件名语义', async () => {
+  const text = ['![space](/work/my photo.png)', '', String.raw`![windows](C:\work\_photo.png)`, '', '![hash](/work/a%23b.png)'].join('\n');
+  assert.deepEqual(markdownImageDestinations(text), ['/work/my photo.png', String.raw`C:\work\_photo.png`, '/work/a%23b.png']);
+  const reads = [];
+  const images = new RemoteMarkdownImages(null, 'chat', { read: async (_, path) => { reads.push(path); return image(); } });
+  images.prefetch(text); await flush();
+  assert.deepEqual(reads, ['/work/my photo.png', String.raw`C:\work\_photo.png`, '/work/a#b.png']);
+  for (const path of reads) assert.match(images.resolve(path), /^blob:/);
+  images.dispose();
+});
+
+test('失败去重，用户显式重试可恢复，永久超限不重复读取', async () => {
+  let online = false, reads = 0;
+  const images = new RemoteMarkdownImages(null, 'chat', { cwd: '/work', read: async () => {
+    reads++; if (!online) throw Error('offline'); return image();
+  } });
+  images.prefetch('![x](a.png)'); await flush();
+  images.prefetch('![x](a.png)'); await flush(); assert.equal(reads, 1);
+  online = true; images.retry('![x](a.png)'); await flush();
+  assert.equal(reads, 2); assert.match(images.resolve('a.png'), /^blob:/);
+  images.dispose();
+});
+
+test('重连时仅重试暂时失败的图片，离线不新增请求', async () => {
+  let state = { connectionState: 'connected', ready: true }, generation = 1, reads = 0;
+  const listeners = new Set();
+  const model = { lifetime: new AbortController(), getSnapshot: () => state,
+    subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn); },
+    connection: { generation: { getSnapshot: () => ({ id: generation }) } } };
+  const publish = () => { for (const fn of listeners) fn(); };
+  const images = new RemoteMarkdownImages(model, 'chat', { cwd: '/work', read: async () => {
+    reads++; if (reads === 1) throw Error('offline'); return image();
+  } });
+  images.prefetch('![x](a.png)'); await flush();
+  state = { ...state, connectionState: 'disconnected' }; publish();
+  images.prefetch('![y](b.png)'); await flush(); assert.equal(reads, 1);
+  generation++; state = { connectionState: 'connected', ready: true }; publish(); await flush();
+  assert.equal(reads, 3); assert.match(images.resolve('a.png'), /^blob:/); assert.match(images.resolve('b.png'), /^blob:/);
+  images.dispose(); assert.equal(listeners.size, 0);
+});
 
 test('正文图片目标包含引用式图片，代码块与原始HTML不预取', () => {
   const text = [

@@ -68,6 +68,8 @@ The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTT
 
 ## Current status
 
+**preview.22 is a local candidate** based on preview.21, integrating community PR #1 with image, cached-argument and oldest-page anchor fixes. Installed and checked in MuMu; not released. The public download remains preview.21. See the [scope and validation (Chinese)](./docs/integration/preview22-pr1-current.md).
+
 **preview.21** fixes competing Remote history anchors, a final-page position shift, and a missing sending-state guard. The reported intermittent scenarios still need field verification. See the [release notes](./ci/release-notes/0.1.0-preview.21.md) and [diagnostics guide (Chinese)](./docs/integration/diagnostics-current.md).
 
 **preview.16** improves Remote reconnection when the app returns to the foreground, shows cached messages when reopening recent chats, and fixes a draft recovery error. See the [validation scope (Chinese)](./docs/integration/preview16-remote-resume.md), [release notes](./ci/release-notes/0.1.0-preview.16.md) and [build and download guide (Chinese)](./docs/releases.md).

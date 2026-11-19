@@ -41,5 +41,6 @@ export function ChatMarkdown({ text, streaming, onOpenLink, onOpenFile, fileMent
   // 普通聊天/更新说明的显式处理优先；Remote继承统一外链能力，文件仍由当前会话指定。
   return <MarkdownDelegateProvider openExternalLink={onOpenLink ?? inherited.openExternalLink} openFile={onOpenFile} fileImages={fileImages}>
     <MarkdownText text={text} streaming={streaming} labels={labels} fileMentions={fileMentions}/>
+    {!streaming && images && hasImages && images.canRetry(text) && <button type="button" className="remote-markdown-image-retry" onClick={() => images.retry(text)}>{t('重试加载图片')}</button>}
   </MarkdownDelegateProvider>;
 }

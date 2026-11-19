@@ -1,5 +1,7 @@
 # Remote 历史定位与发送状态修复
 
+2026-11-20后续：[preview.22候选](./preview22-pr1-current.md)确认末页原锚点因虚拟估算高度而暂时卸载，单帧恢复不足；已追加固定锚点至测量稳定的修复及六次重复回归。下文保留preview.21当时的单次验收范围，不能替代后续稳定性结论。
+
 状态：已随 preview.21/code31 公开，源码提交 `7567430`；[Actions](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/44546317320)构建、签名与发布成功，5 个附件匿名下载、摘要及 APK 原证书/身份复核通过。发行验收见[KKC-130](https://linear.app/kkcodes/issue/KKC-130)。维护角色：DSHM 手机端维护者。最近核验：2026-11-19。用户偶发现场仍待复验：[KKC-129](https://linear.app/kkcodes/issue/KKC-129)。
 
 用户确认问题发生在 preview.20 Remote，手指向下滑动查看更早消息；另有切到其他 App 再回来后无法发送的偶发反馈，按钮颜色未知。
