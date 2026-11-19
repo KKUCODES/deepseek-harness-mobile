@@ -6,7 +6,7 @@
 
 **DSHM** is a community-developed Android client for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Chat directly with DeepSeek or synchronize DSH conversations from your computer. Away from your desk, you can keep sending messages, viewing execution results, switching models, and handling approvals; the computer runs the tasks.
 
-[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.21/DSHM-0.1.0-preview.21.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
+[Download Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
@@ -68,7 +68,7 @@ The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTT
 
 ## Current status
 
-**preview.22 is a local candidate** based on preview.21, integrating community PR #1 with image, cached-argument and oldest-page anchor fixes. Installed and checked in MuMu; not released. The public download remains preview.21. See the [scope and validation (Chinese)](./docs/integration/preview22-pr1-current.md).
+**preview.22** builds on preview.21 with community PR #1: workspace chat groups, local Markdown images and preview zoom. It fixes image paths, failed-read recovery, cached tool arguments and the oldest-page anchor. Checked in MuMu; the original intermittent field reports still need verification. See the [release notes](./ci/release-notes/0.1.0-preview.22.md) and [scope and validation (Chinese)](./docs/integration/preview22-pr1-current.md).
 
 **preview.21** fixes competing Remote history anchors, a final-page position shift, and a missing sending-state guard. The reported intermittent scenarios still need field verification. See the [release notes](./ci/release-notes/0.1.0-preview.21.md) and [diagnostics guide (Chinese)](./docs/integration/diagnostics-current.md).
 

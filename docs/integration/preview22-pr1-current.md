@@ -1,6 +1,6 @@
 # preview.22：接入 PR #1 与兼容修复
 
-- 状态：本地候选，未推送、未发布；维护：DSHM 手机端维护者；核验：2026-11-20。
+- 状态：本地验收完成，已获授权进入发行流程；维护：DSHM 手机端维护者；核验：2026-11-20。发行结果以[构建与下载](../releases.md#已核验范围)为准。
 - 任务：[KKC-132](https://linear.app/kkcodes/issue/KKC-132)；历史审查：[PR #1 对照](./pr1-rc3-review-2026-11-19.md)。
 - 来源：[PR #1](https://github.com/KKUCODES/deepseek-harness-mobile/pull/1)、下列源码、回归脚本和本机验收证据。
 
@@ -8,7 +8,7 @@
 
 `feature/preview22-pr1` 从 rc.3 分支 `e08cdbc` 创建，包含 preview.21 的 `7567430`。保留贡献者 `c5fa95c` 原提交，本地合并提交为 `30ecfc0`；没有把 PR 的 preview.20 整树替换当前代码。旧插件适配分支未纳入，不修改 DSH、桌面插件或中转。
 
-版本元数据为 preview.22/code32，配套插件仍为0.1.88。本轮仅回归当前官方 DSH 0.2.2-rc.3；旧版本尽量维持代码兼容，不准备旧运行环境。README 的公开下载仍指向 preview.21。本地接入不等于 GitHub PR 已被合并或发行。
+版本元数据为 preview.22/code32，配套插件仍为0.1.88。本轮仅回归当前官方 DSH 0.2.2-rc.3；旧版本尽量维持代码兼容，不准备旧运行环境。本地接入保留PR原提交，不单独执行GitHub默认分支合并；本地阶段与后续云端发行分别验收。[发行任务KKC-133](https://linear.app/kkcodes/issue/KKC-133)。
 
 ## 三个兼容缺口
 
@@ -51,4 +51,4 @@
 
 主要入口：[终页回归](../../scripts/check-remote-terminal-history.mjs)、[图片真实入口回归](../../scripts/check-remote-markdown-images.mjs)、[历史页面载体](../../scripts/verify-preview15-history.mjs)、[MuMu回放](../../scripts/verify-preview22-android.mjs)。Android回放默认使用现有 `rc3test` 包；不用于改写用户正式包的配对。
 
-原签名 APK：本机 `F:/dshm-rc3-validation/DSHM-0.1.0-preview.22.apk`，SHA256 `e05dccf785dce21e1a80a6f8d2ff2201b64e900e6770bb9f3da30dbd4b5959f3`；证书SHA256 `d97f5b68c6a327f4ae455834ba30f23ce7b64f2eeafd8a222e0e74b0a998e51e`。这是本轮产品工作树构建的本地候选，最终提交后仅补充SDK类型/测试与文档，发布前仍应从最终提交重新构建。尚无公开 .22 APK 下载或 Actions 发行结果。
+本地阶段原签名 APK：`F:/dshm-rc3-validation/DSHM-0.1.0-preview.22.apk`，SHA256 `e05dccf785dce21e1a80a6f8d2ff2201b64e900e6770bb9f3da30dbd4b5959f3`；证书SHA256 `d97f5b68c6a327f4ae455834ba30f23ce7b64f2eeafd8a222e0e74b0a998e51e`。这是本轮产品工作树构建的本地候选；后续Actions从发行提交重新构建，云端APK摘要与匿名下载结果另记入发行文档，不混用本地候选摘要。

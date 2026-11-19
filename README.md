@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.21/DSHM-0.1.0-preview.21.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -68,7 +68,7 @@ flowchart LR
 
 ## 当前状态
 
-**preview.22 本地候选**在 preview.21 基础上接入社区 PR #1，并补齐图片、缓存参数及最早页定位的兼容修复。已安装 MuMu 验证，尚未发布；公开下载仍为 preview.21。[范围与验收](./docs/integration/preview22-pr1-current.md)
+**preview.22** 在 preview.21 基础上接入社区 PR #1，增加工作区会话分组、本地 Markdown 图片和预览缩放，并修复图片路径、失败恢复、缓存工具参数及最早页定位。已安装 MuMu 验证，用户原有偶发现场仍待复验。[发行说明](./ci/release-notes/0.1.0-preview.22.md) · [范围与验收](./docs/integration/preview22-pr1-current.md)
 
 **preview.21** 修复 Remote 历史分页定位竞争、末页位置偏移和发送状态漏判；用户反馈的偶发场景仍待复验。[发行说明](./ci/release-notes/0.1.0-preview.21.md) · [问题诊断](./docs/integration/diagnostics-current.md)
 
