@@ -31,6 +31,18 @@
 .remote-app .messages [data-chat-flow-kind="steering"],
 .remote-app .messages [data-chat-flow-kind="assistant-step"] { --dsh-chat-flow-gap: 12px; }
 .remote-app .messages :is([data-chat-flow-kind="turn-process"], [data-turn-process-answer]) { --dsh-chat-flow-gap: 16px; }
+/* 报错原文可能是一整段没有空格断点的 JSON；提示行本身也要允许在任意字符处折行。 */
+.remote-error { overflow-wrap: anywhere; min-width: 0; }
+/* 与官方失败行一致：状态点、标题、可折行详情和错误码；原始错误按需展开。 */
+.remote-turn-error { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 2px 0; font-size: var(--dsh-content-font-size-secondary, 13px); line-height: calc(20px + var(--dsh-content-font-delta-secondary, 0px)); }
+.remote-turn-error-dot { width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--dsw-alias-state-error-primary, #b34b40); }
+.remote-turn-error-copy { min-width: 0; overflow-wrap: anywhere; }
+.remote-turn-error-title { margin-right: 6px; color: var(--dsw-alias-state-error-primary, #b34b40); font-weight: 600; }
+.remote-turn-error-message { color: var(--dsw-alias-label-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.remote-turn-error-code { color: var(--dsw-alias-label-tertiary); font: 12px/1.6 var(--dsw-font-mono, ui-monospace, monospace); overflow-wrap: anywhere; user-select: all; }
+.remote-turn-error-raw { margin-top: 6px; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 1.6; }
+.remote-turn-error-raw summary { cursor: pointer; min-height: 40px; line-height: 40px; }
+.remote-turn-error-raw pre { margin: 4px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--dsw-alias-bg-layer-3, var(--dshm-subtle)); color: var(--dsw-alias-label-secondary); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 220px; overflow-y: auto; font: 12px/1.6 var(--dsw-font-mono, ui-monospace, monospace); user-select: text; }
 .remote-tool-entry { display: flex; align-items: flex-start; min-width: 0; gap: 4px; }
 .remote-tool-entry > :first-child { flex: 1; min-width: 0; }
 .remote-tool-inspect { flex: none; display: grid; place-items: center; width: 28px; height: 28px; margin: -2px -4px 0 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer; }
