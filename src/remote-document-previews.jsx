@@ -34,6 +34,7 @@ import { useTranslate } from './ui/locale.jsx';
 import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path';
 import { RemoteToolDiff } from './ui/RemoteDiff.jsx';
+import { documentPreviewInject } from '@dshm/remote-slot-services';
 
 export { TEXTPREVIEW_ID };
 
@@ -47,8 +48,8 @@ export const isRemoteDocumentComposition = (options, component) =>
 /** 保留原注册表、文件标签、状态机与子插槽；只替换需要电脑 HTTP/大消息的读取边界。 */
 export function installRemoteDocumentPreviews(model) {
   if (!model.transport.capabilities?.endpoints?.calls?.includes('workspaceFiles/read')) return false;
-  // 原资源模块异步就绪后再注册整组父、子插槽，避免子插槽早于父声明。
-  model.ctx.inject(['resources'], ctx => { registerRemoteDocumentPreviews(model, ctx); });
+  // 原资源模块与预览体所需服务异步就绪后再注册整组父、子插槽，避免子插槽早于父声明。
+  model.ctx.inject(['resources', ...documentPreviewInject], ctx => { registerRemoteDocumentPreviews(model, ctx); });
   return true;
 }
 
