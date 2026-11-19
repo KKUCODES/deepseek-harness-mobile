@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DocumentPreviewRegistry } from '@upstream/ui-sidebar-documentpreview/src/client/document/registry.ts';
 import { documentTabInfoFactory } from '@upstream/ui-sidebar-documentpreview/src/client/document/contract.ts';
 import { TEXTPREVIEW_ID, textDefinition } from '@upstream/ui-sidebar-documentpreview/src/client/definition.ts';
@@ -35,6 +35,7 @@ import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path';
 import { RemoteToolDiff } from './ui/RemoteDiff.jsx';
 import { documentPreviewInject } from '@dshm/remote-slot-services';
+import { bindImagePreviewZoom } from './remote-image-preview-zoom.mjs';
 
 export { TEXTPREVIEW_ID };
 
@@ -115,6 +116,29 @@ function registerRemoteDocumentPreviews(model, ctx) {
 function MobileOfficeBody(props) {
   const t = useTranslate();
   return <OfficeBody {...props} renderFailure={t}/>;
+}
+
+/** 面板图片预览的手机手势包装；沿用原缩放状态与按钮，补充触摸捏合、平移与双击缩放。 */
+export function MobileImageBody(props) {
+  const { tab } = props.useTabInfo();
+  const container = useRef(null);
+  const commit = useCallback(preference => props.actions.zoom(tab.id, preference), [props.actions, tab.id]);
+  useEffect(() => {
+    const node = container.current;
+    if (!node) return;
+    let cleanup = null, bound = null;
+    const tryBind = () => {
+      if (bound && !bound.isConnected) { cleanup?.(); cleanup = null; bound = null; }
+      if (cleanup) return;
+      const scrollport = node.querySelector('[data-document-zoom-scrollport]');
+      if (scrollport) { bound = scrollport; cleanup = bindImagePreviewZoom(scrollport, { commit, signal: tab.signal }); }
+    };
+    tryBind();
+    const observer = new MutationObserver(tryBind);
+    observer.observe(node, { childList: true, subtree: true });
+    return () => { observer.disconnect(); cleanup?.(); };
+  }, [commit, tab.signal, tab.id]);
+  return <div ref={container} style={{ display: 'contents' }}><ImageBody {...props}/></div>;
 }
 
 /** 带行号的入口先显示源码；用户随后仍可在原“打开方式”菜单切回其他预览器。 */
