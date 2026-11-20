@@ -2,6 +2,8 @@
 
 当前 Remote 组合为手机 `0.1.0-preview.23`、桌面插件 `0.1.88-latest.0` 与官方 DSH `0.2.2-rc.3`。[下载签名 APK](../releases.md) · [安装与配对](../usage.md#在手机配对)
 
+2026-11-20：[Remote 首页会话排序、相对时间与草稿会话](../integration/remote-home-activity-order-current.md)。首页会话按最近活动倒序，对齐电脑端“选中第 5 条发消息后排到第 1”；相对时间进入列表立即重算、之后每 60 秒一次；带草稿或附件的空白会话列入所属工作区最前，“新建聊天”优先回到该草稿。只改 `app` 仓库，已提交待合并，未发行，待真机验收。
+
 2026-11-20：[preview.22 接入 PR #1 与兼容修复](../integration/preview22-pr1-current.md)。独立分支保留.21，补齐官方图片语法、失败恢复和缓存参数视图，确认并修正末页虚拟锚点丢失。616项Node、当前rc.3主旁栏与MuMu回放、原签名覆盖及真实电脑连接通过。Actions44578968831已完成公开发行，5附件匿名下载、摘要/原签名与MuMu覆盖安装核验通过。[实现KKC-132](https://linear.app/kkcodes/issue/KKC-132) · [发行KKC-133](https://linear.app/kkcodes/issue/KKC-133)。
 
 2026-11-19：[PR #1 对比当前 rc.3 / preview.21 的只读审查](../integration/pr1-rc3-review-2026-11-19.md)。实际新增35文件，图片路径/重试和缓存参数语义有缺口；.21核心代码不冲突，最早页用例在原分支和组合构建均不稳定。未合并、未改产品代码。[KKC-131](https://linear.app/kkcodes/issue/KKC-131)。

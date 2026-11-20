@@ -59,7 +59,7 @@ import { RemoteMainConversationBody, RemoteMainConversationFrame } from '../remo
 import { SurfacePresence, useSceneMotion, RemoteFlowMotion } from './motion.jsx';
 import { createChatFlowMotion } from '@dshm/chat-presentation';
 import { dismissRemotePortalModal } from '../remote-modals.mjs';
-import { advanceSessionStatus, collapseWorkspaceChatMode, expandWorkspaceChatMode, formatRelativeChatTime, groupWorkspaceChats, openSessionStatus, readWorkspaceChatPreferences, searchWorkspaceChats, toggleWorkspaceChatMode, visibleWorkspaceChats, writeWorkspaceChatPreferences } from '../remote-home-workspaces.mjs';
+import { advanceSessionStatus, collapseWorkspaceChatMode, draftChatTitle, expandWorkspaceChatMode, formatRelativeChatTime, groupWorkspaceChats, homeChatRows, openSessionStatus, readWorkspaceChatPreferences, searchWorkspaceChats, toggleWorkspaceChatMode, visibleWorkspaceChats, writeWorkspaceChatPreferences } from '../remote-home-workspaces.mjs';
 
 export function RemoteWorkspace({ model, onBack, onConnection, embedded = false, renderConversation }) {
   const t = useTranslate();
@@ -101,12 +101,25 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const [jobOutput, setJobOutput] = useState(() => model.jobOutputResume?.target ?? null);
   const { selected, selectionRevision, cachedHistory, cachedReadingResume } = state;
   const selectedRunning = selected ? state.list?.byId[selected]?.running === true : false;
+  // 首页相对时间：进入列表、退出会话或切回前台时立即重算一次，之后每分钟一次。
   useEffect(() => {
-    if (!homePreferences.enabled || selected || workspace) return;
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 30000);
-    return () => clearInterval(timer);
-  }, [homePreferences.enabled, selected, workspace]);
+    if (selected) return;
+    const refresh = () => setNow(Date.now());
+    refresh();
+    const timer = setInterval(refresh, 60000);
+    const visibility = () => { if (document.visibilityState !== 'hidden') refresh(); };
+    document.addEventListener('visibilitychange', visibility);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', visibility); };
+  }, [selected, workspace, sheet]);
+  // 草稿按会话懒加载；进入首页时读一次本机草稿，重启后带草稿的空白会话仍可见。
+  const homeDrafts = useRef(new Set());
+  useEffect(() => {
+    if (selected) return;
+    const pending = (state.list?.ids ?? []).filter(id => state.list.byId[id]?.blank === true && !homeDrafts.current.has(id));
+    if (!pending.length) return;
+    for (const id of pending) homeDrafts.current.add(id);
+    model.restoreDrafts(pending);
+  }, [model, selected, state.list]);
   useEffect(() => {
     if (!selected) return;
     const target = state.list?.byId[selected];
@@ -191,12 +204,21 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   const currentSearch = search?.query === phrase ? search : null;
   const snippets = new Map((currentSearch?.items ?? []).map(item => [item.sessionId, item.snippet]));
   const searching = !!phrase && (!currentSearch || currentSearch.loading);
-  const rows = (state.list?.ids ?? []).map(id => state.list.byId[id]).filter(item =>
-    !item.blank && !!state.workspaces?.archivedSessionIds.includes(item.id) === archived &&
-    (!workspace || state.workspaces?.items.find(item => item.workspaceId === workspace)?.sessionIds.includes(item.id)) &&
-    (!phrase || item.displayTitle.toLocaleLowerCase().includes(phrase.toLocaleLowerCase()) || snippets.has(item.id)));
+  // 会话列表快照的顺序只在建连时确定，界面按最近活动重排后再分组和截断预览。
+  const rows = homeChatRows({ ids: state.list?.ids, byId: state.list?.byId, workspaces: state.workspaces?.items,
+    archivedSessionIds: state.workspaces?.archivedSessionIds, archived, workspace, phrase, snippets,
+    drafts: state.drafts, attachments: state.attachments });
+  // 带草稿的空白会话不随当前筛选丢失，点「新建会话」优先回到它。
+  const draftChat = homeChatRows({ ids: state.list?.ids, byId: state.list?.byId,
+    archivedSessionIds: state.workspaces?.archivedSessionIds, drafts: state.drafts, attachments: state.attachments })
+    .find(item => item.blank === true);
   const unreadSessions = new Set(homePreferences.unread ?? []);
-  const homeSessions = rows.map(item => ({ id: item.id, title: item.displayTitle, running: item.running, updatedAt: item.updatedAt, snippet: snippets.get(item.id), unread: unreadSessions.has(item.id) }));
+  const homeSessions = rows.map(item => {
+    const draft = item.blank === true;
+    return { id: item.id, draft, updatedAt: item.updatedAt, running: item.running, snippet: snippets.get(item.id),
+      title: draft ? draftChatTitle(state.drafts?.[item.id], state.attachments?.[item.id], t('新聊天')) : item.displayTitle,
+      unread: unreadSessions.has(item.id) };
+  });
   const workspaceChatWorkspaces = (state.workspaces?.items ?? []).map(item => ({ id: item.workspaceId, title: item.title, sessionIds: item.sessionIds }));
   const grouped = homePreferences.enabled;
   const statusSessions = (state.list?.ids ?? []).map(id => state.list.byId[id]).filter(item => !item.blank).map(item => ({ id: item.id, running: item.running === true }));
@@ -237,6 +259,8 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
   };
   const newSession = () => {
     if (!canCreate()) return;
+    // 已有带内容的空白会话时回到它，避免同一条草稿被重复新建的空会话掩盖。
+    if (draftChat) { setSheet(null); void act(() => model.select(draftChat.id)); return; }
     if (workspace === null) { setSheet('new'); return; }
     setSheet(null);
     createSession(workspace);
