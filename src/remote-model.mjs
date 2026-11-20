@@ -264,6 +264,15 @@ export class RemoteModel {
     }
     return restored;
   }
+  /**
+   * 读取多个会话的本机草稿，供首页判断哪些空白会话仍有未发送内容
+   * @param ids 需要读取草稿的会话标识
+   */
+  restoreDrafts(ids) {
+    const changed = {};
+    for (const id of ids ?? []) Object.assign(changed, this.restoreDraft(id));
+    if (Object.keys(changed).length) this.publish(changed);
+  }
   get subagentsAvailable() {
     const calls = this.transport.capabilities?.endpoints?.calls;
     return calls?.includes('subagents/list') === true || calls?.includes('session/projections') === true;

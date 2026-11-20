@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  advanceSessionStatus, collapseWorkspaceChatMode, defaultWorkspaceChatPreferences, expandWorkspaceChatMode, formatRelativeChatTime, groupWorkspaceChats,
-  normalizeWorkspaceChatPreferences, openSessionStatus, readWorkspaceChatPreferences, searchWorkspaceChats, toggleWorkspaceChatMode,
-  visibleWorkspaceChats, WORKSPACE_CHAT_ORPHAN_ID, WORKSPACE_CHAT_PREVIEW_LIMIT, WORKSPACE_CHAT_STORAGE_KEY,
-  writeWorkspaceChatPreferences,
+  advanceSessionStatus, collapseWorkspaceChatMode, defaultWorkspaceChatPreferences, draftChatTitle, expandWorkspaceChatMode, formatRelativeChatTime,
+  groupWorkspaceChats, homeChatRows, normalizeWorkspaceChatPreferences, openSessionStatus, orderChatsByActivity, readWorkspaceChatPreferences,
+  searchWorkspaceChats, toggleWorkspaceChatMode, visibleWorkspaceChats, WORKSPACE_CHAT_ORPHAN_ID, WORKSPACE_CHAT_PREVIEW_LIMIT,
+  WORKSPACE_CHAT_STORAGE_KEY, writeWorkspaceChatPreferences,
 } from '../src/remote-home-workspaces.mjs';
 
 const workspaces = [
@@ -77,6 +77,63 @@ test('搜索只保留有命中的工作区并全部展示，命中不在默认 5
   assert.deepEqual(visibleWorkspaceChats(groups[0]).map(item => item.id), ['f', 'g']);
   assert.deepEqual(visibleWorkspaceChats(groups[1]).map(item => item.id), ['orphan']);
   assert.deepEqual(searchWorkspaceChats({ workspaces, sessions: [] }), []);
+});
+
+test('首页会话按最近活动倒序排列，空白会话固定在前且不修改传入数组', () => {
+  const source = [
+    { id: 'old', updatedAt: 100 },
+    { id: 'blank', blank: true, updatedAt: 0 },
+    { id: 'new', updatedAt: 300 },
+    { id: 'middle', updatedAt: 200 },
+  ];
+  assert.deepEqual(orderChatsByActivity(source).map(item => item.id), ['blank', 'new', 'middle', 'old']);
+  assert.deepEqual(source.map(item => item.id), ['old', 'blank', 'new', 'middle']);
+});
+
+test('活动时间相同按标识升序，非法时间排在有效时间之后', () => {
+  const rows = [
+    { id: 'b', updatedAt: 200 },
+    { id: 'a', updatedAt: 200 },
+    { id: 'unknown', updatedAt: undefined },
+    { id: 'iso', updatedAt: new Date(150).toISOString() },
+  ];
+  assert.deepEqual(orderChatsByActivity(rows).map(item => item.id), ['a', 'b', 'iso', 'unknown']);
+  assert.deepEqual(orderChatsByActivity([]), []);
+});
+
+test('按活动排序后再分组，组内顺序与预览条数都取最近会话', () => {
+  const rows = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id, index) => ({ id, updatedAt: index }));
+  const groups = groupWorkspaceChats({ workspaces, sessions: orderChatsByActivity(rows), expanded: { work: 'preview' } });
+  assert.deepEqual(visibleWorkspaceChats(groups[0]).map(item => item.id), ['g', 'f', 'e', 'd', 'c']);
+});
+
+test('首页行只纳入有草稿的空白会话，并按工作区、归档和搜索条件过滤', () => {
+  const byId = {
+    old: { id: 'old', displayTitle: '旧会话', updatedAt: 100 },
+    blank: { id: 'blank', displayTitle: '', blank: true, updatedAt: 300 },
+    empty: { id: 'empty', displayTitle: '', blank: true, updatedAt: 400 },
+    archivedRow: { id: 'archivedRow', displayTitle: '已归档', updatedAt: 500 },
+  };
+  const ids = ['old', 'blank', 'empty', 'archivedRow'];
+  const scoped = [{ id: 'work', title: '周报', sessionIds: ['old', 'blank'] }, { id: 'site', title: '站点', sessionIds: ['empty'] }];
+  const base = { ids, byId, workspaces: scoped, archivedSessionIds: ['archivedRow'] };
+  const draft = { drafts: { blank: '写了一半' } };
+  assert.deepEqual(homeChatRows({ ...base, ...draft }).map(item => item.id), ['blank', 'old']);
+  assert.deepEqual(homeChatRows(base).map(item => item.id), ['old']);
+  assert.deepEqual(homeChatRows({ ...base, attachments: { blank: [{ name: '周报.docx' }] } }).map(item => item.id), ['blank', 'old']);
+  assert.deepEqual(homeChatRows({ ...base, ...draft, archived: true }).map(item => item.id), ['archivedRow']);
+  assert.deepEqual(homeChatRows({ ...base, ...draft, workspace: 'work' }).map(item => item.id), ['blank', 'old']);
+  assert.deepEqual(homeChatRows({ ...base, ...draft, workspace: 'site' }).map(item => item.id), []);
+  assert.deepEqual(homeChatRows({ ...base, ...draft, phrase: '旧' }).map(item => item.id), ['old']);
+  assert.deepEqual(homeChatRows({ ...base, phrase: '写了一半', snippets: new Map([['blank', '写了一半']]) }).map(item => item.id), []);
+});
+
+test('草稿会话行标题取首个非空行，超长截断，只有附件时用附件名', () => {
+  assert.equal(draftChatTitle('\n  第一行草稿  \n第二行', [], '新会话'), '第一行草稿');
+  assert.equal(draftChatTitle('   ', [], '新会话'), '新会话');
+  assert.equal(draftChatTitle('   ', [{ name: '周报.docx' }], '新会话'), '周报.docx');
+  assert.equal(draftChatTitle(undefined, [], '新会话'), '新会话');
+  assert.equal(draftChatTitle('一'.repeat(80), [], '新会话'), `${'一'.repeat(39)}…`);
 });
 
 test('相对时间按刚刚、秒、分钟、小时、天、月、年分档', () => {

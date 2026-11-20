@@ -6,6 +6,8 @@ export const WORKSPACE_CHAT_PREVIEW_LIMIT = 5;
 export const WORKSPACE_CHAT_ORPHAN_ID = '__orphan_sessions__';
 /** 未归属工作区会话分组的标题 */
 export const WORKSPACE_CHAT_ORPHAN_TITLE = '其他会话';
+/** 草稿会话行标题的最大字符数 */
+const DRAFT_TITLE_LIMIT = 40;
 
 /** 首页工作区会话偏好的默认值：开关关闭且全部收起 */
 export function defaultWorkspaceChatPreferences() {
@@ -63,6 +65,87 @@ export function writeWorkspaceChatPreferences(storage, value) {
   } catch {
     return false;
   }
+}
+
+/**
+ * 按最后活动时间倒序排列首页会话；空白会话固定在最前，同一时间按标识升序保证顺序稳定
+ * @param sessions 首页会话投影，传入顺序不作要求
+ * @returns 排序后的新数组，不修改传入数组
+ */
+export function orderChatsByActivity(sessions) {
+  return [...sessions].sort((left, right) => {
+    if (left.blank !== right.blank) return left.blank === true ? -1 : 1;
+    return chatActivity(right) - chatActivity(left) || String(left.id).localeCompare(String(right.id));
+  });
+}
+
+/**
+ * 读取会话最后活动时间，缺失或非法值按 0 处理
+ * @param session 首页会话投影
+ * @returns 毫秒时间戳
+ */
+function chatActivity(session) {
+  const value = typeof session.updatedAt === 'number' ? session.updatedAt : Number(session.updatedAt);
+  if (Number.isFinite(value)) return value;
+  const parsed = Date.parse(session.updatedAt);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * 组装首页会话行：过滤归档、工作区和搜索条件，纳入带草稿的空白会话，再按最近活动排序
+ * @param options.ids 会话列表的标识顺序
+ * @param options.byId 会话摘要，按标识索引
+ * @param options.workspaces 工作区投影，用于判定会话归属
+ * @param options.archivedSessionIds 已归档会话标识
+ * @param options.archived 是否查看已归档会话
+ * @param options.workspace 当前筛选的工作区标识；为空表示全部工作区
+ * @param options.phrase 搜索词；非空时只保留标题命中或内容命中的会话
+ * @param options.snippets 内容搜索命中摘要，按会话标识索引
+ * @param options.drafts 草稿文本，按会话标识索引
+ * @param options.attachments 草稿附件，按会话标识索引
+ * @returns 已排序的会话摘要；带草稿的空白会话排在最前
+ */
+export function homeChatRows({ ids = [], byId = {}, workspaces = [], archivedSessionIds = [], archived = false,
+  workspace = null, phrase = '', snippets = new Map(), drafts = {}, attachments = {} }) {
+  const lowered = phrase.toLocaleLowerCase();
+  const scope = workspace === null ? undefined : workspaces.find(item => (item.id ?? item.workspaceId) === workspace);
+  const rows = [];
+  for (const id of ids) {
+    const item = byId[id];
+    if (item === undefined || (workspace !== null && scope?.sessionIds?.includes(id) !== true)) continue;
+    if (item.blank === true) {
+      // 空白会话只在草稿有内容时出现；搜索和归档视图不展示未开始的会话。
+      if (lowered || archived || archivedSessionIds.includes(id)) continue;
+      if (!hasDraftContent(drafts[id], attachments[id])) continue;
+    } else if (archivedSessionIds.includes(id) !== archived) continue;
+    if (lowered && !String(item.displayTitle ?? '').toLocaleLowerCase().includes(lowered) && !snippets.has(id)) continue;
+    rows.push(item);
+  }
+  return orderChatsByActivity(rows);
+}
+
+/**
+ * 草稿会话行标题：取草稿首个非空行，没有文字时用第一个附件名
+ * @param text 草稿文本
+ * @param attachments 草稿附件
+ * @param fallback 没有文字也没有附件时的兜底标题
+ * @returns 展示用标题
+ */
+export function draftChatTitle(text, attachments, fallback) {
+  const line = String(text ?? '').split('\n').map(part => part.trim()).find(Boolean);
+  if (line !== undefined) return line.length > DRAFT_TITLE_LIMIT ? `${line.slice(0, DRAFT_TITLE_LIMIT - 1)}…` : line;
+  const name = (attachments ?? []).find(item => typeof item?.name === 'string' && item.name !== '')?.name;
+  return name ?? fallback;
+}
+
+/**
+ * 判断空白会话是否已有草稿内容
+ * @param text 草稿文本
+ * @param attachments 草稿附件
+ * @returns 有文字或附件时为 true
+ */
+function hasDraftContent(text, attachments) {
+  return String(text ?? '').trim() !== '' || (attachments ?? []).length > 0;
 }
 
 /**
