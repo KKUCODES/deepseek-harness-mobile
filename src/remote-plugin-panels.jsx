@@ -12,21 +12,21 @@ import { zh, en } from '@upstream/ui-sidebar-right/src/client/locales.ts';
 import { parseFileAddress } from '@deepseek-ai/dsh-util-workspace-path';
 import { resolveDocumentAddress } from './remote-document-address.mjs';
 import { TabMenu } from '@upstream/ui-dockkit/src/components/TabMenu.tsx';
-import { IconEllipsisOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
+import { IconChevronLeftOutline14, IconCloseOutline16, IconEllipsisOutline16, IconPlusOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { IconButton } from './ui/Surface.jsx';
-import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { RemoteFilePreview } from './ui/RemoteFilePreview.jsx';
 import { useTranslate } from './ui/locale.jsx';
 import { installRemoteDocumentPreviews, TEXTPREVIEW_ID } from './remote-document-previews.jsx';
 import { RemoteDocumentActions } from './ui/RemoteDocumentActions.jsx';
 import { RemoteDesktopOpen } from './ui/RemoteDesktopOpen.jsx';
-import { canOpenDesktopFile } from './remote-desktop.mjs';
+import { canOpenDesktopFile, canRevealDesktopFile } from './remote-desktop.mjs';
 import { installRemoteReviewPreview } from './remote-review-preview.jsx';
 import { installRemoteDeliverables } from './remote-deliverables.jsx';
 import { RemotePanelMemory } from './remote-panel-memory.mjs';
 import { retainRemoteSurface } from './remote-surface-inert.mjs';
 import { SurfacePresence, useSurfaceMotion, useSceneMotion } from './ui/motion.jsx';
 import { panelFillsViewport } from './remote-panel-layout.mjs';
+import { guideInject } from '@dshm/guide-inject';
 
 const FILE_ID = 'dshm/file-preview';
 // 旧版没有快捷键目录；新版读取真实客户端服务，不能以电脑目录代替手机绑定。
@@ -94,12 +94,15 @@ export function installRemotePluginPanels(model) {
       keyedHooks: { tabNavigation: key => controller.tabDomain.occurrence(sessionId, { id: key }).navigation },
     }),
   }, MobilePluginPanels);
+  const guideExtra = guideInject(ctx);
   ctx.slots.register({ name: 'sidebar.right.pane.tab', key: GUIDE_ID, locale: 'sidebarRight',
     children: {
+      'sidebar.right.tab.guide.actions': { kind: 'list', scope: 'root' },
       'sidebar.right.tab.guide.entry': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: guideTabInfoFactory } } },
       'sidebar.right.tab.guide': { kind: 'chain', scope: 'session', inject: { hooks: { tabInfo: guideTabInfoFactory } } },
     }, inject: () => ({ hooks: { shortcuts: ctx.get('shortcuts')?.catalog ?? emptyShortcutCatalog,
-      guideEntries: { subscribe: listener => tabs.subscribe(listener), getSnapshot: () => tabs.guide() } } }),
+      guideEntries: { subscribe: listener => tabs.subscribe(listener), getSnapshot: () => tabs.guide() }, ...guideExtra.hooks },
+      setPinned: guideExtra.setPinned }),
   }, GuideBody);
   ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: GUIDE_ID }, GuideTitle);
   if (!installRemoteDocumentPreviews(model)) {
@@ -176,6 +179,7 @@ function MobilePluginPanels(props) {
   const types = useTabTypes(types => types);
   const surface = surfaces[sessionId], layout = surface?.layout;
   const content = useRef(null);
+  const desktopActions = useRef(null), transferActions = useRef(null);
   useSceneMotion(content, layout?.nodes[layout?.activePaneId]?.activeTabId, 1);
   const close = useCallback(() => actions.setExpanded(sessionId, false), [actions, sessionId]);
   useLayoutEffect(() => {
@@ -184,6 +188,19 @@ function MobilePluginPanels(props) {
   }, [controller, sessionId, actions, surfaces, measure]);
   useEffect(() => { if (!surface) actions.open(sessionId); }, [actions, sessionId, surface]);
   useEffect(() => { setMenu(null); }, [sessionId, layout?.expanded, layout?.activePaneId && layout.nodes[layout.activePaneId]?.activeTabId]);
+  const tabScroll = useRef(null);
+  // 新开或切换标签时把选中标签滚入可视区，避免停留在首个标签
+  useLayoutEffect(() => {
+    const container = tabScroll.current;
+    if (!container || !layout?.expanded) return;
+    const chip = container.querySelector('.remote-panel-chip.is-active');
+    if (!chip) return;
+    const box = container.getBoundingClientRect(), item = chip.getBoundingClientRect();
+    const left = item.left - box.left + container.scrollLeft, right = left + item.width;
+    const margin = 8, viewLeft = container.scrollLeft, viewRight = viewLeft + container.clientWidth;
+    if (left < viewLeft + margin) container.scrollTo({ left: Math.max(0, left - margin), behavior: 'smooth' });
+    else if (right > viewRight - margin) container.scrollTo({ left: right - container.clientWidth + margin, behavior: 'smooth' });
+  }, [layout?.expanded, layout?.nodes[layout?.activePaneId]?.activeTabId]);
   if (!layout) return null;
   const records = Object.values(layout.tabs);
   const activeId = layout.nodes[layout.activePaneId]?.activeTabId;
@@ -194,20 +211,36 @@ function MobilePluginPanels(props) {
   const fileActive = active && types.find(type => type.kind === active.kind)?.id === FILE_ID;
   // 收起窗口或临时看文件时保留插件组件，局部表单不因外壳切换丢失。
   const dismissMenu = () => { setMenu(null); menu?.anchor.focus(); };
+  // 文件操作收进面板菜单，触发器由对应操作组件经 ref 暴露
+  const fileMenuItems = file ? [
+    ...(canOpenDesktopFile(model, file) ? [<button key="open" type="button" role="menuitem" className="remote-panel-menu-item" onClick={() => { dismissMenu(); desktopActions.current?.open(); }}>{t('在电脑打开')}</button>] : []),
+    ...(canRevealDesktopFile(model, file) ? [<button key="reveal" type="button" role="menuitem" className="remote-panel-menu-item" onClick={() => { dismissMenu(); desktopActions.current?.reveal(); }}>{t('在电脑文件夹中显示')}</button>] : []),
+    <button key="download" type="button" role="menuitem" className="remote-panel-menu-item" onClick={() => { dismissMenu(); transferActions.current?.download(); }}>{t(file.diffs ? '下载最新完整文件' : '下载完整文件')}</button>,
+    <button key="share" type="button" role="menuitem" className="remote-panel-menu-item" onClick={() => { dismissMenu(); transferActions.current?.share(); }}>{t(file.diffs ? '分享最新完整文件' : '分享完整文件')}</button>,
+  ] : [];
   return <><PanelSurface title={t('插件面板')} model={model} onClose={close} open={layout.expanded && !fileActive}>
-    <header><h2>{t('插件面板')}</h2><Button onClick={close}>{t('返回聊天')}</Button>
-      {active && <IconButton label={t('面板操作')} aria-haspopup="menu" aria-expanded={!!menu}
-        onClick={event => setMenu({ tabId: active.id, anchor: event.currentTarget })}><IconEllipsisOutline16/></IconButton>}
+    <header>
+      <IconButton label={t('返回聊天')} onClick={close}><IconChevronLeftOutline14/></IconButton>
+      <h2 className="remote-panel-title">{t('插件面板')}</h2>
+      <span className="remote-panel-header-actions">
+        {active && <IconButton label={t('面板操作')} aria-haspopup="menu" aria-expanded={!!menu}
+          onClick={event => setMenu({ tabId: active.id, anchor: event.currentTarget })}><IconEllipsisOutline16/></IconButton>}
+      </span>
     </header>
     <nav aria-label={t('已打开的面板')}>
-      {records.map(tab => <Button key={tab.id} aria-pressed={tab.id === active?.id} onClick={() => controller.focus(tab.id)}>
-        <PanelTab {...props} tab={tab} title active={layout.expanded && tab.id === active?.id} fallback={tab.title}/>
-      </Button>)}
-      <Button onClick={() => controller.openTab('guide')}>{t('打开面板')}</Button>
+      <div className="remote-panel-tab-scroll" ref={tabScroll}>
+        {records.map(tab => <div key={tab.id} className={`remote-panel-chip${tab.id === active?.id ? ' is-active' : ''}`}>
+          <button type="button" className="remote-panel-chip-select" aria-pressed={tab.id === active?.id} onClick={() => controller.focus(tab.id)}>
+            <span className="remote-panel-chip-name"><PanelTab {...props} tab={tab} title active={layout.expanded && tab.id === active?.id} fallback={tab.title}/></span>
+          </button>
+          {tab.kind !== 'guide' && <button type="button" className="remote-panel-chip-close" aria-label={t('关闭 {title}', { title: tab.title ?? '' })} onClick={() => controller.close(tab.id)}><IconCloseOutline16/></button>}
+        </div>)}
+      </div>
+      <IconButton label={t('打开面板')} className="remote-panel-add" onClick={() => controller.openTab('guide')}><IconPlusOutline16/></IconButton>
     </nav>
     {file && layout.expanded && <React.Fragment key={active.id}>
-      {canOpenDesktopFile(model, file) && <RemoteDesktopOpen model={model} file={file}/>}
-      <RemoteDocumentActions model={model} file={file}/>
+      {canOpenDesktopFile(model, file) && <RemoteDesktopOpen model={model} file={file} presentation="panel" actionsRef={desktopActions}/>}
+      <RemoteDocumentActions model={model} file={file} presentation="panel" actionsRef={transferActions}/>
     </React.Fragment>}
     <div ref={content} className={`remote-plugin-panel-content${fillsPanel(active) ? ' is-document' : ''}`}>{records.filter(tab => types.find(type => type.kind === tab.kind)?.id !== FILE_ID).map(tab => <div className={fillsPanel(tab) ? 'remote-document-tab' : undefined} key={tab.id} hidden={tab.id !== active?.id}>
       {documentActive && tab.id === active.id && <p className="remote-document-failure" role="alert">
@@ -223,7 +256,13 @@ function MobilePluginPanels(props) {
     <footer className="remote-plugin-panel-footer">{layout.expanded && !fileActive ? footer : null}</footer>
   </PanelSurface>
   {layout.expanded && !fileActive && menu && menu.tabId === active?.id && <TabMenu labels={{ closeTab: t('关闭当前面板') }} anchor={menu.anchor}
-    onClose={active.kind === 'guide' ? undefined : () => { dismissMenu(); controller.close(active.id); }} onDismiss={dismissMenu}
-    extras={renderSlot('sidebar.right.tab.menu.item', { tab: active, dismiss: dismissMenu })}/>}
+    onClose={undefined} onDismiss={dismissMenu}
+    extras={<>
+      {fileMenuItems}
+      {renderSlot('sidebar.right.tab.menu.item', { tab: active, dismiss: dismissMenu })}
+      {active.kind !== 'guide' && <><hr className="remote-panel-menu-divider"/>
+        <button type="button" role="menuitem" className="remote-panel-menu-item" onClick={() => { dismissMenu(); controller.close(active.id); }}>{t('关闭当前面板')}</button></>}
+    </>}
+  />}
   <SurfacePresence>{layout.expanded && fileActive && <PanelTab {...props} tab={active} active/>}</SurfacePresence></>;
 }

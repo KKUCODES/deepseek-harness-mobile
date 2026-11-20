@@ -182,6 +182,8 @@ class MobileSlotRegistry extends SlotRegistry {
     }
     // 页面级手机布局不参与桌面局部组件的等比缩放。
     if (options.name === REMOTE_HOME_SLOT) return register(options, component);
+    // 标签标题由宿主外壳排版并截断，不参与插件等比缩放。
+    if (options.name === 'sidebar.right.pane.tab.title') return register(options, component);
     if (!id || this.ctx.fiber === this.rootOwner || isRemoteSidebarComposition(options, component)
       || isRemoteDocumentComposition(options, component)) return register(options, component);
     if (id === '@deepseek-ai/dsh-client-ui-agent-preset' && options.name === 'conversation.hero.agentPreset') {

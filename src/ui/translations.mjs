@@ -973,6 +973,7 @@ export const english = Object.freeze({
   "已打开的面板": "Open panels",
   "打开面板": "Open a panel",
   "关闭当前面板": "Close current panel",
+  "关闭 {title}": "Close {title}",
   "此面板的插件暂不可用。": "The plugin for this panel is unavailable.",
   "网页面板的远程访问范围尚未配置。": "Remote access for web panels has not been configured.",
   "文件请通过聊天中的文件入口预览。": "Use file links in the chat to preview files.",

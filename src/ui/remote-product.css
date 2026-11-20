@@ -338,12 +338,38 @@ button.remote-file:hover, button.remote-file:focus-visible { background: var(--d
 .remote-plugin-panel { position: fixed; z-index: 50; inset: 0; margin: 0; width: 100%; height: 100%; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); background: var(--dsw-alias-bg-layer-1, white); color: var(--dsw-alias-label-primary); outline: none; }
 .remote-plugin-panel:not([hidden]) { display: flex; flex-direction: column; }
 .remote-plugin-panel[hidden] { display: none; }
-.remote-plugin-panel > header { display: flex; align-items: center; justify-content: space-between; padding: 12px var(--dshm-gutter); }
+.remote-plugin-panel > header { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 8px calc(var(--dshm-gutter) - 12px); }
 .remote-plugin-panel h2 { margin: 0; font-size: 18px; }
-.remote-plugin-panel > header h2 { margin-right: auto; }
-.remote-plugin-panel nav { display: flex; flex-shrink: 0; gap: 8px; padding: 8px var(--dshm-gutter); overflow-x: auto; }
-.remote-plugin-panel nav button { flex-shrink: 0; }
-.remote-plugin-panel nav [aria-pressed="true"] { background: var(--dsw-alias-bg-layer-2, #f3f3f3); }
+/* 标题整栏居中，与聊天页顶栏标题同款；左返回、右面板操作，按钮边距同顶栏 */
+.remote-plugin-panel .remote-panel-title { position: absolute; left: 0; right: 0; top: 8px; height: 44px; display: flex; align-items: center; justify-content: center; margin: 0; font-size: 17px; font-weight: 550; pointer-events: none; }
+.remote-panel-header-actions { display: flex; align-items: center; gap: 4px; }
+/* 标签栏：chip 横向滚动、边缘渐隐，打开按钮固定右端 */
+.remote-plugin-panel nav { display: flex; flex-shrink: 0; align-items: center; gap: 4px; padding: 0 var(--dshm-gutter) 8px; }
+.remote-panel-tab-scroll { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(to right, black calc(100% - 12px), transparent); }
+.remote-panel-tab-scroll::-webkit-scrollbar { display: none; }
+.remote-panel-chip { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; min-width: 0; max-width: 210px; height: 28px; padding: 0 4px 0 8px; border-radius: var(--dsw-radius-sm, 8px); color: var(--dsw-alias-label-secondary); }
+.remote-panel-chip.is-active { background: var(--dsw-alias-markdown-tag, #f1f3f5); color: var(--dsw-alias-label-primary); }
+.remote-panel-chip-select { display: flex; align-items: center; flex: 1 1 auto; min-width: 0; height: 28px; padding: 0; border: none; background: transparent; color: inherit; text-align: left; }
+.remote-panel-chip-name { display: block; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; line-height: 1.4; }
+.remote-panel-chip-name svg { width: 16px; height: 16px; margin-right: 5px; vertical-align: -3px; }
+.remote-panel-chip-close { display: flex; align-items: center; justify-content: center; flex: none; width: 20px; height: 20px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); }
+.remote-panel-chip-close svg { width: 14px; height: 14px; }
+.remote-plugin-panel .remote-panel-add { min-width: 28px; width: 28px; height: 28px; border-radius: var(--dsw-radius-sm, 8px); color: var(--dsw-alias-label-secondary); }
+/* 文件传输与电脑操作的状态条 */
+.remote-panel-status-strip { display: flex; flex-shrink: 0; align-items: center; gap: 8px; padding: 8px var(--dshm-gutter); background: var(--dsw-alias-markdown-tag, #f1f3f5); font-size: 13px; }
+.remote-panel-status-strip > span { flex: 1; min-width: 0; }
+.remote-panel-strip-cancel { flex: none; height: 28px; padding: 0 10px; border-radius: var(--dsw-radius-sm, 8px); font-size: 12px; background: var(--dsw-alias-bg-layer-1, white); box-shadow: inset 0 0 0 1px var(--dsw-alias-border-l3, rgba(0, 0, 0, 0.12)); }
+/* 面板菜单自有项与原菜单项尺寸一致 */
+.remote-panel-menu-item { padding: 4px 7px; border: none; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(var(--dsh-content-font-size-secondary, 13px) - 1px); text-align: left; border-radius: var(--dsw-radius-md, 12px); cursor: pointer; }
+@media (hover: hover) { .remote-panel-menu-item:hover { background: var(--dsw-alias-interactive-bg-hover); } }
+.remote-panel-menu-divider { border: none; height: 1px; margin: 4px 7px; background: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.08)); }
+/* 电脑打开二次确认对话框 */
+dialog.remote-desktop-confirm { width: min(320px, calc(100vw - 48px)); margin: auto; padding: 20px; border: none; border-radius: 16px; background: var(--dsw-alias-bg-layer-1, white); color: var(--dsw-alias-label-primary); box-shadow: 0 12px 40px rgba(15, 17, 21, 0.2); }
+dialog.remote-desktop-confirm::backdrop { background: rgba(15, 17, 21, 0.45); }
+.remote-desktop-confirm p { margin: 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.remote-desktop-confirm .remote-desktop-confirm-sub { margin-top: 8px; font-size: 13px; color: var(--dsw-alias-label-secondary); }
+.remote-desktop-confirm-actions { display: grid; gap: 8px; margin-top: 16px; }
+.remote-desktop-confirm-actions button { height: 40px; border-radius: 12px; }
 .remote-plugin-panel-content { flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: var(--dshm-gutter); }
 .remote-plugin-panel-content.is-document { padding: 0; overflow: hidden; }
 .remote-plugin-panel-footer { flex: none; min-width: 0; padding: 0 var(--dshm-gutter) 12px; }

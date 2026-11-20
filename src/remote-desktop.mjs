@@ -36,6 +36,11 @@ export function canOpenDesktopFile(model, file) {
     : file.desktopSource ? model.transport.capabilities?.desktopOpen : model.transport.capabilities?.desktopOpenWorkspace);
 }
 
+/** 判断文件是否支持在电脑文件夹中显示；仅 presented 文件且电脑具备对应能力时成立 */
+export function canRevealDesktopFile(model, file) {
+  return file.desktopSource?.source === 'presented' && !!model.transport.capabilities?.desktopReveal;
+}
+
 /** 附件只传原引用；确认快照绑定同一会话/ID/类型/名称，不读取电脑同名文件。 */
 export async function attachmentDesktopRequest(model, file, prepared, signal) {
   signal.throwIfAborted();
