@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android preview.22](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -40,7 +40,7 @@
 | 结果查看 | 工具、命令、文件与改动预览；保存或分享完整文件。 |
 | 插件界面 | 显示兼容插件；默认等比例缩放，作者声明与用户开关可调整。 |
 
-preview.14 支持[预装与外部 Remote 首页插件](./docs/integration/preinstalled-phone-plugins-current.md)：默认预装「Remote 新版首页」0.3.1，在「插件 → 手机」独立更新、启停、卸载或恢复安装；App 升级保留用户版本和卸载选择，失败回退默认首页。提供[开发指南、SDK 与模板](./docs/plugins/development.md)，目前开放 Remote 首页 API v1，不支持任意 npm 插件安装。
+APK 预装「Remote 新版首页」0.7.1，提供连接页和首页，可在「插件 → 手机」管理。App 覆盖安装时保留用户选择的插件版本和启停状态。[手机界面插件指南](./docs/plugins/development.md)
 
 ```mermaid
 flowchart LR
@@ -50,17 +50,17 @@ flowchart LR
 
 ## 下载 Android APK 与开始使用
 
-[APK 发行版本](https://github.com/KKUCODES/deepseek-harness-mobile/releases) · [构建与签名说明](./docs/releases.md) · [GitHub Actions 构建](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)
+[下载 preview.22 签名 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [发行页与校验文件](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.22)
 
-公开开发预览提供已签名 APK，最低 Android 9。可直接从 Release 下载 `.apk` 安装，无需登录 GitHub；Actions 中的 `dshm-signed-apk` 下载需要登录。签名与更新说明见[APK 构建与下载指南](./docs/releases.md)。
+在 Android 9 或更高版本上打开下载的 APK，按系统提示安装。若系统询问，允许打开文件的应用安装此 APK。升级已有官方预览版时直接覆盖安装，即可保留聊天、设置和配对。[APK 安装说明](./docs/releases.md)
 
 安装 App 后，配置自己的 DeepSeek Key 即可开始普通聊天；也可在「设置 → 普通聊天 → 管理供应商与模型」添加兼容服务。手机直连所选供应商，聊天历史保存在本地，无需电脑或 Remote 中转服务。
 
 ### 连接电脑上的 DeepSeek Harness
 
-1. 在电脑的官方 DSH 中安装[DSHM 远程连接插件](https://github.com/KKUCODES/dshm-plugin)，连接中转服务。
-2. 在手机 DSHM 中领取电脑生成的一次性配对链接。
-3. 电脑核对设备指纹并批准后，手机打开已有工作区，继续会话或创建新聊天。
+1. 在电脑的官方 DSH `0.2.2-rc.3` 中安装 [DSHM 桌面插件 `0.1.88-latest.0`](https://github.com/KKUCODES/dshm-plugin/releases/tag/v0.1.88-latest.0)，重启 DSH Web 加载插件。注册电脑并开启中转连接，点击「生成一次性配对链接」。
+2. 在手机 preview.22 中打开「Remote」，扫描电脑上的二维码，或粘贴完整链接。确认设备名称后点击「继续配对」。链接五分钟内有效，只能领取一次。
+3. 对照手机与电脑插件显示的设备公钥指纹。一致后在电脑上批准，保持手机 Remote 页面打开，它会自动连接并读取工作区和会话。
 
 **推荐[自建中转](https://github.com/KKUCODES/dshm-relay)**，也可使用[公共服务](http://118.31.20.47:18787)：`http://118.31.20.47:18787`。开放注册免注册密钥，手机仍需配对和批准。
 
@@ -69,6 +69,10 @@ flowchart LR
 ## 当前状态
 
 **preview.22** 在 preview.21 基础上接入社区 PR #1，增加工作区会话分组、本地 Markdown 图片和预览缩放，并修复图片路径、失败恢复、缓存工具参数及最早页定位。已安装 MuMu 验证，用户原有偶发现场仍待复验。[发行说明](./ci/release-notes/0.1.0-preview.22.md) · [范围与验收](./docs/integration/preview22-pr1-current.md)
+
+本版 Remote 已验组合为 Android `0.1.0-preview.22`、桌面插件 `0.1.88-latest.0` 和官方 DSH `0.2.2-rc.3`。其他版本按各自的[桌面插件兼容记录](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)核对。
+
+### 历史预览版本
 
 **preview.21** 修复 Remote 历史分页定位竞争、末页位置偏移和发送状态漏判；用户反馈的偶发场景仍待复验。[发行说明](./ci/release-notes/0.1.0-preview.21.md) · [问题诊断](./docs/integration/diagnostics-current.md)
 
@@ -86,11 +90,13 @@ flowchart LR
 
 **preview.11** 统一软件更新入口，以单一状态卡片和主按钮完成下载、安装或「重启并应用」；说明与技术信息折叠，重启前保存草稿，无需去系统设置强行停止。[实现和验证范围](./docs/integration/unified-updates-current.md)。
 
-开发预览，尚未进入应用商店。核心 Remote 已在 **官方 DSH `0.2.1-alpha.2`＋插件 `0.1.80-latest.0`＋配套 Android** 上完成 Web + MuMu 本地验收；扩展范围见[兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
+桌面插件 `0.1.80-latest.0` 和 DSH `0.2.1-alpha.2` 的 Web 与 MuMu 验收见[历史兼容记录](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
 
 支持[完整页面资源热更新](./docs/integration/web-resource-updates-current.md)：独立签名与兼容检查、完整启动启用、失败回退及原生恢复入口。涉及原生能力仍需升级 APK；本次只发布 APK，暂不发布 r2。保留此前返回手势、App 内更新及长聊天修复；preview.8 起可在 App 内更新，更早版本请手动覆盖安装。
 
-[0.1.0-preview.14](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.14) 保留普通聊天自定义供应商和模型、原 DeepSeek 配置与聊天；[模型服务说明](./docs/integration/ordinary-providers-current.md)。Remote 配套电脑插件 `0.1.87-latest.0`，核心连接已验官方 DSH `0.2.0-rc.2` / `0.2.1-alpha.2` / `0.2.1-rc.2`；[版本验证范围](./docs/integration/market-baseline.md)。沿用原身份和签名，versionCode 22 可覆盖此前公开预览及本地 code21 候选，保留本地数据；本版无需额外升级插件或中转。
+旧版 DSH 的兼容依据见[历史版本记录](./docs/integration/market-baseline.md)。普通聊天的自定义供应商与模型见[模型服务说明](./docs/integration/ordinary-providers-current.md)。
+
+### 平台与 Remote 使用范围
 
 - 首版仅 Android。真机、完整公网链路及其他版本、插件、模型仍需验证。
 - 电脑和 DSH 保持运行，只安装独立插件，不修改 DSH 本体。
@@ -133,7 +139,7 @@ docs/        使用、开发与技术文档
 
 - [使用指南](./docs/usage.md)：普通聊天、配对与限制。
 - [开发指南](./docs/development.md)：环境、构建与测试。
-- [Remote 缓存](./docs/integration/remote-cache-current.md)：资源校验、增量同步与实测范围；需配套插件 0.1.85-latest.0，现有中转无需升级。
+- [Remote 缓存](./docs/integration/remote-cache-current.md)记录缓存机制及其首次交付时的验收范围。
 - [构建与下载](./docs/releases.md)：自动签名、公开 APK、摘要与版本信息。
 - [App 内更新](./docs/integration/app-updates-current.md)：检查、下载和系统覆盖安装，支持 Markdown 更新说明与具体校验错误提示。
 - [兼容结论](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)：版本与支持范围。

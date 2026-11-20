@@ -2,11 +2,11 @@
 
 本页说明手机端的环境、构建和检查入口。命令在注明的目录执行；普通旧基线与官方候选使用不同资源和包名，需先选择目标版本。
 
-当前分支的 CI 使用官方 rc.3 SDK 和只读源码。旧 Host 兼容及历史诊断见 [rc.2 兼容说明](./integration/dsh-rc21-compatibility.md)。
+公开 `0.1.0-preview.22` 的 CI 使用官方 DSH `0.2.2-rc.3` SDK 与只读源码，Remote 回归配套桌面插件 `0.1.88-latest.0`。[签名 APK 与发行配置](./releases.md) · [安装与配对](./usage.md) · [历史 rc.2 兼容记录](./integration/dsh-rc21-compatibility.md)
 
 [返回项目首页](../README.md) · [使用指南](./usage.md) · [知识库总目录](./project-knowledge/catalog.md)
 
-手机界面扩展从[外部插件开发指南](./plugins/development.md)、[Remote 首页公开 API](./plugins/remote-home-api.md)与[独立示例包](../packages/remote-home-design/README.md)进入。用 SDK 构建完整 `.dshm-plugin` 文件，从手机插件页安装/更新；不随插件重打APK，也不依赖此前独立 npm 适配分支。preview.14起包含外部安装器，本地preview.15选择性保留这套机制；更早APK不能靠页面资源更新取得原生安装能力。
+手机界面扩展从[外部插件开发指南](./plugins/development.md)、[Remote 首页公开 API](./plugins/remote-home-api.md)与[独立示例包](../packages/remote-home-design/README.md)进入。用 SDK 构建完整 `.dshm-plugin` 文件，从手机插件页安装/更新；不随插件重打APK，也不依赖此前独立 npm 适配分支。preview.14起包含外部安装器，preview.22 继续提供此入口；更早APK不能靠页面资源更新取得原生安装能力。
 
 源码[preinstalled-plugins](../preinstalled-plugins/README.md)中的完整包作为APK资产预装；空目录不装，错误包或重复ID使构建失败。Gradle默认读取此目录，可用`-PpreinstalledPluginsDir=<路径>`构建其他发行组合。目录切换会同步删除上次残留包，不影响手机上已经安装的副本。首次安装、用户卸载与恢复规则见[预装专题](./integration/preinstalled-phone-plugins-current.md)。
 

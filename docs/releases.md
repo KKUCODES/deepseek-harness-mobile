@@ -10,7 +10,9 @@ Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-当前开发预览使用 `dev.dshmobile.validation.officialtest` 包名与原签名证书。请直接覆盖安装来保留本地数据。preview.8 起可在 App 内检查新版，更早的公开版请手动下载 APK。Remote 已验收官方 DSH `0.2.2-rc.3`，配套电脑插件为 `0.1.88-latest.0`。大响应分块需要中转包含提交 `94183d0`。
+preview.22 的版本码为 32，沿用包名 `dev.dshmobile.validation.officialtest` 和原签名证书。打开 APK 并按 Android 提示确认；升级官方预览版时直接覆盖安装即可保留数据。preview.8 起也可在 App 内检查更新。
+
+本版 Remote 的电脑组合为官方 DSH `0.2.2-rc.3` 和[桌面插件 `0.1.88-latest.0`](https://github.com/KKUCODES/dshm-plugin/releases/tag/v0.1.88-latest.0)。安装后按[手机配对步骤](./usage.md#在手机配对)连接。自建中转需包含协议提交 `94183d0` 才能传输大响应。
 
 ## 自动构建与发布
 

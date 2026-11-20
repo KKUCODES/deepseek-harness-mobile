@@ -1,10 +1,10 @@
 # Remote 首页界面插件 API v1
 
-状态：首页接口已公开，连接页扩展为preview.15本地候选，尚未发行；维护：DSHM 手机端维护者；核验日期：2026-11-19。来源：[本地页面宿主](../../src/remote-interface-host.jsx)、[加载器](../../src/mobile-interface-plugins.mjs)、[首页投影](../../src/ui/RemoteWorkspace.jsx)、[独立样例](../../packages/remote-home-design/index.jsx)。从[开发指南](./development.md)开始，连接页见[当前验收](../integration/remote-connection-plugin-current.md)，预装与外部安装分别见原专题。
+状态：公开 preview.22 包含首页与连接页扩展；维护：DSHM 手机端维护者；核验日期：2026-11-20。来源：[本地页面宿主](../../src/remote-interface-host.jsx)、[加载器](../../src/mobile-interface-plugins.mjs)、[首页投影](../../src/ui/RemoteWorkspace.jsx)、[独立样例](../../packages/remote-home-design/index.jsx)。从[开发指南](./development.md)开始，连接页见[当前验收](../integration/remote-connection-plugin-current.md)，预装与外部安装分别见原专题。
 
 ## 加载和声明
 
-界面模块使用现有 Cordis 生命周期、公开 `slots` 服务。v1 提供根作用域单选槽 `dshm.remote.home`；preview.15 本地候选新增可选 `dshm.remote.connection`。两处由同一个本地运行实例提供，连接前即可加载，不依赖电脑 SDK/RemoteModel。页面槽按手机实际宽度承载，不使用桌面局部组件的等比缩放。已发布 preview.14 仍只有首页槽。
+界面模块使用现有 Cordis 生命周期、公开 `slots` 服务。v1 提供根作用域单选槽 `dshm.remote.home`；从 preview.15 起提供可选 `dshm.remote.connection`。两处由同一个本地运行实例提供，连接前即可加载，不依赖电脑 SDK/RemoteModel。页面槽按手机实际宽度承载，不使用桌面局部组件的等比缩放。已发布 preview.14 仍只有首页槽。
 
 ```jsx
 import React from 'react';
@@ -30,7 +30,7 @@ function Home({ home }) {
 
 ## owner props
 
-### 可选连接页（preview.15 本地候选）
+### 可选连接页（preview.15 起）
 
 包格式和`mobileInterface.surface`保持`dshm.remote.home`，作为既有界面选择组，不改变安装器协议。同一模块用可选注入注册连接页，旧宿主没有该槽时仍能运行首页；旧首页包在新宿主也继续可用，连接页回退默认视图。
 
