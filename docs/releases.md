@@ -50,6 +50,14 @@ Web 与 Gradle 的 `ciBuild` 产物独立放在 `artifacts/ci/`，默认本地�
 
 ## 已核验范围
 
+### preview.23
+
+2026-11-20 已从两份 README 使用的公开直链接收完整 APK（11,599,639 字节），匿名请求返回 HTTP 200。文件 SHA-256 为 `6545bd54d87dac55f7cee65fdefa49ae92315a89a41d3875f8f6d85616436bc7`，与发行页资产摘要及 `SHA256SUMS.txt` 一致。其余四个附件也已匿名下载并核对大小和摘要。[公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.23)
+
+对下载的 APK 运行 `apksigner verify` 已通过，证书 SHA-256 与原签名一致。`aapt dump badging` 确认包名为 `dev.dshmobile.validation.officialtest`、版本为 `0.1.0-preview.23`（33）、最低 Android 9。公开包来自提交 `9e5e82a`。本次检查覆盖下载、签名和包身份，未在设备上覆盖安装。[构建与签名记录](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/44692806104)
+
+### 历史版本
+
 2026-11-20 的[Actions44578968831](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/44578968831)完成 preview.22/code32 网页与Android构建、lint、原签名及公开[Release](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.22)。独立分支 `feature/preview22-pr1` 与标签固定发行源码 `f5fc3b4097a1fc3e8dbdda643e3004ad5d2ba1af`，包含.21及PR原提交，旧插件适配分支不是其祖先。5个附件均已匿名下载，大小、GitHub资产摘要及SHA256SUMS匹配；APK为11,591,447字节，SHA256 `2c2de270fac988fe5610d26e5ac5e4bdfee65ce37f61e714398b2b6201707d3a`。本机apksigner/aapt确认原证书、原包名、code32、Android9及非调试属性；符号包提交与网页构建标识匹配。公开APK覆盖MuMu原正式包成功，应用UID与首次安装时间保持，未清数据；覆盖前已安装同版本的本地候选，不把本次安装描述为新增.21到.22的数据迁移验收。616项Node、rc.3主旁栏/历史/图片/首页及真实电脑连接的范围见[实现专题](./integration/preview22-pr1-current.md)，用户原始偶发现场仍待复验。未修改DSH、桌面插件、中转或资源通道，配套插件保持0.1.88。本机忽略目录 `artifacts/preview22-release/` 保存公开下载、签名、符号与覆盖安装证据。[发行KKC-133](https://linear.app/kkcodes/issue/KKC-133)。
 
 2026-11-19 的[Actions44546317320](https://github.com/KKUCODES/deepseek-harness-mobile/actions/runs/44546317320)完成 preview.21/code31 构建、lint、原签名与公开[Release](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.21)，标签固定源码 `7567430f0161c8bc9165cae7464c8c353de43c8e`。5 个附件均匿名下载并核对 GitHub 资产摘要，APK 与 SHA256SUMS 一致；APK 11,579,159 字节，SHA-256 `6dd0ff7aea59e1b98ddeaf61113542598a2907104618bd6bd9d7df2e134c0c4e`。本机 apksigner/aapt 复核原证书、原包名、版本 code31 和非调试属性，符号包与发布提交及网页构建标识一致。发行前 588 项 Node、当前 rc.3 页面回归及 MuMu 验证范围见[专题](./integration/remote-reading-send-recovery-current.md)。未修改 DSH、桌面插件、中转或资源通道，未混入旧插件适配分支；本轮未覆盖安装公开 APK，不把下载核验等同于新增现场复验。用户偶发回跳/无法发送仍保持待确认。证据在本地忽略目录 `artifacts/preview21-release/`。[发行KKC-130](https://linear.app/kkcodes/issue/KKC-130)。
