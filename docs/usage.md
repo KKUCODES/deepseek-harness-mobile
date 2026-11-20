@@ -6,7 +6,7 @@ DSHM 提供普通聊天和 Remote 两种入口。普通聊天使用手机自己�
 
 ## 安装与准备
 
-在 Android 9 或更高版本上下载 [DSHM `0.1.0-preview.22` 签名 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk)。打开 APK，按系统提示允许安装。升级官方预览版时直接覆盖安装，保留本地聊天、设置与配对。[发行页与校验文件](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.22) · [安装包指南](./releases.md)
+在 Android 9 或更高版本上下载 [DSHM `0.1.0-preview.23` 签名 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.23/DSHM-0.1.0-preview.23.apk)。打开 APK，按系统提示允许安装。升级官方预览版时直接覆盖安装，保留本地聊天、设置与配对。[发行页与校验文件](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.23) · [安装包指南](./releases.md)
 
 普通聊天只需配置手机上的模型服务。使用 Remote 时，电脑需运行官方 DSH **`0.2.2-rc.3`** 并安装 [DSHM 桌面插件 **`0.1.88-latest.0`**](https://github.com/KKUCODES/dshm-plugin/releases/tag/v0.1.88-latest.0)，且两端均能访问同一中转。其他组合见[兼容范围](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)。
 
@@ -83,14 +83,14 @@ DSH 需要提问、审批或计划确认时，可以在聊天中处理；也可�
 
 在普通聊天侧边抽屉打开「插件 → 手机」，所有随包插件共用安装、卸载、启停和状态规则。点「＋」进入安装目录，已卸载的条目可重新安装；卸载保留设置和聊天数据。「已启用」是用户选择，列表只有在对应宿主确认加载成功后才显示「运行中」；否则显示待加载或具体失败。支持配置的插件在详情提供「设置」。
 
-preview.22 预装「Remote 新版首页」0.7.1，提供首页和连接页。升级 App 会保留已安装版本、停用和卸载选择。停用或卸载后回到默认界面，项目、会话和草稿保留。可从「＋」打开插件详情恢复 APK 内置版本，或通过「从文件安装」选择外部 `.dshm-plugin`。[预装规则](./integration/preinstalled-phone-plugins-current.md) · [插件开发指南](./plugins/development.md)
+preview.23 预装「Remote 新版首页」0.7.2，提供首页和连接页。升级 App 会保留已安装版本、停用和卸载选择。停用或卸载后回到默认界面，项目、会话和草稿保留。可从「＋」打开插件详情恢复 APK 内置版本，或通过「从文件安装」选择外部 `.dshm-plugin`。[预装规则](./integration/preinstalled-phone-plugins-current.md) · [插件开发指南](./plugins/development.md)
 
 ## 文件、通知与断线
 
 | 情况 | 处理方式 |
 | --- | --- |
 | 查看文件 | 从聊天或工具记录进入预览；文本、图片、PDF、隔离 HTML 和 Office 的支持范围见[文件说明](./integration/files-delivery-current.md)。 |
-| 下载或分享 | 重新读取电脑最新完整原件，由 Android 选择保存位置或接收 App；接收 App 已取得的文件无法撤回。 |
+| 下载或分享 | 在文件面板打开「面板操作」，选择下载或分享完整文件，再由 Android 选择保存位置或接收 App。接收 App 已取得的文件无法撤回。 |
 | 连接中断 | 保留已加载内容和草稿，恢复后重新核对电脑状态。结果未确认的发送或审批不会自动重发。 |
 | App 进程结束 | 不再接收通知，重新打开后尝试重连；电脑上已经开始的任务仍由 DSH 管理。 |
 | 电脑或 DSH 退出 | 无法继续远程操作；重新连接不保证中断任务自动续跑。 |
@@ -116,7 +116,7 @@ preview.11将APK与页面资源合并为统一更新卡片，主按钮依状态�
 
 preview.10起支持[页面资源更新](./integration/web-resource-updates-current.md)。preview.11下载兼容资源后，点击「重启并应用」即可自动重新打开原模式；先保存各页面草稿，发送中或保存失败时保留当前页面并提示重试，无需去系统设置强行停止。失败可恢复上一可用版或APK内置页面，保留本地数据；涉及原生能力仍升级APK。本次不发布r2，尚无兼容新资源包时继续使用内置页面。
 
-从 preview.8 起，可在「设置 → 软件更新」或「Remote → 连接选项 → 软件更新」手动检查更新。preview.7 及更早的公开版请[下载 preview.22 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) 后直接覆盖安装。
+从 preview.8 起，可在「设置 → 软件更新」或「Remote → 连接选项 → 软件更新」手动检查更新。preview.7 及更早的公开版请[下载 preview.23 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.23/DSHM-0.1.0-preview.23.apk) 后直接覆盖安装。
 
 发现新版后查看更新内容及配套插件要求，点击下载；下载完成并验证后，点击「安装更新」。首次需在Android设置允许此来源，返回后再次点击安装，再由系统确认覆盖安装。安装会保留原应用数据，请勿先卸载。系统扫描或安装取消后，可返回App重新操作；网络失败时可重试或前往发行页下载。详情见[更新说明与验证边界](./integration/app-updates-current.md)。
 

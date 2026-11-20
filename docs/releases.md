@@ -1,16 +1,16 @@
 # APK 构建、签名与下载
 
-**preview.22（versionCode 32）** 保留.21修复，接入社区PR #1，补齐图片、缓存工具参数及最早页定位的兼容缺口。用户反馈的偶发现场仍待复验，不宣称已全部根治。[双语发行说明](../ci/release-notes/0.1.0-preview.22.md) · [验证范围](./integration/preview22-pr1-current.md)
+**preview.23（versionCode 33）** 收录社区 PR #1 后续提交，更新了 Remote 图片失败提示、图片缩放、文件面板和分组首页的电脑连接入口。[双语发行说明](../ci/release-notes/0.1.0-preview.23.md)
 
 [返回首页](../README.md) · [使用指南](./usage.md)
 
 ## 下载并安装
 
-Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA256SUMS.txt`、`signature.txt`、`compatibility.json` 和 WebView 符号包，无需登录 GitHub。[下载 preview.22 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.22)
+Android 9 及以上可以直接下载 APK 并覆盖安装。发行页提供 `SHA256SUMS.txt`、`signature.txt`、`compatibility.json` 和 WebView 符号包，无需登录 GitHub。[下载 preview.23 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.23/DSHM-0.1.0-preview.23.apk) · [公开发行页](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.23)
 
 也可打开 [Build Android APK](https://github.com/KKUCODES/deepseek-harness-mobile/actions/workflows/android-build.yml)，在成功构建的 Artifacts 下载 `dshm-signed-apk`。Actions 下载需要登录 GitHub，产物保留 30 天。`dshm-unsigned-apk` 是构建检查产物，不能直接安装。
 
-preview.22 的版本码为 32，沿用包名 `dev.dshmobile.validation.officialtest` 和原签名证书。打开 APK 并按 Android 提示确认；升级官方预览版时直接覆盖安装即可保留数据。preview.8 起也可在 App 内检查更新。
+preview.23 的版本码为 33，沿用包名 `dev.dshmobile.validation.officialtest` 和原签名证书。打开 APK 并按 Android 提示确认；升级官方预览版时直接覆盖安装即可保留数据。preview.8 起也可在 App 内检查更新。
 
 本版 Remote 的电脑组合为官方 DSH `0.2.2-rc.3` 和[桌面插件 `0.1.88-latest.0`](https://github.com/KKUCODES/dshm-plugin/releases/tag/v0.1.88-latest.0)。安装后按[手机配对步骤](./usage.md#在手机配对)连接。自建中转需包含协议提交 `94183d0` 才能传输大响应。
 

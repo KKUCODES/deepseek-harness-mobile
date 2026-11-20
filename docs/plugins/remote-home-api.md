@@ -1,6 +1,6 @@
 # Remote 首页界面插件 API v1
 
-状态：公开 preview.22 包含首页与连接页扩展；维护：DSHM 手机端维护者；核验日期：2026-11-20。来源：[本地页面宿主](../../src/remote-interface-host.jsx)、[加载器](../../src/mobile-interface-plugins.mjs)、[首页投影](../../src/ui/RemoteWorkspace.jsx)、[独立样例](../../packages/remote-home-design/index.jsx)。从[开发指南](./development.md)开始，连接页见[当前验收](../integration/remote-connection-plugin-current.md)，预装与外部安装分别见原专题。
+状态：公开 preview.23 包含首页与连接页扩展；维护：DSHM 手机端维护者；核验日期：2026-11-20。来源：[本地页面宿主](../../src/remote-interface-host.jsx)、[加载器](../../src/mobile-interface-plugins.mjs)、[首页投影](../../src/ui/RemoteWorkspace.jsx)、[独立样例](../../packages/remote-home-design/index.jsx)。从[开发指南](./development.md)开始，连接页见[当前验收](../integration/remote-connection-plugin-current.md)，预装与外部安装分别见原专题。
 
 ## 加载和声明
 

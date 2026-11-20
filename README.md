@@ -6,7 +6,7 @@
 
 **DSHM** 是社区开发的 [DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness) 安卓客户端。支持手机直连 DeepSeek 普通聊天，也能同步电脑上的 DSH 会话。离开电脑后，仍能继续发送消息、查看执行结果、切换模型和处理审批；任务由电脑执行。
 
-[下载 Android preview.22](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
+[下载 Android preview.23](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.23/DSHM-0.1.0-preview.23.apk) · [连接电脑 DSH](#连接电脑上的-deepseek-harness) · [使用指南](./docs/usage.md) · [常见问题](#常见问题)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM Logo：DeepSeek 鲸鱼与手机、电脑双向连接">
@@ -40,7 +40,7 @@
 | 结果查看 | 工具、命令、文件与改动预览；保存或分享完整文件。 |
 | 插件界面 | 显示兼容插件；默认等比例缩放，作者声明与用户开关可调整。 |
 
-已发布的 preview.22 APK 预装「Remote 新版首页」0.7.1，提供连接页和首页，可在「插件 → 手机」管理。App 覆盖安装时保留用户选择的插件版本和启停状态。[手机界面插件指南](./docs/plugins/development.md)
+已发布的 preview.23 APK 预装「Remote 新版首页」0.7.2，提供连接页和首页，可在「插件 → 手机」管理。App 覆盖安装时保留用户选择的插件版本和启停状态。[手机界面插件指南](./docs/plugins/development.md)
 
 ```mermaid
 flowchart LR
@@ -50,7 +50,7 @@ flowchart LR
 
 ## 下载 Android APK 与开始使用
 
-[下载 preview.22 签名 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [发行页与校验文件](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.22)
+[下载 preview.23 签名 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.23/DSHM-0.1.0-preview.23.apk) · [发行页与校验文件](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.23)
 
 在 Android 9 或更高版本上打开下载的 APK，按系统提示安装。若系统询问，允许打开文件的应用安装此 APK。升级已有官方预览版时直接覆盖安装，即可保留聊天、设置和配对。[APK 安装说明](./docs/releases.md)
 
@@ -59,7 +59,7 @@ flowchart LR
 ### 连接电脑上的 DeepSeek Harness
 
 1. 在电脑的官方 DSH `0.2.2-rc.3` 中安装 [DSHM 桌面插件 `0.1.88-latest.0`](https://github.com/KKUCODES/dshm-plugin/releases/tag/v0.1.88-latest.0)，重启 DSH Web 加载插件。注册电脑并开启中转连接，点击「生成一次性配对链接」。
-2. 在手机 preview.22 中打开「Remote」，扫描电脑上的二维码，或粘贴完整链接。确认设备名称后点击「继续配对」。链接五分钟内有效，只能领取一次。
+2. 在手机 preview.23 中打开「Remote」，扫描电脑上的二维码，或粘贴完整链接。确认设备名称后点击「继续配对」。链接五分钟内有效，只能领取一次。
 3. 对照手机与电脑插件显示的设备公钥指纹。一致后在电脑上批准，保持手机 Remote 页面打开，它会自动连接并读取工作区和会话。
 
 **推荐[自建中转](https://github.com/KKUCODES/dshm-relay)**，也可使用[公共服务](http://118.31.20.47:18787)：`http://118.31.20.47:18787`。开放注册免注册密钥，手机仍需配对和批准。
@@ -68,9 +68,9 @@ flowchart LR
 
 ## 当前状态
 
-**preview.22** 在 preview.21 基础上接入社区 PR #1，增加工作区会话分组、本地 Markdown 图片和预览缩放，并修复图片路径、失败恢复、缓存工具参数及最早页定位。已安装 MuMu 验证，用户原有偶发现场仍待复验。[发行说明](./ci/release-notes/0.1.0-preview.22.md) · [范围与验收](./docs/integration/preview22-pr1-current.md)
+**preview.23** 更新了 Remote 图片和文件预览。图片读取失败时可展开原因，临时错误可单独重试；在文件面板的「面板操作」菜单可下载或分享完整文件。开启工作区分组后，点击首页标题即可进入电脑连接页。[双语发行说明](./ci/release-notes/0.1.0-preview.23.md)
 
-本版 Remote 已验组合为 Android `0.1.0-preview.22`、桌面插件 `0.1.88-latest.0` 和官方 DSH `0.2.2-rc.3`。其他版本按各自的[桌面插件兼容记录](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)核对。
+本版 Remote 配套版本为 Android `0.1.0-preview.23`、桌面插件 `0.1.88-latest.0` 和官方 DSH `0.2.2-rc.3`。其他版本按各自的[桌面插件兼容记录](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md)核对。
 
 ### 历史预览版本
 

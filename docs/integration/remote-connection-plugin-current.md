@@ -1,6 +1,6 @@
 # 连接前通用界面宿主与默认回退
 
-当前公开 preview.22 已包含连接页宿主。安装与配对步骤见[使用指南](../usage.md#在手机配对)。下文记录 preview.15 本地实现及原签名 MuMu 验收，维护者为手机端维护者，历史核验日期为 2026-10-27。[KKC-123](https://linear.app/kkcodes/issue/KKC-123)
+当前公开 preview.23 已包含连接页宿主。安装与配对步骤见[使用指南](../usage.md#在手机配对)。下文记录 preview.15 本地实现及原签名 MuMu 验收，维护者为手机端维护者，历史核验日期为 2026-10-27。[KKC-123](https://linear.app/kkcodes/issue/KKC-123)
 - 先前待连接页固定在宿主、不读插件状态的证据见[诊断](./remote-connection-plugin-diagnosis.md)。本次仍在`release/preview15-from-preview11`，保留已有图片/思考/UI工作，不修改DSH本体、电脑插件或中转，不混旧适配分支。
 
 ## 交付边界

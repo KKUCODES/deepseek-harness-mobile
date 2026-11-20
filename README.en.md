@@ -6,7 +6,7 @@
 
 **DSHM** is a community-developed Android client for [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness). Chat directly with DeepSeek or synchronize DSH conversations from your computer. Away from your desk, you can keep sending messages, viewing execution results, switching models, and handling approvals; the computer runs the tasks.
 
-[Download preview.22 for Android](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
+[Download preview.23 for Android](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.23/DSHM-0.1.0-preview.23.apk) · [Connect to computer DSH](#connect-to-deepseek-harness-on-your-computer) · [Usage guide (Chinese)](./docs/usage.md) · [FAQ](#faq)
 
 <p align="center">
   <img src="./docs/images/logo.png" width="128" height="128" alt="DSHM logo: the DeepSeek whale with a two-way phone and computer connection">
@@ -46,11 +46,11 @@ flowchart LR
     Relay <--> Computer["Computer: DSH + DSHM plugin<br/>Conversations · Projects · Task execution"]
 ```
 
-The published preview.22 APK includes the Remote home and connection-page plugin (0.7.1). Manage it under **Plugins → Phone**. Updating the app keeps your installed version and preferences. [Phone plugin guide (Chinese)](./docs/plugins/development.md)
+The published preview.23 APK includes the Remote home and connection-page plugin (0.7.2). Manage it under **Plugins → Phone**. Updating the app keeps your installed version and preferences. [Phone plugin guide (Chinese)](./docs/plugins/development.md)
 
 ## Download the Android APK and get started
 
-[Download the signed preview.22 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.22/DSHM-0.1.0-preview.22.apk) · [Release and checksums](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.22)
+[Download the signed preview.23 APK](https://github.com/KKUCODES/deepseek-harness-mobile/releases/download/v0.1.0-preview.23/DSHM-0.1.0-preview.23.apk) · [Release and checksums](https://github.com/KKUCODES/deepseek-harness-mobile/releases/tag/v0.1.0-preview.23)
 
 On Android 9 or later, open the downloaded APK and confirm installation. If Android prompts you, allow the app you used to open the file to install it. To upgrade an earlier official preview, install over the existing app to keep your chats, settings and pairing. [APK installation guide (Chinese)](./docs/releases.md)
 
@@ -59,7 +59,7 @@ Install the app and configure your own DeepSeek API key, or add a compatible ser
 ### Connect to DeepSeek Harness on your computer
 
 1. On your computer, install [DSHM desktop plugin `0.1.88-latest.0`](https://github.com/KKUCODES/dshm-plugin/releases/tag/v0.1.88-latest.0) in official DSH `0.2.2-rc.3`. Restart DSH Web to load it, register the computer with the relay, enable the connection, and generate a one-time pairing link.
-2. On your phone, open **Remote** in preview.22. Scan the QR code on the computer or paste the full link, check the device name, and tap **Continue pairing**. The link expires after five minutes and can be claimed once.
+2. On your phone, open **Remote** in preview.23. Scan the QR code on the computer or paste the full link, check the device name, and tap **Continue pairing**. The link expires after five minutes and can be claimed once.
 3. Compare the phone’s public-key fingerprint with the one shown in the desktop plugin. If they match, approve the device on the computer. Keep Remote open. It connects automatically and loads your workspaces and sessions.
 
 **[Hosting your own relay](https://github.com/KKUCODES/dshm-relay/blob/main/README.en.md) is recommended.** You can also use the [public service](http://118.31.20.47:18787): `http://118.31.20.47:18787`. Open registration requires no enrollment token; phone pairing and computer approval are still required.
@@ -68,9 +68,9 @@ The public service uses HTTP, so transport is unencrypted. Use a self-hosted HTT
 
 ## Current status
 
-**preview.22** builds on preview.21 with community PR #1: workspace chat groups, local Markdown images and preview zoom. It fixes image paths, failed-read recovery, cached tool arguments and the oldest-page anchor. Checked in MuMu; the original intermittent field reports still need verification. See the [release notes](./ci/release-notes/0.1.0-preview.22.md) and [scope and validation (Chinese)](./docs/integration/preview22-pr1-current.md).
+**preview.23** updates Remote image and file previews. Expand a failed image to see the cause and retry temporary read errors individually. Use the file panel’s actions menu to download or share the complete file. With workspace grouping enabled, tap the home title to open the computer connection page. [Release notes](./ci/release-notes/0.1.0-preview.23.md)
 
-Tested Remote combination: Android `0.1.0-preview.22`, desktop plugin `0.1.88-latest.0`, and official DSH `0.2.2-rc.3`. For other versions, check the [desktop compatibility report (Chinese)](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md).
+For Remote, use Android `0.1.0-preview.23`, desktop plugin `0.1.88-latest.0`, and official DSH `0.2.2-rc.3`. For other versions, check the [desktop compatibility report (Chinese)](https://github.com/KKUCODES/dshm-plugin/blob/main/compatibility/latest-upstream/official-support.md).
 
 ### Earlier previews
 

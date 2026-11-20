@@ -1,6 +1,6 @@
 # 预装手机插件与恢复安装
 
-preview.22 的[预装目录](../../preinstalled-plugins/README.md)包含「Remote 新版首页」0.7.1。以下记录覆盖首次预装功能及 preview.14 的[主题与图标修复](./remote-theme-current.md)。
+preview.23 的[预装目录](../../preinstalled-plugins/README.md)包含「Remote 新版首页」0.7.2。以下记录覆盖首次预装功能及 preview.14 的[主题与图标修复](./remote-theme-current.md)。
 
 - 历史验收版本为 preview.14/code22，当时预装 0.3.1。各公开包结果见[发行核验](../releases.md#已核验范围)。
 - 维护：手机端维护者；核验日期：2026-10-26；任务：[KKC-103](https://linear.app/kkcodes/issue/KKC-103)。

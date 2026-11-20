@@ -1,6 +1,6 @@
 # 正式接入清单
 
-当前公开版本为 `0.1.0-preview.22`，Remote 对应官方 DSH `0.2.2-rc.3` 和桌面插件 `0.1.88-latest.0`。[下载与校验](../releases.md) · [安装与配对](../usage.md) · [preview.22 验收范围](./preview22-pr1-current.md)
+当前公开版本为 `0.1.0-preview.23`，Remote 对应官方 DSH `0.2.2-rc.3` 和桌面插件 `0.1.88-latest.0`。[下载与校验](../releases.md) · [安装与配对](../usage.md) · [preview.23 发行说明](../../ci/release-notes/0.1.0-preview.23.md)
 
 ## 历史接入记录
 
