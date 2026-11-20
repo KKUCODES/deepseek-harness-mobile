@@ -56,8 +56,12 @@ export function RemoteHome({ home }) {
   const scroll = useRef(null);
   useLayoutEffect(() => { if (scroll.current) scroll.current.scrollTop = actions.readScroll(); }, [view.key]);
   const connected = view.connection === 'connected';
+  // 开启「工作区展开显示会话」后，电脑入口收进标题行，给列表让出顶部空间。
+  const compactConnection = view.grouped === true;
+  const connectionLabel = connected ? '已连接' : view.connection === 'connecting' ? '连接中' : '已断开';
   const phrase = view.query.trim();
   const grouped = view.grouped === true && !view.workspace;
+  const groupedHeading = phrase ? '搜索结果' : view.archived ? '已归档' : null;
   const workspaceGroups = view.workspaceGroups ?? [];
   /** 渲染首页会话行；分组视图与平铺最近列表共用。 */
   const sessionRow = (item, relative = false) => {
@@ -72,12 +76,16 @@ export function RemoteHome({ home }) {
   };
   return <div className="dshm-home-plugin" data-testid="remote-home-plugin">
     <style>{styles}</style>
-    <header className="dhp-bar"><button aria-label={t('返回')} disabled={view.busy} onClick={actions.back}><Icon name="back"/></button><h1>{view.title}</h1><button aria-label={t('Remote 选项')} onClick={actions.menu}><Icon name="more"/></button></header>
+    <header className="dhp-bar"><button aria-label={t('返回')} disabled={view.busy} onClick={actions.back}><Icon name="back"/></button><div className="dhp-heading">
+      {compactConnection
+        ? <button type="button" className="dhp-connection" aria-label={`${t('电脑连接')} · ${t(connectionLabel)}`} onClick={actions.connection}><Icon name="monitor" size={20}/><span className="dhp-connection-title">{view.title}</span></button>
+        : <h1>{view.title}</h1>}
+    </div><button aria-label={t('Remote 选项')} onClick={actions.menu}><Icon name="more"/></button></header>
     <section className="dhp-scroll" ref={scroll} onScroll={event => actions.rememberScroll(event.currentTarget.scrollTop)}>
-      <button className="dhp-computer" onClick={actions.connection}><span><Icon name="monitor" size={28}/><strong>{t('我的工作电脑')}</strong><small className={connected ? 'is-online' : ''}>{t(connected ? '已连接' : view.connection === 'connecting' ? '连接中' : '已断开')}</small></span><p>{t(connected ? '项目与会话会及时同步' : '电脑连接已断开')}</p></button>
+      {!compactConnection && <button className="dhp-computer" onClick={actions.connection}><span><Icon name="monitor" size={28}/><strong>{t('我的工作电脑')}</strong><small className={connected ? 'is-online' : ''}>{t(connectionLabel)}</small></span><p>{t(connected ? '项目与会话会及时同步' : '电脑连接已断开')}</p></button>}
       {!view.ready ? <section role="status" aria-label={t('正在读取电脑会话…')} className="dhp-skeleton"><h2>{t('项目')}</h2><i/><h2>{t('最近会话')}</h2><i/><i/><i/></section> : <>
         {grouped ? <section>
-          <h2>{t(phrase ? '搜索结果' : view.archived ? '已归档' : '项目')}</h2>
+          {groupedHeading && <h2>{t(groupedHeading)}</h2>}
           {!phrase && !view.archived && !workspaceGroups.length && <p role="status">{t('电脑还没有工作区，请先在电脑添加。')}</p>}
           {!phrase && view.archived && !workspaceGroups.length && <p role="status">{t('还没有聊天记录')}</p>}
           {phrase && view.searching && <p role="status">{t('正在搜索聊天内容…')}</p>}

@@ -167,7 +167,8 @@ try {
   if (rc3Layout) {
     for (const file of [resolve(directory, 'test.css'), 'src/ui/mobile.css', 'src/ui/ordinary-product.css', 'docs/design/ordinary-preview/remote.css', 'src/ui/remote-product.css']) await page.addStyleTag({ path: resolve(root, file) });
     await page.waitForFunction(() => !!window.preview15);
-    if (toolFilePreviewOnly) {
+    if (transferOnly) report.transfers = await checkFileTransfers(page);
+    else if (toolFilePreviewOnly) {
       const path = 'tools\\preview.py';
       await page.evaluate(async path => {
         window.fixture.toolLocale('zh');
@@ -181,7 +182,13 @@ try {
       const file = history.getByRole('button', { name: /preview\.py/ }).first();
       await file.click();
       const panel = page.getByRole('region', { name: '插件面板', exact: true });
-      await panel.getByRole('button', { name: '下载完整文件', exact: true }).waitFor();
+      const checkFileMenu = async () => {
+        await panel.getByRole('button', { name: '面板操作', exact: true }).click();
+        await page.getByRole('menuitem', { name: '下载完整文件', exact: true }).waitFor();
+        await page.getByRole('menuitem', { name: '分享完整文件', exact: true }).waitFor();
+        await page.keyboard.press('Escape');
+      };
+      await checkFileMenu();
       await panel.locator('[data-textpreview-body]').getByText(/DSHM_FILE_PREVIEW_BODY/).waitFor();
       await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
       await history.waitFor();
@@ -190,8 +197,7 @@ try {
         await window.fixture.fileLayout('fixture.preview-fail', 'Renderer failure probe');
       });
       await panel.getByRole('alert').getByText(/文件预览加载失败/).waitFor();
-      await panel.getByRole('button', { name: '下载完整文件', exact: true }).waitFor();
-      await panel.getByRole('button', { name: '分享完整文件', exact: true }).waitFor();
+      await checkFileMenu();
       await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
       await history.waitFor();
       const expected = /^(?:Error: DSHM_EXPECTED_DOCUMENT_RENDER_FAILURE|slot entry crashed in 'sidebar\.right\.tab\.document': Error: DSHM_EXPECTED_DOCUMENT_RENDER_FAILURE)(?:\n|$)/;

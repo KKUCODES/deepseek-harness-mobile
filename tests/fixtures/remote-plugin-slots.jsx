@@ -841,7 +841,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
     emit(5, 'step/end', { turn: 2, step: 1 }); emit(6, 'turn/end', { turn: 2, reason: { kind: 'completed' } });
     emit(7, 'workspace/changes', { turn: 2 });
   },
-  documentPreview: async () => {
+  documentPreview: async ({ showTool = true } = {}) => {
     await model.ctx.plugin({ ...originalResources, name: 'fixture-document-resources' }).await();
     const documentPlugin = model.ctx.plugin({ name: '@fixture/document-diff', inject: ['resources', 'documentPreviews', 'slots'], apply(ctx) {
       ctx.effect(() => ctx.resources.register({ protocol: 'file', async *open(address) {
@@ -863,7 +863,7 @@ window.fixture = { setupDesktopApps: () => { window.fixture.desktopApps = deskto
         {file && (file.seq !== undefined ? <RemoteChangesPreview file={file} model={model} onClose={() => setFile(null)}/>
           : <RemoteFilePreview file={file} model={model} onClose={() => setFile(null)}/>)}</>;
     }
-    root.render(<RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={() => {}} onConnection={() => {}}/><ToolPreview/></RemotePluginScope>);
+    root.render(<RemotePluginScope model={model}><RemoteWorkspace model={model} onBack={() => {}} onConnection={() => {}}/>{showTool && <ToolPreview/>}</RemotePluginScope>);
   },
   fileLayout: async (path, text, { open = true } = {}) => {
     if (!model.ctx.get('resources')) await model.ctx.plugin({ ...originalResources, name: 'fixture-file-layout-resources' }).await();

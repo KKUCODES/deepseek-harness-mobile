@@ -8,8 +8,12 @@ export const styles = `
 .dshm-home-plugin svg { flex:none; }
 .dshm-home-plugin .dhp-icon { display:inline-block; flex:none; background:currentColor; mask-size:contain; mask-position:center; mask-repeat:no-repeat; -webkit-mask-size:contain; -webkit-mask-position:center; -webkit-mask-repeat:no-repeat; }
 .dshm-home-plugin .dhp-bar { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; min-height:56px; padding:6px 16px; gap:12px; align-items:center; flex:none; }
+.dshm-home-plugin .dhp-heading { justify-self:center; max-width:100%; min-width:0; }
 .dshm-home-plugin .dhp-bar h1 { margin:0; font-size:18px; line-height:28px; font-weight:500; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .dshm-home-plugin .dhp-bar button,.dshm-home-plugin .dhp-footer>button { display:flex; align-items:center; justify-content:center; width:44px; height:44px; border:0; border-radius:50%; background:var(--dhp-soft); }
+/* 电脑图标与标题是同一个入口，点击标题同样进入电脑连接页。 */
+.dshm-home-plugin .dhp-bar .dhp-connection { display:inline-flex; align-items:center; justify-content:center; gap:8px; width:auto; height:auto; max-width:100%; min-width:0; margin:0; padding:8px 0; border:0; border-radius:0; background:transparent; color:var(--dhp-secondary); font:inherit; cursor:pointer; }
+.dshm-home-plugin .dhp-connection-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--dhp-text); font-size:18px; line-height:28px; font-weight:500; }
 .dshm-home-plugin .dhp-scroll { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:16px 24px 24px; display:flex; flex-direction:column; gap:16px; }
 .dshm-home-plugin .dhp-scroll h2 { margin:0 0 8px; font-size:16px; line-height:24px; font-weight:500; }
 .dshm-home-plugin .dhp-computer { display:block; width:100%; padding:0; border:0; background:transparent; text-align:left; }

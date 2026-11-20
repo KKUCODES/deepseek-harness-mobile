@@ -84,7 +84,7 @@ try {
       await manager.getByText('电脑连接已断开，重新连接后可继续操作。', { exact: true }).first().waitFor({ timeout: 120000 });
       report.disconnected = true;
       // 电脑换代可能重建客户端并关闭管理页；沿同一 WebView 重开，不能重启 Activity 清掉内存摘要。
-      await page.getByText('已连接电脑', { exact: true }).waitFor({ timeout: 120000 });
+      await page.locator('.connection-dot.online').waitFor({ timeout: 120000 });
       if (!await manager.count()) {
         await page.getByRole('button', { name: 'Remote 选项', exact: true }).click();
         await page.getByRole('button', { name: '电脑插件', exact: true }).click();

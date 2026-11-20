@@ -29,16 +29,17 @@ try {
     await page.getByRole('button', { name: '返回', exact: true }).click();
   }
   assert.equal(await workspace.locator('.remote-heading').innerText(), 'Remote');
-  const strip = workspace.locator('.connection-strip');
-  await strip.getByText('已连接电脑', { exact: true }).waitFor();
-  assert.equal(await strip.locator('.connection-dot.online').count(), 1);
+  await workspace.locator('.connection-dot.online').waitFor();
   console.log('READY: observe a verified local DSH restart');
   let previous, interrupted = false, stableAt;
   const deadline = Date.now() + 150000;
   while (Date.now() < deadline) {
     const sample = await page.evaluate(() => {
-      const strip = document.querySelector('[data-testid="remote-workspace"] .connection-strip');
-      return strip ? { label: strip.textContent, online: !!strip.querySelector('.connection-dot.online') } : null;
+      const root = document.querySelector('[data-testid="remote-workspace"]');
+      const strip = root?.querySelector('.connection-strip');
+      const inline = root?.querySelector('.remote-home-connection');
+      const node = strip ?? inline;
+      return node ? { label: strip ? strip.textContent : inline.getAttribute('aria-label'), online: !!node.querySelector('.connection-dot.online') } : null;
     });
     if (JSON.stringify(sample) !== previous) {
       previous = JSON.stringify(sample); report.samples.push({ at: new Date().toISOString(), ...sample });

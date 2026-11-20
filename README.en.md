@@ -46,7 +46,7 @@ flowchart LR
     Relay <--> Computer["Computer: DSH + DSHM plugin<br/>Conversations · Projects · Task execution"]
 ```
 
-The APK includes the Remote home and connection-page plugin (0.7.1). Manage it under **Plugins → Phone**. Updating the app keeps your installed version and preferences. [Phone plugin guide (Chinese)](./docs/plugins/development.md)
+The published preview.22 APK includes the Remote home and connection-page plugin (0.7.1). Manage it under **Plugins → Phone**. Updating the app keeps your installed version and preferences. [Phone plugin guide (Chinese)](./docs/plugins/development.md)
 
 ## Download the Android APK and get started
 

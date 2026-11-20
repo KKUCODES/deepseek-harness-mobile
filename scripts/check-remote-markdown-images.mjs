@@ -27,7 +27,7 @@ export async function checkRemoteMarkdownImages(page, { aside = false } = {}) {
   await preview.waitFor({state:'detached'});
   if(aside) return {aside:true,officialPaths:true,scopedReads:true,zoom:true,systemBack:true};
   await page.evaluate(async()=>{window.preview15.images.markdownFailure(true);await window.preview15.images.markdown('![retry](/work/retry.png)');});
-  const retry=chat.getByRole('button',{name:'重试加载图片',exact:true});
+  const retry=chat.getByRole('button',{name:'重新加载',exact:true});
   await retry.waitFor();
   assert.equal(await page.evaluate(()=>window.preview15.images.markdownReads().filter(x=>x.path==='/work/retry.png').length),1);
   await page.evaluate(()=>window.preview15.images.markdownFailure(false));

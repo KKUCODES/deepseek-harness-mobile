@@ -1,6 +1,6 @@
 # Remote 正文 Markdown 图片
 
-- 状态：已随preview.22公开，独立分支与原签名发行核验完成。维护：手机端维护者；核验：2026-11-20。完整接入与设备边界见[preview.22验收](./preview22-pr1-current.md)。
+- 状态：基础图片功能已随 preview.22 公开；追加的失败原因和分图重试尚未发行。维护：手机端维护者；核验：2026-11-20。完整接入与设备边界见[preview.22验收](./preview22-pr1-current.md)。
 - 本轮只改 `app` 仓库；DSH、电脑插件与中转未修改。
 
 ## 问题与原因
@@ -21,10 +21,19 @@ App 端 [ChatMarkdown](../../src/ui/ChatMarkdown.jsx) 只提供 `openExternalLin
 2. 相对路径按会话 `cwd` 补全，绝对路径原样提交；只接受常见图片扩展名，`http(s)`、`data:` 等非本地目标不处理。
 3. 字节仍走现有 `model.files` 会话文件授权读取，成功后才发布 `blob:` URL；原 CSP 已允许 `blob:`，未放宽网络来源。
 4. 缓存变化时重建 `fileImages` 身份，原图片节点经 React context 重新渲染并显示图片。
-5. 读取失败或超出预算时返回固定失败目标，原组件显示“图片加载失败”与替代文字；临时错误可由正文下的按钮重试，恢复连接/世代变化时也受控重试。格式、超限和权限拒绝不自动重读，普通重画不重复请求，离线读取等恢复后才开始。
+5. 顶层独立图片段落读取失败时，[ChatMarkdown](../../src/ui/ChatMarkdown.jsx) 用手机端失败块替换该段：红色“图片加载失败”、重新加载、可折叠的失败原因；行内图片、表格和列表里的失败仍走原组件替代文字。失败原因包括读取失败、超过大小上限、缓存已满、解码失败、工作区未知和权限拒绝，只有读取失败和缓存已满显示重试；正文里的浏览器解码失败按 blob URL 回查缓存后转成解码原因。
+   临时读取错误随重连受控重试，离线排队。权限拒绝、格式错误和超限不会自动重读。
 6. 单张上限 16 MiB、总量预算 64 MiB、最多 2 个并发读取；会话切换、连接生命周期结束或组件卸载时撤销全部 URL。
 
 [RemoteWorkspace](../../src/ui/RemoteWorkspace.jsx) 按当前会话创建并释放该缓存，主聊天与旁栏共用。
+
+## 失败态与重试
+
+[RemoteImageFailure](../../src/ui/RemoteImageFailure.jsx) 与 [RemoteAttachmentFailure](../../src/ui/RemoteAttachmentFailure.jsx) 共用 [失败原因目录](../../src/remote-image-failure.mjs)：临时读取失败和缓存已满可手动重试。超过大小上限、解码失败、工作区未知和权限拒绝时只显示原因。正文展开区给一句原因、图片路径和错误码；重试按目标重新读取，期间按钮显示“重新加载中…”并禁用，成功后就地换回图片。
+
+消息附件保留原画廊的缩略图、原图预览和拖拽，失败分支换成 [RemoteMessageImage](../../src/ui/RemoteMessageImage.jsx)：多图为 64px 失败格（上行打开原因小卡，下行直接重试），单图为 240px 失败卡（卡内重试和查看原因）。小卡用底部弹层显示原因、附件名和错误码；不可重试时只留关闭；文件预览的图片读取失败用同一块的面板形态。
+
+失败图片段落由手机端按顶层独立段落切分，其余 Markdown 仍由原组件解析；附件失败在手机端保存原始错误，再按错误码归类。
 
 ## 原图预览缩放
 
@@ -33,6 +42,7 @@ App 端 [ChatMarkdown](../../src/ui/ChatMarkdown.jsx) 只提供 `openExternalLin
 ## 边界
 
 - 只支持本地文件路径；外链图片保持现状（CSP 禁止），未新增网络权限。
+- 正文失败块只替换顶层独立图片段落；行内图片、表格和列表里的失败保持原替代文字，含跨段引用的其余正文交给原组件整段渲染，以保留引用定义。
 - 工作区外绝对路径交由电脑端按现有会话文件授权判断，拒绝时显示失败占位。
 - 流式输出期间原 DSH 渲染器本身不渲染图片，消息结束后才出现，App 沿用该行为。
 - 普通聊天（无会话文件授权）不传图片能力，行为不变。
@@ -42,4 +52,6 @@ App 端 [ChatMarkdown](../../src/ui/ChatMarkdown.jsx) 只提供 `openExternalLin
 
 - [remote-markdown-images.test.mjs](../../tests/remote-markdown-images.test.mjs) 10 项：原语法目标提取（含引用式图片、代码块忽略）、本地/外链过滤、路径解码、去重、临时错误重试、离线/重连、预算、并发上限、释放后 URL 与订阅失效。
 - 新增 [remote-image-zoom.test.mjs](../../tests/remote-image-zoom.test.mjs) 4 项：缩放倍数限制、围绕指针缩放的锚点、平移边界、双指距离与中点。
-- 当前rc.3单测通过（10/10、4/4）；全量616项Node、Web/Android构建与lint通过。主聊天/旁栏实际Markdown入口、原预览放大/系统返回、显式及重连重试均通过浏览器与MuMu RemoteActivity受控回放；[回归入口](../../scripts/check-remote-markdown-images.mjs)。这不是用户远程电脑的真实文件读取验收，真实连接与安装数据保留另见preview.22专题。
+- preview.22 发行时 rc.3 单测通过（10/10、4/4）；全量616项Node、Web/Android构建与lint通过。主聊天/旁栏实际Markdown入口、原预览放大/系统返回、显式及重连重试均通过浏览器与MuMu RemoteActivity受控回放；[回归入口](../../scripts/check-remote-markdown-images.mjs)。这不是用户远程电脑的真实文件读取验收，真实连接与安装数据保留另见preview.22专题。
+- 后续 PR 为正文、附件和文件预览增加失败原因、重试入口及图片解码测试，详见[失败原因测试](../../tests/remote-image-failure.test.mjs)。
+- PR 追加至 `c26c5d6` 后，与 preview.22 合并的版本通过 637 项 Node 测试和 rc.3 Web 构建。浏览器使用受控会话验证了主聊天与旁栏的图片打开、显式重试及重连恢复；其中故障恢复用例在主聊天执行。

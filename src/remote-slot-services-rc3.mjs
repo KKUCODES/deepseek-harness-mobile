@@ -10,3 +10,6 @@ export function installRemoteSlotServices(ctx) {
     ctx.plugin({ name: '@deepseek-ai/dsh-client-ui-file-drag', apply: fileDrag, inject: dragServices }).await(),
   ]);
 }
+
+/** 文档预览体插槽注入工厂通过 ctx 属性读取的额外客户端服务 */
+export const documentPreviewInject = ['fileDrag'];

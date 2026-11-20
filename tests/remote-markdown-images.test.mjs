@@ -11,7 +11,7 @@ const outfile = resolve(root, 'artifacts/tests/markdown-images.cjs');
 await build({ absWorkingDir: root, entryPoints: ['src/remote-markdown-images.mjs'], outfile, bundle: true, platform: 'node', format: 'cjs',
   plugins: [sdk.resolver], alias: sdk.alias, nodePaths: [resolve(sdk.runtime, 'node_modules'), resolve(root, 'node_modules')],
   loader: { '.module.css': 'empty', '.css': 'empty', '.svg': 'dataurl' }, logLevel: 'silent' });
-const { FAILED_IMAGE_URL, RemoteMarkdownImages, markdownImageDestinations } = createRequire(import.meta.url)(outfile);
+const { FAILED_IMAGE_URL, RemoteMarkdownImages, markdownImageDestinations, markdownImageFailureBlocks } = createRequire(import.meta.url)(outfile);
 
 const image = () => new Uint8Array([137, 80, 78, 71]);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -35,7 +35,7 @@ test('失败去重，用户显式重试可恢复，永久超限不重复读取',
   } });
   images.prefetch('![x](a.png)'); await flush();
   images.prefetch('![x](a.png)'); await flush(); assert.equal(reads, 1);
-  online = true; images.retry('![x](a.png)'); await flush();
+  online = true; images.retryText('![x](a.png)'); await flush();
   assert.equal(reads, 2); assert.match(images.resolve('a.png'), /^blob:/);
   images.dispose();
 });
@@ -187,4 +187,154 @@ test('释放后读取、通知与已发布URL都失效', async () => {
   images.notify();
   await flush();
   assert.equal(reads, 1);
+});
+
+test('失败原因按读取、超限、缓存与解码归类，并带错误码和可重试标记', async () => {
+  const cases = [
+    { reason: 'denied', retryable: false, code: 'remote_image_denied', error: new Error('workspace-file/denied') },
+    { reason: 'read', retryable: true, code: 'remote_image_read_failed', error: new Error('offline') },
+    { reason: 'too_large', retryable: false, code: 'remote_image_too_large', error: Object.assign(new Error('too big'), { code: 'remote_file_preview_too_large' }) },
+    { reason: 'budget', retryable: true, code: 'remote_image_budget', budget: 1 },
+    { reason: 'decode', retryable: false, code: 'remote_image_decode', bytes: new Uint8Array(0) },
+  ];
+  for (const item of cases) {
+    const images = new RemoteMarkdownImages(null, 'chat', {
+      cwd: '/work', budget: item.budget,
+      read: async () => {
+        if (item.error) throw item.error;
+        return item.bytes ?? image();
+      },
+    });
+    images.prefetch('![a](a.png)');
+    await flush();
+    const failure = images.failureFor('a.png', '播放中声波动画');
+    assert.equal(failure.reason, item.reason);
+    assert.equal(failure.retryable, item.retryable);
+    assert.equal(failure.code, item.code);
+    assert.equal(failure.alt, '播放中声波动画');
+    assert.equal(failure.path, '/work/a.png');
+    assert.equal(images.resolve('a.png'), FAILED_IMAGE_URL);
+    images.dispose();
+  }
+});
+
+test('工作区未知的本地图片登记为不可重试失败，仍可展开原因', async () => {
+  let reads = 0;
+  const images = new RemoteMarkdownImages(null, 'chat', { read: async () => { reads++; return image(); } });
+  images.prefetch('![a](artifacts/a.png)');
+  await flush();
+  const failure = images.failureFor('artifacts/a.png', '描述');
+  assert.equal(failure.reason, 'no_cwd');
+  assert.equal(failure.code, 'remote_image_no_cwd');
+  assert.equal(failure.retryable, false);
+  assert.equal(failure.path, 'artifacts/a.png');
+  assert.equal(images.resolve('artifacts/a.png'), FAILED_IMAGE_URL);
+  assert.equal(await images.retry('artifacts/a.png'), false);
+  assert.equal(reads, 0);
+  images.dispose();
+});
+
+test('重新加载清掉失败并重新读取，成功后恢复为就绪图片', async () => {
+  let reads = 0;
+  const images = new RemoteMarkdownImages(null, 'chat', {
+    cwd: '/work',
+    read: async () => {
+      reads++;
+      if (reads === 1) throw new Error('offline');
+      return image();
+    },
+  });
+  images.prefetch('![a](a.png)');
+  await flush();
+  assert.equal(images.failureFor('a.png', 'a').reason, 'read');
+  assert.equal(await images.retry('a.png'), true);
+  assert.equal(images.failureFor('a.png', 'a'), undefined);
+  assert.match(images.resolve('a.png'), /^blob:/);
+  assert.equal(reads, 2);
+  images.dispose();
+});
+
+test('不可重试的失败不发起新的读取', async () => {
+  let reads = 0;
+  const images = new RemoteMarkdownImages(null, 'chat', {
+    cwd: '/work',
+    read: async () => { reads++; throw Object.assign(new Error('too big'), { code: 'remote_file_preview_too_large' }); },
+  });
+  images.prefetch('![a](a.png)');
+  await flush();
+  assert.equal(await images.retry('a.png'), false);
+  assert.equal(reads, 1);
+  images.dispose();
+});
+
+test('浏览器解码失败后按解码原因展示，不再保留原URL', async () => {
+  const images = new RemoteMarkdownImages(null, 'chat', { cwd: '/work', read: async () => image() });
+  images.prefetch('![a](a.png)');
+  await flush();
+  const url = images.resolve('a.png');
+  assert.match(url, /^blob:/);
+  assert.equal(images.decodeFailed(url), true);
+  assert.equal(images.decodeFailed(url), false);
+  assert.equal(images.failureFor('a.png', 'a').reason, 'decode');
+  assert.equal(images.failureFor('a.png', 'a').retryable, false);
+  assert.equal(images.resolve('a.png'), FAILED_IMAGE_URL);
+  images.dispose();
+});
+
+test('失败图片只切分顶层独立图片段落，行内与嵌套图片保持原渲染', async () => {
+  const images = new RemoteMarkdownImages(null, 'chat', {
+    cwd: '/work',
+    read: async (_session, path) => {
+      if (path.endsWith('a.png')) throw new Error('offline');
+      return image();
+    },
+  });
+  const text = [
+    '第一段',
+    '',
+    '![播放中声波动画](a.png)',
+    '',
+    '第二段 ![行内](b.png) 继续',
+    '',
+    '- 列表里的 ![图](a.png)',
+  ].join('\n');
+  images.prefetch(text);
+  await flush();
+  const blocks = markdownImageFailureBlocks(text, (destination, alt) => images.failureFor(destination, alt));
+  assert.equal(blocks.length, 3);
+  assert.equal(blocks[0].type, 'markdown');
+  assert.match(blocks[0].text, /第一段/);
+  assert.equal(blocks[1].type, 'failure');
+  assert.equal(blocks[1].failure.alt, '播放中声波动画');
+  assert.equal(blocks[1].failure.reason, 'read');
+  assert.equal(blocks[2].type, 'markdown');
+  assert.match(blocks[2].text, /第二段/);
+  assert.match(blocks[2].text, /列表里的/);
+  images.dispose();
+});
+
+test('引用式独立图片同样按失败切分，没有失败时不切分', async () => {
+  const crossBlock = '[文档][ref]\n\n![图](a.png)\n\n[ref]: guide.md';
+  assert.equal(markdownImageFailureBlocks(crossBlock, () => ({ reason: 'read' })), undefined);
+  const images = new RemoteMarkdownImages(null, 'chat', {
+    cwd: '/work',
+    read: async () => { throw new Error('offline'); },
+  });
+  const text = '![图][shot]\n\n[shot]: a.png';
+  images.prefetch(text);
+  await flush();
+  const blocks = markdownImageFailureBlocks(text, (destination, alt) => images.failureFor(destination, alt));
+  assert.equal(blocks.length, 2);
+  assert.equal(blocks[0].type, 'failure');
+  assert.equal(blocks[0].failure.alt, '图');
+  assert.equal(blocks[0].failure.destination, 'a.png');
+  assert.equal(blocks[1].type, 'markdown');
+  assert.match(blocks[1].text, /\[shot\]: a\.png/);
+  images.dispose();
+
+  const ready = new RemoteMarkdownImages(null, 'chat', { cwd: '/work', read: async () => image() });
+  ready.prefetch('![a](a.png)');
+  await flush();
+  assert.equal(markdownImageFailureBlocks('![a](a.png)', (destination, alt) => ready.failureFor(destination, alt)), undefined);
+  ready.dispose();
 });

@@ -13,6 +13,7 @@ import { diffCardModel } from '@upstream/ui-tool/src/client/tool/models/diff-car
 import { RemoteToolDiff } from './RemoteDiff.jsx';
 import { commandDetails } from '../remote-commands.mjs';
 import { RemoteTurnExtensions, RemoteNodeExtension, RemoteMessageImages, useRemoteFileMentions } from '../remote-plugin-slots.jsx';
+import { turnErrorDetail } from '../remote-turn-error.mjs';
 import { MotionDetails } from './motion.jsx';
 
 export const contentText = content => (content ?? []).filter(block => block.type === 'text').map(block => block.text).join('\n');
@@ -112,6 +113,29 @@ function RemoteAssistantMessage({ node, turnProcess, reasoningProps, renderConte
   return <AssistantMessage body={body.length ? body : undefined} active={active} error={interrupted ? t('已停止') : null} renderContent={renderContent}/>;
 }
 
+/**
+ * 终端失败行：标题、可折行详情和错误码，原始错误按需展开。
+ * @param {{ message?: string, code?: string }} data 原会话的失败记录
+ * @param {(text: string) => string} t 本地化函数
+ */
+function RemoteTurnError({ data, t }) {
+  const detail = turnErrorDetail(data.message);
+  const stopped = data.code === 'INTERRUPTED' || data.code === 'ACCOUNT_SIGNED_OUT';
+  const code = stopped ? null : data.code ?? detail.status;
+  return <div className="remote-turn-error" role="status">
+    <span className="remote-turn-error-dot" aria-hidden="true"/>
+    <div className="remote-turn-error-copy">
+      <span className="remote-turn-error-title">{t(stopped ? '任务已停止' : '本轮运行失败')}</span>
+      <span className="remote-turn-error-message">{detail.message || t('本轮回复未完成，请检查电脑端模型连接。')}</span>
+      {detail.extracted && <details className="remote-turn-error-raw">
+        <summary>{t('原始错误')}</summary>
+        <pre>{detail.raw}</pre>
+      </details>}
+    </div>
+    {code && <code className="remote-turn-error-code">{code}</code>}
+  </div>;
+}
+
 function DefaultRemoteMessage({ node, turnProcess, reasoningProps, renderContent, openFile, openAttachment, openChanges, openCommand, onFork, forkDisabled }) {
   const t = useTranslate();
   if (!node || node.visibility === 'hidden') return null;
@@ -129,7 +153,7 @@ function DefaultRemoteMessage({ node, turnProcess, reasoningProps, renderContent
   if (node.kind === 'context') return <Disclosure title={t(data.producer?.role === 'recall' ? '引用的上下文' : '补充上下文')}>{data.producer?.label && <p className="muted">{data.producer.label}</p>}<RemoteFiles content={data.content} openAttachment={openAttachment}/>{renderContent(contentText(data.content), false)}</Disclosure>;
   if (node.kind === 'command') return <Disclosure title={`${data.name ?? t('会话操作')} · ${t(!data.outcome ? '执行中' : data.outcome.kind === 'success' ? '已完成' : '失败')}`}><pre>{data.args}</pre>{data.outcome?.text && renderContent(data.outcome.text, false)}</Disclosure>;
   if (node.kind === 'compaction' || node.kind === 'manual-compaction') return <Disclosure title={t('上下文整理')}>{renderContent(data.summary ?? data.compaction?.summary ?? t('已整理较早的聊天内容。'), false)}</Disclosure>;
-  if (node.kind === 'turn-error') return <p className="remote-error" role="status">{data.message || t('本轮回复未完成，请检查电脑端模型连接。')}</p>;
+  if (node.kind === 'turn-error') return <RemoteTurnError data={data} t={t}/>;
   if (node.kind === 'turn-max-tokens') return <p className="muted">{t('已达到本轮输出长度上限。')}</p>;
   if (node.kind === 'turn-blocked') return <p className="remote-error" role="status" data-turn-blocked={data.turn}>{t('本轮任务受阻，未继续执行。')}</p>;
   if (node.kind === 'model-retry') return <p className="muted">{t(data.current.retryState === 'scheduled' ? '模型连接失败，正在等待重试…' : data.current.retryState === 'cancelled' ? '已取消重试' : '已重新连接模型')}</p>;

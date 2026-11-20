@@ -11,7 +11,9 @@ export async function checkDocumentDiff(page) {
   await history.getByText('BEFORE a', { exact: false }).waitFor();
   await history.getByText('AFTER a', { exact: false }).waitFor();
   assert.deepEqual(await page.evaluate(() => window.fixture.documentReads()), []);
-  await panel.getByRole('button', { name: '下载最新完整文件', exact: true }).waitFor();
+  await panel.getByRole('button', { name: '面板操作', exact: true }).click();
+  await page.getByRole('menuitem', { name: '下载最新完整文件', exact: true }).waitFor();
+  await page.keyboard.press('Escape');
   await active.getByRole('button', { name: '最新完整文件', exact: true }).click();
   await active.getByTestId('diff-custom-renderer').getByText('CURRENT a.dshmdoc', { exact: true }).waitFor();
   await active.getByRole('button', { name: '本次修改', exact: true }).click();

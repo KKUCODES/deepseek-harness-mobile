@@ -1,32 +1,38 @@
 import assert from 'node:assert/strict';
 
 export async function checkFileTransfers(page) {
-  await page.evaluate(async () => { await window.fixture.select('two'); await window.fixture.documentPreview(); window.fixture.startTransfers(); window.fixture.openCurrentDocument(); });
+  await page.evaluate(async () => { await window.fixture.select('two'); await window.fixture.documentPreview({ showTool: false }); window.fixture.startTransfers(); window.fixture.openCurrentDocument(); });
   const panel = page.getByRole('region', { name: '插件面板', exact: true });
+  const fileMenu = async name => {
+    await panel.getByRole('button', { name: '面板操作', exact: true }).click();
+    return page.getByRole('menuitem', { name, exact: true });
+  };
   const calls = () => page.evaluate(() => window.fixture.transfers());
   const waitOperation = op => page.waitForFunction(op => window.fixture.transfers().some(call => call.op === op), op);
   await panel.getByTestId('diff-custom-renderer').waitFor();
   await page.evaluate(() => window.fixture.holdTransfer('file.chunk'));
-  await panel.getByRole('button', { name: '下载完整文件', exact: true }).click();
+  await (await fileMenu('下载完整文件')).click();
   await waitOperation('file.chunk');
   await panel.getByRole('button', { name: '返回聊天', exact: true }).click();
   await waitOperation('file.abort');
   await page.evaluate(() => { window.fixture.releaseTransfer(); window.fixture.openCurrentDocument(); });
-  await panel.getByRole('button', { name: '下载完整文件', exact: true }).waitFor();
+  await (await fileMenu('下载完整文件')).waitFor();
+  await page.keyboard.press('Escape');
   assert.equal((await calls()).some(item => item.op === 'file.save'), false);
   assert.equal(await panel.getByRole('status').filter({ hasText: '已保存' }).count(), 0);
 
   await page.evaluate(() => window.fixture.holdTransfer('file.share'));
-  await panel.getByRole('button', { name: '分享完整文件', exact: true }).click();
+  await (await fileMenu('分享完整文件')).click();
   await waitOperation('file.share');
   await panel.getByRole('button', { name: '取消分享', exact: true }).click();
-  assert.equal(await panel.getByRole('button', { name: '分享完整文件', exact: true }).isEnabled(), false, '取消完成前不能并发启动第二次传输');
+  assert.equal(await (await fileMenu('分享完整文件')).isEnabled(), false, '取消完成前不能并发启动第二次传输');
+  await page.keyboard.press('Escape');
   await page.evaluate(() => window.fixture.releaseTransfer());
   await panel.getByText('已打开系统分享面板。', { exact: true }).waitFor();
   const complete = (await calls()).filter(item => item.op === 'file.chunk');
   assert.ok(complete.every(item => Buffer.from(item.data.data, 'base64').toString() === 'LATEST COMPLETE FILE'));
   await page.evaluate(() => { window.fixture.holdTransfer(undefined); window.fixture.failTransfer('download_cleanup_failed'); });
-  await panel.getByRole('button', { name: '下载完整文件', exact: true }).click();
+  await (await fileMenu('下载完整文件')).click();
   await panel.getByText('保存未完成，目标位置可能留有不完整文件，请检查后重新下载。', { exact: true }).waitFor();
   assert.equal(await panel.getByText('已保存到所选位置。', { exact: true }).count(), 0);
   await page.evaluate(() => window.fixture.failTransfer(undefined));

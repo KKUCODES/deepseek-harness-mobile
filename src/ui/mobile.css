@@ -15,7 +15,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus
 /* 顶栏按钮盒为44px、图标居中，横向内缩扣掉图标在盒内的偏移，使图标左缘与正文基准对齐。 */
 .topbar { flex: none; height: 62px; padding: 8px calc(var(--dshm-gutter) - 12px); display: flex; justify-content: space-between; gap: 8px; align-items: center; }
 .icon-button { min-width: 44px; width: 44px; height: 44px; padding: 0; flex: none; border-radius: 50%; corner-shape: round; }
-.conversation { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* 聊天容器只承载纵向滚动；超宽内容不能把整个聊天区带成横向可滚。 */
+.conversation { flex: 1; min-height: 0; overflow-y: auto; overflow-x: clip; overscroll-behavior: contain; }
 .conversation.is-empty { display: flex; align-items: center; justify-content: center; overflow: auto; }
 .welcome { text-align: center; padding: 20px 12px 24px; }
 .welcome-title { display: flex; align-items: center; justify-content: center; gap: 10px; }

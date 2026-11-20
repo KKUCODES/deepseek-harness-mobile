@@ -159,7 +159,6 @@ export function RemoteWorkspace({ model, onBack, onConnection, embedded = false,
     } catch (error) { if (isCurrent()) setNotice(t(error.message)); }
     finally { if (historyRequest.current === request) historyRequest.current = null; }
   };
-  const connectionLabel = connected ? '已连接电脑' : state.connectionState === 'connecting' ? '正在连接电脑…' : '电脑连接已断开';
   const childAccess = subagentAccess(state);
   const modelReadOnly = !!childAccess.address;
   const modelSheetTitle = modelReadOnly ? '当前模型' : '选择模型';

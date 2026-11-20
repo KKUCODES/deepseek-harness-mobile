@@ -3,7 +3,9 @@ import { Button } from '@upstream/ui-primitives/src/Button.tsx';
 import { IconCloseOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { Surface, IconButton } from './Surface.jsx';
 import { ChatMarkdown } from './ChatMarkdown.jsx';
+import { RemoteImageFailure } from './RemoteImageFailure.jsx';
 import { fileError } from '../remote-files.mjs';
+import { previewImageFailure } from '../remote-image-failure.mjs';
 import { RemoteDocumentActions } from './RemoteDocumentActions.jsx';
 import { imageMediaType } from '@upstream/ui-sidebar-documentpreview/src/client/image/ImageBody.tsx';
 import { RemoteBytesImage } from './RemoteImages.jsx';
@@ -61,7 +63,7 @@ function LegacyFilePreview({ file, model, onClose }) {
 function RemoteFileContent({ file, model, onClose, selector }) {
   const t = useTranslate();
   const present = useSurfacePresent();
-  const [result, setResult] = useState(null), [error, setError] = useState(''), [revision, setRevision] = useState(0);
+  const [result, setResult] = useState(null), [error, setError] = useState(''), [failure, setFailure] = useState(null), [revision, setRevision] = useState(0);
   const [source, setSource] = useState(() => fileLine(file.line) !== undefined), [full, setFull] = useState(false);
   const [latest, setLatest] = useState(false);
   const historical = !!file.diffs && !latest;
@@ -75,7 +77,7 @@ function RemoteFileContent({ file, model, onClose, selector }) {
   useEffect(() => {
     if (!present) return;
     const controller = new AbortController();
-    setResult(null); setError('');
+    setResult(null); setError(''); setFailure(null);
     if (file.diffs && !latest) return () => controller.abort();
     const signal = AbortSignal.any([controller.signal, model.lifetime.signal]);
     const reading = office ? readOffice(model, file.sessionId, file.path, signal, file.attachment)
@@ -83,7 +85,11 @@ function RemoteFileContent({ file, model, onClose, selector }) {
       : image || pdf ? files.bytes(file.sessionId, file.path, signal, { maxBytes: pdf ? 32 * 1024 * 1024 : undefined }) : files.text(file.sessionId, file.path, signal);
     void reading.then(value => {
       if (!signal.aborted) setResult(value);
-    }).catch(reason => { if (!signal.aborted) setError(office ? officeError(reason) : fileError(reason)); });
+    }).catch(reason => {
+      if (signal.aborted) return;
+      setError(office ? officeError(reason) : fileError(reason));
+      setFailure(image ? previewImageFailure(reason, file.path, file.path.split(/[\\/]/).at(-1)) : null);
+    });
     return () => controller.abort();
   }, [file, model, files, revision, image, pdf, html, office, latest, present]);
   const markdown = /\.(md|markdown)$/i.test(file.path);
@@ -96,7 +102,7 @@ function RemoteFileContent({ file, model, onClose, selector }) {
     <RemoteDocumentActions file={file} model={model}/>
     <div className="remote-file-preview-body">
       {office && result?.missingFonts?.length > 0 && <p role="status">{t('电脑缺少字体：{fonts}。显示效果可能不同。', { fonts: result.missingFonts.join('、') })}</p>}
-      {historical ? <RemoteToolDiff diffs={file.diffs.filter(diff => diff.path === file.path)}/> : error ? <p role="alert">{t(error)}</p> : result === null ? <p role="status">{t(office ? '正在电脑上转换文档…' : '正在读取文件…')}</p>
+      {historical ? <RemoteToolDiff diffs={file.diffs.filter(diff => diff.path === file.path)}/> : error ? (failure ? <RemoteImageFailure failure={failure} layout="panel" onRetry={() => setRevision(value => value + 1)}/> : <p role="alert">{t(error)}</p>) : result === null ? <p role="status">{t(office ? '正在电脑上转换文档…' : '正在读取文件…')}</p>
         : image ? <RemoteBytesImage data={result} mediaType={file.mediaType ?? imageMediaType(file.path)} name={file.path}/>
         : pdf || office ? <RemotePdfPreview key={revision} data={office ? result.data : result} address={sessionFileAddress(file.sessionId, file.path)} signal={model.lifetime.signal}/>
         : html ? <RemoteHtmlPreview key={revision} document={result} file={file} model={model} onRetry={() => setRevision(value => value + 1)}/>

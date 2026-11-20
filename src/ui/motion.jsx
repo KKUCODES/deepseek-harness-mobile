@@ -28,7 +28,7 @@ export function SurfacePresence({ children }) {
   return <PresenceContext.Provider value={{ present, finish }}>{present || retained ? content.current : null}</PresenceContext.Provider>;
 }
 
-/** 中途反向时从屏幕上的当前位置接续；结束后清掉临时合成层和变换。 */
+/** 中途反向时从屏幕上的当前位置接续；结束先落最终帧再取消动画，避免回弹闪烁。 */
 function animate(element, running, frames, duration, onFinish = () => {}) {
   const previous = running.current;
   if (previous?.effect.target === element) frames[0] = { transform: getComputedStyle(element).transform, opacity: getComputedStyle(element).opacity };
@@ -39,6 +39,9 @@ function animate(element, running, frames, duration, onFinish = () => {}) {
   const finish = () => {
     if (running.current !== animation) return;
     running.current = null;
+    // 取消动画会移除 fill 效果并回弹到基础不透明度；先写入最终帧，退出才不会闪回全不透明。
+    const end = frames[frames.length - 1];
+    for (const property of Object.keys(end)) element.style[property] = end[property];
     animation.cancel();
     onFinish();
   };

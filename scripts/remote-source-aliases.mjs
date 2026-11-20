@@ -10,6 +10,9 @@ export function remoteSourceAliases(root, options = {}) {
     '@dshm/remote-slot-services': options.version === '0.2.2-rc.3'
       ? resolve(root, 'src/remote-slot-services-rc3.mjs')
       : resolve(root, 'src/remote-slot-services-legacy.mjs'),
+    '@dshm/guide-inject': options.version === '0.2.2-rc.3'
+      ? resolve(root, 'src/remote-guide-inject-rc3.mjs')
+      : resolve(root, 'src/remote-guide-inject-legacy.mjs'),
     '@dshm/user-message-bubble': options.version === '0.2.2-rc.3'
       ? source('client/ui-primitives/src/UserMessageBubble.tsx')
       : resolve(root, 'src/ui/LegacyUserMessageBubble.jsx'),

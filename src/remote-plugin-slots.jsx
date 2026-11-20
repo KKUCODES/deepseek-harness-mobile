@@ -16,7 +16,8 @@ import { zh as conversationZh, en as conversationEn, NS as conversationNS } from
 import { MobilePluginLayout, pluginIdentity } from './mobile-plugin-layout.mjs';
 import { MobilePluginFrame } from './ui/MobilePluginFrame.jsx';
 import { nativeToolSlot, NativeToolFrame } from './remote-tool-typography.jsx';
-import { isRemoteDocumentComposition } from './remote-document-previews.jsx';
+import { isRemoteDocumentComposition, MobileImageBody } from './remote-document-previews.jsx';
+import { ImageBody } from '@dshm/document/image/ImageBody.tsx';
 import { nativePanelSlot } from './remote-panel-layout.mjs';
 import { IconEllipsisOutline16 } from '@upstream/ui-primitives/src/icons/index.tsx';
 import { RemoteDesktopAppAction } from './ui/RemoteDesktopAppAction.jsx';
@@ -132,6 +133,8 @@ class MobileSlotRegistry extends SlotRegistry {
     if (options.name === 'root' && this.ctx.fiber !== this.rootOwner) throw new Error('DSHM owns the root page; plugins must register partial UI slots');
     const sidebar = options.name === 'sidebar.right.pane.tab' && remoteSidebarHost(component, this.model);
     if (sidebar) return register(options, sidebar);
+    // 图片预览体补手机手势缩放；保留上游缩放状态、注入与元数据，仅包装渲染组件。
+    if (options.name === 'sidebar.right.tab.document' && component === ImageBody) return register(options, MobileImageBody);
     const id = pluginIdentity(this.ctx), layout = this.layout;
     if (id === '@deepseek-ai/dsh-client-ui-settings-general' && options.name === 'settings.general.item'
       && options.id === 'developer-tools' && this.model.codingTools) {
@@ -179,6 +182,8 @@ class MobileSlotRegistry extends SlotRegistry {
     }
     // 页面级手机布局不参与桌面局部组件的等比缩放。
     if (options.name === REMOTE_HOME_SLOT) return register(options, component);
+    // 标签标题由宿主外壳排版并截断，不参与插件等比缩放。
+    if (options.name === 'sidebar.right.pane.tab.title') return register(options, component);
     if (!id || this.ctx.fiber === this.rootOwner || isRemoteSidebarComposition(options, component)
       || isRemoteDocumentComposition(options, component)) return register(options, component);
     if (id === '@deepseek-ai/dsh-client-ui-agent-preset' && options.name === 'conversation.hero.agentPreset') {
